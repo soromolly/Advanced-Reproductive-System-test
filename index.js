@@ -454,10 +454,21 @@ function triggerPregnancy(data) {
     
     const lang = getLanguage();
     for (let i = 0; i < data.babiesCount; i++) {
-        data.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
+        let genderText = Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀');
+        
+        // Определение вторичного пола для Омегаверса
+        if (settings.mode === 'omegaverse') {
+            const secondaryRoll = Math.random() * 100;
+            let secondarySex = lang === 'ru' ? 'Бета' : 'Beta';
+            if (secondaryRoll < 30) secondarySex = lang === 'ru' ? 'Альфа' : 'Alpha';
+            else if (secondaryRoll < 60) secondarySex = lang === 'ru' ? 'Омега' : 'Omega';
+            genderText += ` [${secondarySex}]`;
+        }
+        
+        data.babiesGenders.push(genderText);
     }
 
-    // Бросок на врожденную патологию плода (~3% шанс)
+    // Бросок на врожденную патологию плода 
     data.fetalDisease = null;
     if (settings.isFetalPathologyEnabled) {
         if (Math.random() * 100 < 3) {
@@ -470,7 +481,6 @@ function triggerPregnancy(data) {
         toastr.success(getText('toastConception'));
     }
 }
-
 function processBirthTrigger(method = 'natural') {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
@@ -804,9 +814,12 @@ function renderUI() {
                             <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6;">
                                 ℹ️ <em>${getText('wombMap')}</em><br>
                                 • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
-                                • ${getText('babiesSex')} <b>${data.babiesGenders.join(', ')}</b>
+                                • ${getText('babiesSex')} <b>${(settings.aiAwareness === 'dynamic' && data.pregnancyWeeks < 20) ? `<i style="opacity: 0.6; font-weight: normal;">Скрыто до 20 нед.</i>` : data.babiesGenders.join(', ')}</b>
                             </div>
                         `}
+                    ` : `
+                        ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} из ${settings.cycleLength}</div>` : ''}
+                    `}
                     ` : `
                         ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} из ${settings.cycleLength}</div>` : ''}
                     `}
@@ -964,9 +977,21 @@ function renderUI() {
         
         const lang = getLanguage();
         for (let i = 0; i < count; i++) {
-            bodyData.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
+            let genderText = Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀');
+            
+            // Вторичный пол для ручного спавна
+            if (settings.mode === 'omegaverse') {
+                const secondaryRoll = Math.random() * 100;
+                let secondarySex = lang === 'ru' ? 'Бета' : 'Beta';
+                if (secondaryRoll < 30) secondarySex = lang === 'ru' ? 'Альфа' : 'Alpha';
+                else if (secondaryRoll < 60) secondarySex = lang === 'ru' ? 'Омега' : 'Omega';
+                genderText += ` [${secondarySex}]`;
+            }
+            
+            bodyData.babiesGenders.push(genderText);
         }
 
+        // Бросаем кубик на патологию при ручном старте
         if (settings.isFetalPathologyEnabled) {
             if (Math.random() * 100 < 3) {
                 bodyData.fetalDisease = getRandomFetalDisease();
