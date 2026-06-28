@@ -359,7 +359,7 @@ function advanceBodyTime(days) {
 
         // Уведомление об обнаружении патологии на УЗИ-скрининге (20-я неделя) только для ультразвука
         if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness === 'dynamic') {
-            toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
+            toastr.warning(`🧬 УЗИ-скриниег (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
         }
 
         data.currentSymptoms = []; 
@@ -382,8 +382,8 @@ function checkConceptionTrigger(text) {
     const phase = getBodyPhase();
     const isFertile = phase.includes('Овуляция') || phase.includes('Течка') || phase.includes('Ovulation') || phase.includes('Heat');
     
-    const hasVaginalTag = //i.test(text);
-    const hasAnalTag = //i.test(text);
+    const hasVaginalTag = /<!--CUM_VAGINAL-->/i.test(text);
+    const hasAnalTag = /<!--CUM_ANAL-->/i.test(text);
 
     let canConceive = false;
 
@@ -456,7 +456,6 @@ function triggerPregnancy(data) {
     for (let i = 0; i < data.babiesCount; i++) {
         let genderText = Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀');
         
-        // Определение вторичного пола для Омегаверса
         if (settings.mode === 'omegaverse') {
             const secondaryRoll = Math.random() * 100;
             let secondarySex = lang === 'ru' ? 'Бета' : 'Beta';
@@ -471,7 +470,7 @@ function triggerPregnancy(data) {
     // Бросок на врожденную патологию плода (100% шанс для тестов)
     data.fetalDisease = null;
     if (settings.isFetalPathologyEnabled) {
-        if (Math.random() * 100 < 100) {
+        if (Math.random() * 100 < 3) {
             data.fetalDisease = getRandomFetalDisease();
         }
     }
@@ -505,7 +504,6 @@ function processBirthTrigger(method = 'natural') {
     const methodText = method === 'c_section' ? 'Кесарево сечение' : 'Естественные роды';
     if (settings.isNotificationsEnabled) {
         toastr.success(`👶 Роды успешно прошли! Способ: ${methodText}. Статистика беременности сброшена, запущен период восстановления.`);
-        // Уведомление о патологии в режиме Средневековье (после родов)
         if (data.fetalDisease && settings.aiAwareness === 'hidden') {
             toastr.error(`🚨 Обнаружена врождённая патология у новорождённого: «${data.fetalDisease.name}»!`);
         }
@@ -552,7 +550,6 @@ function updatePromptInjection(isImmediateBirth = false) {
         prompt += `Status: RECOVERY PHASE (Day ${data.postpartumDays}/40) | Event Outcome: ${data.deliveryMethod.toUpperCase()}\n`;
         prompt += `Physical Condition & Limitations: ${pData.desc}\n`;
         
-        // Специфицируем для ИИ, что дефект только у ОДНОГО из новорожденных
         if (data.fetalDisease) {
             prompt += `[MEDICAL RECORD - NEWBORN CONGENITAL CONDITION]: Exactly ONE of the recently born children has a congenital condition: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} must isolate this condition to only one child. All other newborn siblings are completely healthy and unaffected.\n`;
         }
@@ -588,7 +585,6 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
         }
 
-        // Динамическое уточнение во время многоплодной беременности
         if (data.fetalDisease) {
             const targetFetus = data.babiesCount > 1 ? `ONLY ONE of the fetuses (the other siblings are perfectly healthy)` : `the fetus`;
             
@@ -612,7 +608,10 @@ function updatePromptInjection(isImmediateBirth = false) {
         
         prompt += `🚨 CRITICAL SYSTEM LOG DIRECTIVE FOR {{char}}: At the absolute end of your response text, you MUST append a hidden HTML comment summary ONLY IF a full climax/ejaculation has explicitly occurred inside {{user}} WITHIN THIS SPECIFIC RESPONSE. 
         Choose exactly one that matches the finished action and write it verbatim:
-        - If ejaculation has fully completed inside the vagina: - If ejaculation has fully completed inside the anus: - If ejaculation has fully completed inside the mouth/oral: ⚠️ STRICTION LIMITATION: You MUST only append this tag at the very end when the action is truly COMPLETE and the climax has happened. Do not include this tag for foreplay or ongoing descriptions. Do not append if no climax/ejaculation occurs.\n`;
+        - If ejaculation has fully completed inside the vagina: <!--CUM_VAGINAL-->
+        - If ejaculation has fully completed inside the anus: <!--CUM_ANAL-->
+        - If ejaculation has fully completed inside the mouth/oral: <!--CUM_ORAL-->
+        ⚠️ STRICTION LIMITATION: You MUST only append this tag at the very end when the action is truly COMPLETE and the climax has happened. Do not include this tag for foreplay or ongoing descriptions. Do not append if no climax/ejaculation occurs.\n`;
     }
 
     setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
@@ -646,7 +645,6 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        // Динамическое отображение патологии плода БЕЗ лишних заглушек во время беременности
         if (data.fetalDisease) {
             if (settings.aiAwareness === 'full') {
                 fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
@@ -673,7 +671,6 @@ function renderUI() {
             eddHtml = `<div style="margin-bottom: 4px;"><strong>${getText('eddLabel')}</strong> <span style="color: #f472b6; font-weight: bold;">${eddParts[2]}.${eddParts[1]}.${eddParts[0]}</span></div>`;
         }
     } else if (data.postpartumDays > 0 && data.fetalDisease) {
-        // Показываем патологию в интерфейсе после родов (для всех режимов, включая Средневековье)
         fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.0em; color: #ef4444; display: block; margin-bottom: 4px;">🧬 Врожденная патология новорожденного (Выявлена после родов):</strong>
             <b style="color: #fca5a5;">${data.fetalDisease.name}</b><br>
@@ -975,7 +972,6 @@ function renderUI() {
         for (let i = 0; i < count; i++) {
             let genderText = Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀');
             
-            // Вторичный пол для ручного спавна
             if (settings.mode === 'omegaverse') {
                 const secondaryRoll = Math.random() * 100;
                 let secondarySex = lang === 'ru' ? 'Бета' : 'Beta';
@@ -987,7 +983,6 @@ function renderUI() {
             bodyData.babiesGenders.push(genderText);
         }
 
-        // Бросаем кубик на патологию при ручном старте
         if (settings.isFetalPathologyEnabled) {
             if (Math.random() * 100 < 3) {
                 bodyData.fetalDisease = getRandomFetalDisease();
