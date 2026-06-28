@@ -350,14 +350,14 @@ function advanceBodyTime(days) {
             }
         }
 
-        const  prevWeeks = data.pregnancyWeeks ;​​
-        data.pregnancyDays + = days ;​
-        if  ( data.pregnancyDays > = 7 )  {​
-            data.pregnancyWeeks + = Math.floor ( data.pregnancyDays / 7 ) ;​​​​​
-            data.pregnancyDays % = 7 ;​
+        const prevWeeks = data.pregnancyWeeks;
+        data.pregnancyDays += days;
+        if (data.pregnancyDays >= 7) {
+            data.pregnancyWeeks += Math.floor(data.pregnancyDays / 7);
+            data.pregnancyDays %= 7;
         }
 
-        // Уведомление об обнаружении излучения на ультразвуковом скрининге (20-я неделя) только для ультразвука
+        // Уведомление об обнаружении патологии на УЗИ-скрининге (20-я неделя) только для ультразвука
         if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness === 'dynamic') {
             toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
         }
@@ -382,8 +382,8 @@ function checkConceptionTrigger(text) {
     const phase = getBodyPhase();
     const isFertile = phase.includes('Овуляция') || phase.includes('Течка') || phase.includes('Ovulation') || phase.includes('Heat');
     
-    const hasVaginalTag = /<!--CUM_VAGINAL-->/i.test(text);
-    const hasAnalTag = /<!--CUM_ANAL-->/i.test(text);
+    const hasVaginalTag = //i.test(text);
+    const hasAnalTag = //i.test(text);
 
     let canConceive = false;
 
@@ -468,10 +468,10 @@ function triggerPregnancy(data) {
         data.babiesGenders.push(genderText);
     }
 
-    // Бросок на врожденную патологию плода 
+    // Бросок на врожденную патологию плода (100% шанс для тестов)
     data.fetalDisease = null;
     if (settings.isFetalPathologyEnabled) {
-        if (Math.random() * 100 < 3) {
+        if (Math.random() * 100 < 100) {
             data.fetalDisease = getRandomFetalDisease();
         }
     }
@@ -481,6 +481,7 @@ function triggerPregnancy(data) {
         toastr.success(getText('toastConception'));
     }
 }
+
 function processBirthTrigger(method = 'natural') {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
@@ -551,9 +552,9 @@ function updatePromptInjection(isImmediateBirth = false) {
         prompt += `Status: RECOVERY PHASE (Day ${data.postpartumDays}/40) | Event Outcome: ${data.deliveryMethod.toUpperCase()}\n`;
         prompt += `Physical Condition & Limitations: ${pData.desc}\n`;
         
-        // Инъекция патологии после родов (для всех режимов, включая Средневековье)
+        // Специфицируем для ИИ, что дефект только у ОДНОГО из новорожденных
         if (data.fetalDisease) {
-            prompt += `[MEDICAL RECORD - NEWBORN CONGENITAL CONDITION]: The child has been born with a congenital condition: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} must reference this condition naturally in the roleplay context.\n`;
+            prompt += `[MEDICAL RECORD - NEWBORN CONGENITAL CONDITION]: Exactly ONE of the recently born children has a congenital condition: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} must isolate this condition to only one child. All other newborn siblings are completely healthy and unaffected.\n`;
         }
         
         setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
@@ -587,14 +588,15 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
         }
 
-        // Логика инъекции патологии плода в промпт во время беременности
+        // Динамическое уточнение во время многоплодной беременности
         if (data.fetalDisease) {
+            const targetFetus = data.babiesCount > 1 ? `ONLY ONE of the fetuses (the other siblings are perfectly healthy)` : `the fetus`;
+            
             if (settings.aiAwareness === 'full') {
-                prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED]: A congenital condition has been identified in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is fully aware of this diagnosis from the very beginning.\n`;
+                prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED]: A congenital condition has been identified in ${targetFetus}: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is fully aware of this diagnosis from the very beginning.\n`;
             } else if (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20) {
-                prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN - WEEK 20)]: The anatomy scan has revealed a congenital condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is now aware of this diagnosis and should reference it naturally.\n`;
+                prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN - WEEK 20)]: The anatomy scan has revealed a congenital condition in ${targetFetus}: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is now aware of this diagnosis and should reference it naturally.\n`;
             }
-            // Если режим 'hidden' (Средневековье), ИИ ничего не знает во время беременности
         }
 
         if (data.pregnancyWeeks >= maxWeeks) {
@@ -610,10 +612,7 @@ function updatePromptInjection(isImmediateBirth = false) {
         
         prompt += `🚨 CRITICAL SYSTEM LOG DIRECTIVE FOR {{char}}: At the absolute end of your response text, you MUST append a hidden HTML comment summary ONLY IF a full climax/ejaculation has explicitly occurred inside {{user}} WITHIN THIS SPECIFIC RESPONSE. 
         Choose exactly one that matches the finished action and write it verbatim:
-        - If ejaculation has fully completed inside the vagina: <!--CUM_VAGINAL-->
-        - If ejaculation has fully completed inside the anus: <!--CUM_ANAL-->
-        - If ejaculation has fully completed inside the mouth/oral: <!--CUM_ORAL-->
-        ⚠️ STRICTION LIMITATION: You MUST only append this tag at the very end when the action is truly COMPLETE and the climax has happened. Do not include this tag for foreplay or ongoing descriptions. Do not append if no climax/ejaculation occurs.\n`;
+        - If ejaculation has fully completed inside the vagina: - If ejaculation has fully completed inside the anus: - If ejaculation has fully completed inside the mouth/oral: ⚠️ STRICTION LIMITATION: You MUST only append this tag at the very end when the action is truly COMPLETE and the climax has happened. Do not include this tag for foreplay or ongoing descriptions. Do not append if no climax/ejaculation occurs.\n`;
     }
 
     setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
@@ -820,9 +819,6 @@ function renderUI() {
                     ` : `
                         ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} из ${settings.cycleLength}</div>` : ''}
                     `}
-                    ` : `
-                        ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} из ${settings.cycleLength}</div>` : ''}
-                    `}
                     <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync')} ${displayDate}</div>
                 </div>
 
@@ -1022,6 +1018,7 @@ function renderUI() {
         }
     });
 }
+
 jQuery(async () => {
     loadSettings();
     if (typeof eventSource?.on === 'function') { eventSource.on('i18n_language_changed', () => { renderUI(); }); }
