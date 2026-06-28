@@ -350,14 +350,14 @@ function advanceBodyTime(days) {
             }
         }
 
-        const prevWeeks = data.pregnancyWeeks;
-        data.pregnancyDays += days;
-        if (data.pregnancyDays >= 7) {
-            data.pregnancyWeeks += Math.floor(data.pregnancyDays / 7);
-            data.pregnancyDays %= 7;
+        const  prevWeeks = data.pregnancyWeeks ;​​
+        data.pregnancyDays + = days ;​
+        if  ( data.pregnancyDays > = 7 )  {​
+            data.pregnancyWeeks + = Math.floor ( data.pregnancyDays / 7 ) ;​​​​​
+            data.pregnancyDays % = 7 ;​
         }
 
-        // Уведомление об обнаружении патологии на УЗИ-скрининге (20-я неделя) только для режима УЗИ
+        // Уведомление об обнаружении излучения на ультразвуковом скрининге (20-я неделя) только для ультразвука
         if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness === 'dynamic') {
             toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
         }
@@ -460,7 +460,7 @@ function triggerPregnancy(data) {
     // Бросок на врожденную патологию плода (~3% шанс)
     data.fetalDisease = null;
     if (settings.isFetalPathologyEnabled) {
-        if (Math.random() * 100 < 99) {
+        if (Math.random() * 100 < 3) {
             data.fetalDisease = getRandomFetalDisease();
         }
     }
@@ -968,7 +968,7 @@ function renderUI() {
         }
 
         if (settings.isFetalPathologyEnabled) {
-            if (Math.random() * 100 < 99) {
+            if (Math.random() * 100 < 3) {
                 bodyData.fetalDisease = getRandomFetalDisease();
             }
         }
