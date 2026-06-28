@@ -350,17 +350,18 @@ function advanceBodyTime(days) {
             }
         }
 
+        const prevWeeks = data.pregnancyWeeks;
         data.pregnancyDays += days;
         if (data.pregnancyDays >= 7) {
-            const prevWeeks = data.pregnancyWeeks;
             data.pregnancyWeeks += Math.floor(data.pregnancyDays / 7);
             data.pregnancyDays %= 7;
-
-            // Уведомление об обнаружении патологии на УЗИ-скрининге (20-я неделя)
-            if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled) {
-                toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
-            }
         }
+
+        // Уведомление об обнаружении патологии на УЗИ-скрининге (20-я неделя) только для режима УЗИ
+        if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness === 'dynamic') {
+            toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
+        }
+
         data.currentSymptoms = []; 
         const maxWeeks = settings.maxPregnancyWeeks || (settings.mode === 'omegaverse' ? 36 : 40);
         if (data.pregnancyWeeks >= maxWeeks && settings.isNotificationsEnabled) {
@@ -493,6 +494,10 @@ function processBirthTrigger(method = 'natural') {
     const methodText = method === 'c_section' ? 'Кесарево сечение' : 'Естественные роды';
     if (settings.isNotificationsEnabled) {
         toastr.success(`👶 Роды успешно прошли! Способ: ${methodText}. Статистика беременности сброшена, запущен период восстановления.`);
+        // Уведомление о патологии в режиме Средневековье (после родов)
+        if (data.fetalDisease && settings.aiAwareness === 'hidden') {
+            toastr.error(`🚨 Обнаружена врождённая патология у новорождённого: «${data.fetalDisease.name}»!`);
+        }
     }
 }
 
@@ -535,6 +540,12 @@ function updatePromptInjection(isImmediateBirth = false) {
         const pData = getPostpartumData(data.postpartumDays, data.deliveryMethod);
         prompt += `Status: RECOVERY PHASE (Day ${data.postpartumDays}/40) | Event Outcome: ${data.deliveryMethod.toUpperCase()}\n`;
         prompt += `Physical Condition & Limitations: ${pData.desc}\n`;
+        
+        // Инъекция патологии после родов (для всех режимов, включая Средневековье)
+        if (data.fetalDisease) {
+            prompt += `[MEDICAL RECORD - NEWBORN CONGENITAL CONDITION]: The child has been born with a congenital condition: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} must reference this condition naturally in the roleplay context.\n`;
+        }
+        
         setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
         return;
     }
@@ -557,9 +568,6 @@ function updatePromptInjection(isImmediateBirth = false) {
             
             if (revealGenders) {
                 prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Fetal development is sufficient to determine sex. Scans confirm the genders are: ${data.babiesGenders.join(', ')}.\n`;
-                if (data.fetalDisease) {
-                    prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN)]: The anatomy scan has revealed a congenital condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is aware of this diagnosis and should reference it naturally in the roleplay where relevant.\n`;
-                }
             } else {
                 prompt += `[ULTRASOUND STAGE NOTICE]: Fetal genders are still completely OBSCURED and hidden from {{char}} (too early to visually see their sex). {{char}} MUST NOT mention or guess their genders yet.\n`;
             }
@@ -567,6 +575,16 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: The number of babies and their genders are strictly CONCEALED from {{char}} right now (Medieval/Blind mode).\n`;
         } else {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
+        }
+
+        // Логика инъекции патологии плода в промпт во время беременности
+        if (data.fetalDisease) {
+            if (settings.aiAwareness === 'full') {
+                prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED]: A congenital condition has been identified in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is fully aware of this diagnosis from the very beginning.\n`;
+            } else if (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20) {
+                prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN - WEEK 20)]: The anatomy scan has revealed a congenital condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is now aware of this diagnosis and should reference it naturally.\n`;
+            }
+            // Если режим 'hidden' (Средневековье), ИИ ничего не знает во время беременности
         }
 
         if (data.pregnancyWeeks >= maxWeeks) {
@@ -619,16 +637,21 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        if (data.fetalDisease && data.pregnancyWeeks >= 20) {
-            fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (обнаружена на УЗИ):</strong>
-                <b style="color: #fcd34d;">${data.fetalDisease.name}</b><br>
-                <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${data.fetalDisease.desc}</span>
-            </div>`;
-        } else if (data.fetalDisease && data.pregnancyWeeks < 20) {
-            fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 8px 10px; background: rgba(251, 191, 36, 0.06); border-left: 3px solid rgba(251, 191, 36, 0.35); border-radius: 4px; text-align: left; font-size: 0.82em; color: #92400e; font-style: italic;">
-                🔒 Патология плода будет выявлена на скрининговом УЗИ (20-я неделя).
-            </div>`;
+        // Динамическое отображение патологии плода БЕЗ лишних заглушек во время беременности
+        if (data.fetalDisease) {
+            if (settings.aiAwareness === 'full') {
+                fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                    <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода:</strong>
+                    <b style="color: #fcd34d;">${data.fetalDisease.name}</b><br>
+                    <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${data.fetalDisease.desc}</span>
+                </div>`;
+            } else if (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20) {
+                fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                    <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (Выявлено на УЗИ):</strong>
+                    <b style="color: #fcd34d;">${data.fetalDisease.name}</b><br>
+                    <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${data.fetalDisease.desc}</span>
+                </div>`;
+            }
         }
 
         if (data.lastRpDate) {
@@ -640,6 +663,13 @@ function renderUI() {
             const eddParts = eddDate.toISOString().split('T')[0].split('-');
             eddHtml = `<div style="margin-bottom: 4px;"><strong>${getText('eddLabel')}</strong> <span style="color: #f472b6; font-weight: bold;">${eddParts[2]}.${eddParts[1]}.${eddParts[0]}</span></div>`;
         }
+    } else if (data.postpartumDays > 0 && data.fetalDisease) {
+        // Показываем патологию в интерфейсе после родов (для всех режимов, включая Средневековье)
+        fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+            <strong style="font-size: 1.0em; color: #ef4444; display: block; margin-bottom: 4px;">🧬 Врожденная патология новорожденного (Выявлена после родов):</strong>
+            <b style="color: #fca5a5;">${data.fetalDisease.name}</b><br>
+            <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${data.fetalDisease.desc}</span>
+        </div>`;
     }
 
     let postpartumHtml = '';
@@ -768,7 +798,7 @@ function renderUI() {
 
                         ${(settings.aiAwareness === 'hidden') ? `
                              <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic;">
-                                🔒 Режим Средневековье: пол младенца скрыт до момента родов.
+                                🔒 Режим Средневековье: пол и дефекты младенца скрыты до момента родов.
                              </div>
                         ` : `
                             <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6;">
@@ -937,6 +967,12 @@ function renderUI() {
             bodyData.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
         }
 
+        if (settings.isFetalPathologyEnabled) {
+            if (Math.random() * 100 < 3) {
+                bodyData.fetalDisease = getRandomFetalDisease();
+            }
+        }
+
         saveSettingsDebounced(); renderUI(); updatePromptInjection(); 
         if (settings.isNotificationsEnabled) toastr.success(`${getText('toastManualPreg')}${weeks}`);
     });
@@ -961,7 +997,6 @@ function renderUI() {
         }
     });
 }
-
 jQuery(async () => {
     loadSettings();
     if (typeof eventSource?.on === 'function') { eventSource.on('i18n_language_changed', () => { renderUI(); }); }
