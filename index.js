@@ -265,7 +265,8 @@ function parseRpDateFromText(text) {
 }
 
 function parseRelativeTimeFromText(text) {
-    const ruRegex = /прошло\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
+    // ИСПРАВЛЕНО: добавлена проверка на прошел/прошёл/прошла/прошло
+    const ruRegex = /(?:прошло|прошел|прошёл|прошла)\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
     const ruMatch = text.match(ruRegex);
     const enRegex = /(?:passed\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later))/i;
     const enMatch = text.match(enRegex);
