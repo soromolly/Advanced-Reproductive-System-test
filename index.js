@@ -265,8 +265,7 @@ function parseRpDateFromText(text) {
 }
 
 function parseRelativeTimeFromText(text) {
-    // ИСПРАВЛЕНО: добавлена проверка на прошел/прошёл/прошла/прошло
-    const ruRegex = /(?:прошло|прошел|прошёл|прошла)\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
+    const ruRegex = /прошло\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
     const ruMatch = text.match(ruRegex);
     const enRegex = /(?:passed\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later))/i;
     const enMatch = text.match(enRegex);
@@ -310,11 +309,7 @@ function handleTimeProgression(text) {
     if (!currentRpDate) return;
     const currentRpDateStr = currentRpDate.toISOString().split('T')[0];
 
-    // ИСПРАВЛЕНО: Безопасное обновление даты. Не даем откатывать время назад из-за галлюцинаций ИИ
-    if (!data.lastRpDate) {
-        data.lastRpDate = currentRpDateStr;
-        saveSettingsDebounced(); renderUI();
-    } else if (data.lastRpDate !== currentRpDateStr) {
+    if (data.lastRpDate && data.lastRpDate !== currentRpDateStr) {
         const previousDate = new Date(data.lastRpDate);
         const daysPassed = Math.floor((currentRpDate - previousDate) / (1000 * 60 * 60 * 24));
         if (daysPassed > 0) {
@@ -323,10 +318,10 @@ function handleTimeProgression(text) {
             if (settings.isNotificationsEnabled) {
                 toastr.info(`${getText('toastTimePassed')}${daysPassed}.`);
             }
-            data.lastRpDate = currentRpDateStr;
-            saveSettingsDebounced(); renderUI();
         }
     }
+    data.lastRpDate = currentRpDateStr;
+    saveSettingsDebounced(); renderUI();
 }
 
 function advanceBodyTime(days) {
@@ -541,12 +536,6 @@ function updatePromptInjection(isImmediateBirth = false) {
     const phase = getBodyPhase();
     
     let prompt = `\n[OOC: SYSTEM NOTE — {{user}} Physiological Status]\n`;
-    
-    // ИСПРАВЛЕНО: Теперь плагин жестко инжектирует текущую дату ролевой в контекст ИИ
-    if (data.lastRpDate) {
-        const parts = data.lastRpDate.split('-');
-        prompt += `Current Roleplay Date: ${parts[2]}.${parts[1]}.${parts[0]} (You MUST maintain this specific setting timeline, ignore any internal default dates)\n`;
-    }
     
     if (isImmediateBirth) {
         const lastChildren = data.childrenList.slice(-data.childrenList.length);
