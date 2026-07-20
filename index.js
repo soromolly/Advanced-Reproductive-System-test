@@ -51,9 +51,13 @@ let userInitiatedTimeSkip = false;
 const MONTHS = {
     'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
     'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11,
+    'январь': 0, 'февраль': 1, 'март': 2, 'апрель': 3, 'май': 4, 'июнь': 5,
+    'июль': 6, 'август': 7, 'сентябрь': 8, 'октябрь': 9, 'ноябрь': 10, 'декабрь': 11,
+    'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'июн': 5,
+    'июл': 6, 'авг': 7, 'сен': 8, 'окт': 9, 'ноя': 10, 'дек': 11,
     'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
     'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11,
-    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
 };
 
 const TRANSLATIONS = {
@@ -256,53 +260,137 @@ function checkPregnancyComplications(data) {
     }
 }
 
-function parseRpDateFromText(text) {
-    if (!text) return null;
-    const textRegex = /(\d{1,2})\s+([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{4})/i;
-    const textMatch = text.match(textRegex);
-    if (textMatch) {
-        const day = parseInt(textMatch[1]), monthStr = textMatch[2].toLowerCase(), year = parseInt(textMatch[3]);
-        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
-            return new Date(Date.UTC(year, MONTHS[monthStr], day));
-        }
-    }
-    const numRegex = /(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{4})/;
-    const numMatch = text.match(numRegex);
-    if (numMatch) {
-        const day = parseInt(numMatch[1]), month = parseInt(numMatch[2]) - 1, year = parseInt(numMatch[3]);
+function parseRpDateFromText(rawText) {
+    if (!rawText) return null;
+    
+    // Очистка от брайлевских пробелов (джелбрейков) и спецсимволов
+    const text = rawText.replace(/[\u2800\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+
+    // 1. Формат ГГГГ/ММ/ДД, ГГГГ.ММ.ДД, ГГГГ-ММ-ДД (например: 2026/07/20, 1453-05-15)
+    const isoRegex = /(\d{4})[\.\/\-](\d{1,2})[\.\/\-](\d{1,2})/;
+    const isoMatch = text.match(isoRegex);
+    if (isoMatch) {
+        const year = parseInt(isoMatch[1], 10);
+        const month = parseInt(isoMatch[2], 10) - 1;
+        const day = parseInt(isoMatch[3], 10);
         if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
             return new Date(Date.UTC(year, month, day));
         }
     }
+
+    // 2. Формат ДД/ММ/ГГГГ, ДД.ММ.ГГГГ, ДД-ММ-ГГГГ (например: 20.07.2026)
+    const dmyRegex = /(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})/;
+    const dmyMatch = text.match(dmyRegex);
+    if (dmyMatch) {
+        const day = parseInt(dmyMatch[1], 10);
+        const month = parseInt(dmyMatch[2], 10) - 1;
+        const year = parseInt(dmyMatch[3], 10);
+        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+            return new Date(Date.UTC(year, month, day));
+        }
+    }
+
+    // 3. Текстовый формат RU с окончаниями: "20-го июля 2026", "15-е мая 1453", "20 июля 2026"
+    const textRuRegex = /(\d{1,2})(?:-(?:го|е|я|й|го|ое|ее))?\s+([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{4})/i;
+    const textRuMatch = text.match(textRuRegex);
+    if (textRuMatch) {
+        const day = parseInt(textRuMatch[1], 10);
+        const monthStr = textRuMatch[2].toLowerCase();
+        const year = parseInt(textRuMatch[3], 10);
+        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
+            return new Date(Date.UTC(year, MONTHS[monthStr], day));
+        }
+    }
+
+    // 4. Текстовый формат EN: "July 20th, 2026", "July 20, 2026"
+    const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:st|nd|rd|th)?\,?\s+(\d{4})/i;
+    const mdyMatch = text.match(mdyTextRegex);
+    if (mdyMatch) {
+        const monthStr = mdyMatch[1].toLowerCase();
+        const day = parseInt(mdyMatch[2], 10);
+        const year = parseInt(mdyMatch[3], 10);
+        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
+            return new Date(Date.UTC(year, MONTHS[monthStr], day));
+        }
+    }
+
     return null;
 }
 
-function parseRelativeTimeFromText(text) {
-    const ruRegex = /прошло\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
-    const ruMatch = text.match(ruRegex);
-    const enRegex = /(?:passed\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later))/i;
-    const enMatch = text.match(enRegex);
+function parseRelativeTimeFromText(rawText) {
+    if (!rawText) return null;
+    
+    // Очистка от джелбрейк-символов
+    const text = rawText.replace(/[\u2800\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
 
-    let count = 0, unit = '';
-    if (ruMatch) { count = parseInt(ruMatch[1]); unit = ruMatch[2].toLowerCase(); }
-    else if (enMatch) { count = parseInt(enMatch[1] || enMatch[3]); unit = (enMatch[2] || enMatch[4]).toLowerCase(); }
-    else return null;
+    // Словарь текстовых чисел
+    const wordNumbers = {
+        'один': 1, 'одна': 1, 'одно': 1,
+        'два': 2, 'две': 2, 'пару': 2, 'пара': 2,
+        'три': 3, 'четыре': 4, 'пять': 5,
+        'шесть': 6, 'семь': 7, 'восемь': 8,
+        'девять': 9, 'десять': 10, 'несколько': 3
+    };
+
+    let count = null;
+    let unit = '';
+
+    // А. Поиск фраз с цифрами: "прошло 3 дня", "через 5 месяцев", "спустя 2 недели"
+    const digitRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
+    const digitMatch = text.match(digitRegex);
+
+    if (digitMatch) {
+        count = parseInt(digitMatch[1], 10);
+        unit = digitMatch[2].toLowerCase();
+    } else {
+        // Б. Поиск фраз с числами словами: "через три дня", "спустя пару месяцев"
+        const wordNumKeys = Object.keys(wordNumbers).join('|');
+        const wordNumRegex = new RegExp(`(?:прошл[оаи]|спустя|через|минул[оаи])\\s+(${wordNumKeys})\\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)`, 'i');
+        const wordNumMatch = text.match(wordNumRegex);
+
+        if (wordNumMatch) {
+            count = wordNumbers[wordNumMatch[1].toLowerCase()];
+            unit = wordNumMatch[2].toLowerCase();
+        } else {
+            // В. Поиск фраз без явных цифр: "прошла неделя", "прошел месяц", "через год"
+            const singleRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])\s+(день|неделя|неделю|месяц|год)/i;
+            const singleMatch = text.match(singleRegex);
+
+            if (singleMatch) {
+                count = 1;
+                unit = singleMatch[1].toLowerCase();
+            }
+        }
+    }
+
+    if (!count || !unit) {
+        // Попытка парсинга английских таймскипов
+        const enRegex = /(?:passed|after|later)\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later)/i;
+        const enMatch = text.match(enRegex);
+        if (enMatch) {
+            count = parseInt(enMatch[1] || enMatch[3], 10);
+            unit = (enMatch[2] || enMatch[4]).toLowerCase();
+        } else {
+            return null;
+        }
+    }
 
     const data = getChatBodyData();
     if (data.lastRpDate) {
         const parts = data.lastRpDate.split('-');
-        const futureDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+        const futureDate = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
         const baseDate = new Date(futureDate.getTime());
 
         if (unit.startsWith('дн') || unit.startsWith('day')) futureDate.setUTCDate(futureDate.getUTCDate() + count);
         else if (unit.startsWith('нед') || unit.startsWith('week')) futureDate.setUTCDate(futureDate.getUTCDate() + (count * 7));
-        else if (unit.startsWith('мес') || unit.startsWith('month')) futureDate.setMonth(futureDate.getUTCMonth() + count);
+        else if (unit.startsWith('мес') || unit.startsWith('month')) futureDate.setUTCMonth(futureDate.getUTCMonth() + count);
         else if (unit.startsWith('ле') || unit.startsWith('год') || unit.startsWith('year')) futureDate.setUTCFullYear(futureDate.getUTCFullYear() + count);
 
         const totalDays = Math.floor((futureDate - baseDate) / (1000 * 60 * 60 * 24));
         data.lastRpDate = futureDate.toISOString().split('T')[0];
         return totalDays;
     }
+
     if (unit.startsWith('дн') || unit.startsWith('day')) return count;
     if (unit.startsWith('нед') || unit.startsWith('week')) return count * 7;
     if (unit.startsWith('мес') || unit.startsWith('month')) return count * 30;
