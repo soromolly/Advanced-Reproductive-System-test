@@ -426,6 +426,12 @@ function handleTimeProgression(text, isAiMessage = false) {
         if (isAiMessage && userInitiatedTimeSkip) return; 
         advanceBodyTime(relativeDays);
         checkPregnancyComplications(data);
+
+        // Уведомление о таймскипе от юзера/текста
+        if (settings.isNotificationsEnabled) {
+            toastr.info(`${getText('toastTimePassed')}${relativeDays}.`);
+        }
+
         saveSettingsDebounced(); renderUI(); return; 
     }
 
@@ -1179,6 +1185,7 @@ jQuery(async () => {
     loadSettings();
     if (typeof eventSource?.on === 'function') { eventSource.on('i18n_language_changed', () => { renderUI(); }); }
 
+    // 1. Слушатель твоих сообщений
     eventSource.on(event_types.MESSAGE_SENT, async (messageIndex) => {
         if (!settings.isEnabled) return; 
         const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
@@ -1195,6 +1202,7 @@ jQuery(async () => {
         updatePromptInjection();
     });
 
+    // 2. Слушатель ответов от ИИ
     eventSource.on(event_types.MESSAGE_RECEIVED, async (messageIndex) => {
         if (!settings.isEnabled) return; 
         const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
@@ -1204,6 +1212,7 @@ jQuery(async () => {
 
         handleTimeProgression(text, true);
         checkConceptionTrigger(text);
+        checkBirthTrigger(text); // <--- Проверка авто-родов от ИИ
         updatePromptInjection();
 
         userInitiatedTimeSkip = false;
