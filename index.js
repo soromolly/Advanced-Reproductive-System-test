@@ -46,6 +46,7 @@ function createDefaultBodyData() {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
+let userInitiatedTimeSkip = false;
 
 const MONTHS = {
     'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
@@ -308,10 +309,12 @@ function parseRelativeTimeFromText(text) {
     return count * 365;
 }
 
-function handleTimeProgression(text) {
+function handleTimeProgression(text, isAiMessage = false) {
     const data = getChatBodyData();
     const relativeDays = parseRelativeTimeFromText(text);
+    
     if (relativeDays !== null && relativeDays > 0) {
+        if (isAiMessage && userInitiatedTimeSkip) return; 
         advanceBodyTime(relativeDays);
         checkPregnancyComplications(data);
         saveSettingsDebounced(); renderUI(); return; 
@@ -325,6 +328,13 @@ function handleTimeProgression(text) {
         const previousDate = new Date(data.lastRpDate);
         const daysPassed = Math.floor((currentRpDate - previousDate) / (1000 * 60 * 60 * 24));
         if (daysPassed > 0) {
+            // Если ИИ прислал дату ПОСЛЕ твоего таймскипа — просто синхронизируем календарь без повторной накрутки цикла
+            if (isAiMessage && userInitiatedTimeSkip) {
+                data.lastRpDate = currentRpDateStr;
+                saveSettingsDebounced(); renderUI();
+                return;
+            }
+
             advanceBodyTime(daysPassed);
             checkPregnancyComplications(data);
             if (settings.isNotificationsEnabled) {
@@ -985,7 +995,11 @@ jQuery(async () => {
         if (!chat || !chat[messageIndex]) return;
         const text = chat[messageIndex].mes; if (!text) return;
 
-        handleTimeProgression(text);
+        // Фиксируем, был ли таймскип в сообщении юзера
+        const hasUserSkip = parseRelativeTimeFromText(text) !== null || parseRpDateFromText(text) !== null;
+        userInitiatedTimeSkip = hasUserSkip;
+
+        handleTimeProgression(text, false);
         checkConceptionTrigger(text);
         updatePromptInjection();
     });
@@ -997,8 +1011,11 @@ jQuery(async () => {
         if (!chat || !chat[messageIndex]) return;
         const text = chat[messageIndex].mes; if (!text) return;
 
+        handleTimeProgression(text, true);
         checkConceptionTrigger(text);
         updatePromptInjection();
+
+        userInitiatedTimeSkip = false;
     });
 
     if (event_types.CHAT_CHANGED) {
