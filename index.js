@@ -77,7 +77,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', ovulation: 'Овуляция (Окно зачатия) ✨',
-        follicularLuteal: 'Фолликулярная/Лютеиновая фаза', heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
+        follicular: 'Фолликулярная фаза 🌱', luteal: 'Лютеиновая фаза (ПМС) 🌙', heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
         delayed: 'Задержка цикла ⚠️',
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
@@ -110,7 +110,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         pregnancy: 'Pregnancy 🤰', pregnancyOmega: 'Pregnancy (Omega) 🤰',
         menstruation: 'Menstruation 🩸', ovulation: 'Ovulation (Conception Window) ✨',
-        follicularLuteal: 'Follicular/Luteal Phase', heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
+        follicular: 'Follicular Phase 🌱', luteal: 'Luteal Phase (PMS) 🌙', heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
         delayed: 'Cycle Delayed ⚠️',
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         complicationTitle: '⚠️ Medical Complication:', cureBtn: '💊 Treat / Alleviate Complication',
@@ -175,16 +175,26 @@ function loadSettings() {
 function getBodyPhase() {
     const data = getChatBodyData();
     if (data.postpartumDays > 0) return getText('postpartumPhase');
-    if (data.isPregnant && data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) return getText('follicularLuteal');
-    if (data.isPregnant) return settings.mode === 'realism' ? getText('pregnancy') : getText('pregnancyOmega');
+    
+    if (data.isPregnant) {
+        if (data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) {
+            const day = data.cycleDay;
+            if (day <= settings.periodDuration) return getText('menstruation');
+            if (day < 11) return getText('follicular');
+            if (day <= 16) return getText('ovulation');
+            return getText('luteal');
+        }
+        return settings.mode === 'realism' ? getText('pregnancy') : getText('pregnancyOmega');
+    }
 
     const day = data.cycleDay;
     if (day > settings.cycleLength) return getText('delayed'); 
 
     if (settings.mode === 'realism') {
         if (day <= settings.periodDuration) return getText('menstruation');
+        if (day > settings.periodDuration && day < 11) return getText('follicular');
         if (day >= 11 && day <= 16) return getText('ovulation');
-        return getText('follicularLuteal');
+        return getText('luteal');
     } else {
         if (day >= 12 && day <= 15) return getText('heat');
         return getText('quiescence');
@@ -212,7 +222,9 @@ function updateSymptomsData(data) {
         else phaseKey = 'preg_trimester_3';
     } else {
         if (phase === getText('menstruation')) phaseKey = 'menstruation';
+        else if (phase === getText('follicular')) phaseKey = 'follicular';
         else if (phase === getText('ovulation')) phaseKey = 'ovulation';
+        else if (phase === getText('luteal')) phaseKey = 'luteal';
         else if (phase === getText('heat')) phaseKey = (settings.gender === 'male_omega') ? 'heat_male' : 'heat_female';
     }
 
