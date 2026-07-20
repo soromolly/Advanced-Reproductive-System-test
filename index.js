@@ -405,6 +405,12 @@ function handleTimeProgression(text, isAiMessage = false) {
         if (isAiMessage && userInitiatedTimeSkip) return; 
         advanceBodyTime(relativeDays);
         checkPregnancyComplications(data);
+
+        // Уведомление о таймскипе
+        if (settings.isNotificationsEnabled) {
+            toastr.info(`${getText('toastTimePassed')}${relativeDays}.`);
+        }
+
         saveSettingsDebounced(); renderUI(); return; 
     }
 
@@ -416,7 +422,6 @@ function handleTimeProgression(text, isAiMessage = false) {
         const previousDate = new Date(data.lastRpDate);
         const daysPassed = Math.floor((currentRpDate - previousDate) / (1000 * 60 * 60 * 24));
         if (daysPassed > 0) {
-            // Если ИИ прислал дату ПОСЛЕ твоего таймскипа — просто синхронизируем календарь без повторной накрутки цикла
             if (isAiMessage && userInitiatedTimeSkip) {
                 data.lastRpDate = currentRpDateStr;
                 saveSettingsDebounced(); renderUI();
