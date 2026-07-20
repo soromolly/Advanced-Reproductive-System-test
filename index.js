@@ -317,64 +317,7 @@ function parseRpDateFromText(rawText) {
     return null;
 }
 
-function parseRelativeTimeFromText(rawText) {
-    if (!rawText) return null;
-    
-    // Очистка от джелбрейк-символов
-    const text = rawText.replace(/[\u2800\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
-
-    // Словарь текстовых чисел
-    const wordNumbers = {
-        'один': 1, 'одна': 1, 'одно': 1,
-        'два': 2, 'две': 2, 'пару': 2, 'пара': 2,
-        'три': 3, 'четыре': 4, 'пять': 5,
-        'шесть': 6, 'семь': 7, 'восемь': 8,
-        'девять': 9, 'десять': 10, 'несколько': 3
-    };
-
-    let count = null;
-    let unit = '';
-
-    // А. Поиск фраз с цифрами: "прошло 3 дня", "через 5 месяцев", "спустя 2 недели"
-    const digitRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
-    const digitMatch = text.match(digitRegex);
-
-    if (digitMatch) {
-        count = parseInt(digitMatch[1], 10);
-        unit = digitMatch[2].toLowerCase();
-    } else {
-        // Б. Поиск фраз с числами словами: "через три дня", "спустя пару месяцев"
-        const wordNumKeys = Object.keys(wordNumbers).join('|');
-        const wordNumRegex = new RegExp(`(?:прошл[оаи]|спустя|через|минул[оаи])\\s+(${wordNumKeys})\\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)`, 'i');
-        const wordNumMatch = text.match(wordNumRegex);
-
-        if (wordNumMatch) {
-            count = wordNumbers[wordNumMatch[1].toLowerCase()];
-            unit = wordNumMatch[2].toLowerCase();
-        } else {
-            // В. Поиск фраз без явных цифр: "прошла неделя", "прошел месяц", "через год"
-            const singleRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])\s+(день|неделя|неделю|месяц|год)/i;
-            const singleMatch = text.match(singleRegex);
-
-            if (singleMatch) {
-                count = 1;
-                unit = singleMatch[1].toLowerCase();
-            }
-        }
-    }
-
-    if (!count || !unit) {
-        // Попытка парсинга английских таймскипов
-        const enRegex = /(?:passed|after|later)\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later)/i;
-        const enMatch = text.match(enRegex);
-        if (enMatch) {
-            count = parseInt(enMatch[1] || enMatch[3], 10);
-            unit = (enMatch[2] || enMatch[4]).toLowerCase();
-        } else {
-            return null;
-        }
-    }
-
+function calculateDaysOffset(count, unit) {
     const data = getChatBodyData();
     if (data.lastRpDate) {
         const parts = data.lastRpDate.split('-');
@@ -397,6 +340,83 @@ function parseRelativeTimeFromText(rawText) {
     return count * 365;
 }
 
+function parseRelativeTimeFromText(rawText) {
+    if (!rawText) return null;
+    
+    // Очистка от брайлевских пробелов (джелбрейков) и спецсимволов
+    const text = rawText.replace(/[\u2800\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+
+    // 1. Разговорные и дробные таймскипы ("полгода", "полтора года", "полторы недели")
+    const specialMatch = text.match(/(?:прошл[оаи]|спустя|через|минул[оаи])?\s*(пол-?года|пол\s+года|полтора\s+года|полтора\s+месяца|полторы\s+недели)/i);
+    if (specialMatch) {
+        const phrase = specialMatch[1].toLowerCase().replace('-', ' ').replace(/\s+/g, ' ');
+        if (phrase === 'полгода' || phrase === 'пол года') {
+            return calculateDaysOffset(6, 'месяцев');
+        }
+        if (phrase === 'полтора года') {
+            return calculateDaysOffset(18, 'месяцев');
+        }
+        if (phrase === 'полтора месяца') {
+            return calculateDaysOffset(45, 'дней');
+        }
+        if (phrase === 'полторы недели') {
+            return calculateDaysOffset(10, 'дней');
+        }
+    }
+
+    // Словарь числительных словами
+    const wordNumbers = {
+        'один': 1, 'одна': 1, 'одно': 1,
+        'два': 2, 'две': 2, 'пару': 2, 'пара': 2,
+        'три': 3, 'четыре': 4, 'пять': 5,
+        'шесть': 6, 'семь': 7, 'восемь': 8,
+        'девять': 9, 'десять': 10, 'несколько': 3
+    };
+
+    let count = null;
+    let unit = '';
+
+    // 2. Фразы с цифрами: "прошло 3 дня", "через 6 месяцев", "спустя 2 недели"
+    const digitRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])?\s*(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
+    const digitMatch = text.match(digitRegex);
+
+    if (digitMatch) {
+        count = parseInt(digitMatch[1], 10);
+        unit = digitMatch[2].toLowerCase();
+    } else {
+        // 3. Фразы со словами-числами: "через шесть месяцев", "спустя пару месяцев"
+        const wordNumKeys = Object.keys(wordNumbers).join('|');
+        const wordNumRegex = new RegExp(`(?:прошл[оаи]|спустя|через|минул[оаи])\\s+(${wordNumKeys})\\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)`, 'i');
+        const wordNumMatch = text.match(wordNumRegex);
+
+        if (wordNumMatch) {
+            count = wordNumbers[wordNumMatch[1].toLowerCase()];
+            unit = wordNumMatch[2].toLowerCase();
+        } else {
+            // 4. Одиночные периоды: "прошла неделя", "прошел месяц", "прошел год"
+            const singleRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])\s+(день|неделя|неделю|месяц|год)/i;
+            const singleMatch = text.match(singleRegex);
+
+            if (singleMatch) {
+                count = 1;
+                unit = singleMatch[1].toLowerCase();
+            }
+        }
+    }
+
+    if (!count || !unit) {
+        const enRegex = /(?:passed|after|later)\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later)/i;
+        const enMatch = text.match(enRegex);
+        if (enMatch) {
+            count = parseInt(enMatch[1] || enMatch[3], 10);
+            unit = (enMatch[2] || enMatch[4]).toLowerCase();
+        } else {
+            return null;
+        }
+    }
+
+    return calculateDaysOffset(count, unit);
+}
 function handleTimeProgression(text, isAiMessage = false) {
     const data = getChatBodyData();
     const relativeDays = parseRelativeTimeFromText(text);
