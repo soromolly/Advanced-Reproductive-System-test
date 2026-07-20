@@ -33,11 +33,12 @@ function createDefaultBodyData() {
         pregnancyDays: 0,
         babiesCount: 0,
         babiesGenders: [],
+        deliveredCount: 0, // <--- Добавили счетчик рожденных малышей
         currentSymptoms: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
         activeComplication: null,
         postpartumDays: 0,
-        deliveryMethod: 'none', // Варианты: 'none', 'natural', 'c_section', 'miscarriage'
+        deliveryMethod: 'none',
         childrenList: [],
         contraception: 'none',
         fetalDisease: null 
@@ -600,32 +601,96 @@ function triggerPregnancy(data) {
     }
 }
 
+function checkBirthTrigger(text) {
+    const data = getChatBodyData();
+    if (!data.isPregnant) return;
+
+    const hasNaturalTag = /<!--BIRTH_NATURAL-->/i.test(text);
+    const hasCSectionTag = /<!--BIRTH_CSECTION-->/i.test(text);
+
+    if (hasCSectionTag) {
+        processBirthTrigger('c_section');
+    } else if (hasNaturalTag) {
+        processSingleBabyBirth('natural');
+    }
+}
+
+function processSingleBabyBirth(method = 'natural') {
+    const data = getChatBodyData();
+    if (!data.isPregnant) return;
+
+    if (data.deliveredCount === undefined) data.deliveredCount = 0;
+
+    const currentBabyIndex = data.deliveredCount;
+    const babyGender = data.babiesGenders[currentBabyIndex] || (getLanguage() === 'ru' ? 'Ребенок 👶' : 'Baby 👶');
+
+    data.childrenList.push({
+        id: Date.now() + currentBabyIndex,
+        gender: babyGender
+    });
+
+    data.deliveredCount++;
+
+    if (data.deliveredCount >= data.babiesCount) {
+        data.isPregnant = false;
+        data.pregnancyWeeks = 0;
+        data.pregnancyDays = 0;
+        data.babiesCount = 0;
+        data.babiesGenders = [];
+        data.activeComplication = null;
+        data.deliveredCount = 0;
+        data.postpartumDays = 1;
+        data.deliveryMethod = method;
+
+        if (settings.isNotificationsEnabled) {
+            toastr.success(`👶 Все дети успешно родились! Родился последний ребенок (${babyGender}). Запущен период восстановления.`);
+        }
+    } else {
+        const remaining = data.babiesCount - data.deliveredCount;
+        if (settings.isNotificationsEnabled) {
+            toastr.info(`👶 Родился ребенок #${data.deliveredCount} (${babyGender})! В матке остаётся ещё детей: ${remaining}.`);
+        }
+    }
+
+    updatePromptInjection();
+    saveSettingsDebounced();
+    renderUI();
+}
+
 function processBirthTrigger(method = 'natural') {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
 
-    for (let i = 0; i < data.babiesCount; i++) {
+    if (data.deliveredCount === undefined) data.deliveredCount = 0;
+
+    while (data.deliveredCount < data.babiesCount) {
+        const idx = data.deliveredCount;
         data.childrenList.push({
-            id: Date.now() + i,
-            gender: data.babiesGenders[i]
+            id: Date.now() + idx,
+            gender: data.babiesGenders[idx]
         });
+        data.deliveredCount++;
     }
 
     data.isPregnant = false;
-    data.pregnancyWeeks = 0; data.pregnancyDays = 0; data.babiesCount = 0; data.babiesGenders = []; data.activeComplication = null;
-    data.postpartumDays = 1; 
-    data.deliveryMethod = method; 
+    data.pregnancyWeeks = 0;
+    data.pregnancyDays = 0;
+    data.babiesCount = 0;
+    data.babiesGenders = [];
+    data.activeComplication = null;
+    data.deliveredCount = 0;
+    data.postpartumDays = 1;
+    data.deliveryMethod = method;
 
-    updatePromptInjection(); 
+    updatePromptInjection();
     saveSettingsDebounced();
     renderUI();
-    
+
     const methodText = method === 'c_section' ? 'Кесарево сечение' : 'Естественные роды';
     if (settings.isNotificationsEnabled) {
-        toastr.success(`👶 Роды успешно прошли! Способ: ${methodText}. Статистика беременности сброшена, запущен период восстановления.`);
+        toastr.success(`👶 Роды успешно завершены! Способ: ${methodText}. Запущен период восстановления.`);
     }
 }
-
 function processMiscarriageTrigger() {
     const data = getChatBodyData();
     data.isPregnant = false;
@@ -699,9 +764,27 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
         }
 
+        const delivered = data.deliveredCount || 0;
+        const remaining = data.babiesCount - delivered;
+
+        if (delivered > 0) {
+            prompt += `\n[🚨 MULTIPLE BIRTH IN PROGRESS]: {{user}} is currently IN ACTIVE LABOR delivering multiples!
+- Total headcount: ${data.babiesCount}
+- Already delivered: ${delivered} baby/babies
+- REMAINING IN WOMB: ${remaining} baby/babies
+- Next baby to be born right now gender: ${data.babiesGenders[delivered]}\n`;
+        }
+
+        prompt += `\n🚨 CRITICAL SYSTEM LOG DIRECTIVE FOR {{char}} REGARDING DELIVERY:
+At the absolute end of your response text, you MUST append a hidden HTML comment summary ONLY IF a baby is delivered WITHIN THIS SPECIFIC RESPONSE.
+Choose exactly one that matches the action:
+- If a baby is born naturally in this turn (delivers 1 baby from womb): <!--BIRTH_NATURAL-->
+- If surgical C-section is performed (delivers ALL remaining babies at once): <!--BIRTH_CSECTION-->
+⚠️ STRICTION LIMITATION: Append the tag ONLY when a baby has physically emerged and been born in this turn. Do not append if labor is only progressing without an actual birth.\n`;
+
         if (data.pregnancyWeeks >= maxWeeks) {
             prompt += `\n[🚨 CRITICAL MANDATORY SYSTEM DIRECTIVE FOR {{char}}]:\n`;
-            prompt += `{{user}} has reached full term (${data.pregnancyWeeks} weeks) and the labor/delivery process is starting right now! You MUST completely write and vividly describe the scene of childbirth and the delivery of the babies in full detail. Focus on the emotional and physical intensity of the labor.\n`;
+            prompt += `{{user}} has reached full term (${data.pregnancyWeeks} weeks) and the labor/delivery process is starting right now! You MUST completely write and vividly describe the scene of childbirth and the delivery of the babies in full detail.\n`;
         }
     } else {
         prompt += `Current Cycle Day: ${data.cycleDay}/${settings.cycleLength} | Phase: ${phase}\n`;
