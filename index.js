@@ -997,7 +997,6 @@ jQuery(async () => {
         if (!chat || !chat[messageIndex]) return;
         const text = chat[messageIndex].mes; if (!text) return;
 
-        handleTimeProgression(text);
         checkConceptionTrigger(text);
         updatePromptInjection();
     });
