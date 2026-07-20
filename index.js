@@ -1087,7 +1087,7 @@ function renderUI() {
             const chatId = getCurrentChatId();
             settings.chatPregnancyData[chatId] = createDefaultBodyData();
             saveSettingsDebounced(); renderUI(); updatePromptInjection(); 
-            if (settings.isNotificationsEnabled) toastr.warning(getText('warningResetAll'));
+            if (settings.isNotificationsEnabled) toastr.warning(getText('toastResetAll'));
         }
     });
 }
