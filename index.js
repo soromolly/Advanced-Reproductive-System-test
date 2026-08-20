@@ -33,12 +33,11 @@ function createDefaultBodyData() {
         pregnancyDays: 0,
         babiesCount: 0,
         babiesGenders: [],
-        deliveredCount: 0, // <--- Добавили счетчик рожденных малышей
         currentSymptoms: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
         activeComplication: null,
         postpartumDays: 0,
-        deliveryMethod: 'none',
+        deliveryMethod: 'none', // Варианты: 'none', 'natural', 'c_section', 'miscarriage'
         childrenList: [],
         contraception: 'none',
         fetalDisease: null 
@@ -47,18 +46,14 @@ function createDefaultBodyData() {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
-let userInitiatedTimeSkip = false;
+let pendingUserTimeskipDays = 0; // Блокировка эхо-перемотки от ИИ
 
 const MONTHS = {
     'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
     'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11,
-    'январь': 0, 'февраль': 1, 'март': 2, 'апрель': 3, 'май': 4, 'июнь': 5,
-    'июль': 6, 'август': 7, 'сентябрь': 8, 'октябрь': 9, 'ноябрь': 10, 'декабрь': 11,
-    'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'июн': 5,
-    'июл': 6, 'авг': 7, 'сен': 8, 'окт': 9, 'ноя': 10, 'дек': 11,
     'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
     'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11,
-    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
 };
 
 const TRANSLATIONS = {
@@ -83,7 +78,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', ovulation: 'Овуляция (Окно зачатия) ✨',
-        follicular: 'Фолликулярная фаза 🌱', luteal: 'Лютеиновая фаза (ПМС) 🌙', heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
+        follicularLuteal: 'Фолликулярная/Лютеиновая фаза', heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
         delayed: 'Задержка цикла ⚠️',
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
@@ -116,7 +111,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         pregnancy: 'Pregnancy 🤰', pregnancyOmega: 'Pregnancy (Omega) 🤰',
         menstruation: 'Menstruation 🩸', ovulation: 'Ovulation (Conception Window) ✨',
-        follicular: 'Follicular Phase 🌱', luteal: 'Luteal Phase (PMS) 🌙', heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
+        follicularLuteal: 'Follicular/Luteal Phase', heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
         delayed: 'Cycle Delayed ⚠️',
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         complicationTitle: '⚠️ Medical Complication:', cureBtn: '💊 Treat / Alleviate Complication',
@@ -181,26 +176,16 @@ function loadSettings() {
 function getBodyPhase() {
     const data = getChatBodyData();
     if (data.postpartumDays > 0) return getText('postpartumPhase');
-    
-    if (data.isPregnant) {
-        if (data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) {
-            const day = data.cycleDay;
-            if (day <= settings.periodDuration) return getText('menstruation');
-            if (day < 11) return getText('follicular');
-            if (day <= 16) return getText('ovulation');
-            return getText('luteal');
-        }
-        return settings.mode === 'realism' ? getText('pregnancy') : getText('pregnancyOmega');
-    }
+    if (data.isPregnant && data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) return getText('follicularLuteal');
+    if (data.isPregnant) return settings.mode === 'realism' ? getText('pregnancy') : getText('pregnancyOmega');
 
     const day = data.cycleDay;
     if (day > settings.cycleLength) return getText('delayed'); 
 
     if (settings.mode === 'realism') {
         if (day <= settings.periodDuration) return getText('menstruation');
-        if (day > settings.periodDuration && day < 11) return getText('follicular');
         if (day >= 11 && day <= 16) return getText('ovulation');
-        return getText('luteal');
+        return getText('follicularLuteal');
     } else {
         if (day >= 12 && day <= 15) return getText('heat');
         return getText('quiescence');
@@ -228,9 +213,7 @@ function updateSymptomsData(data) {
         else phaseKey = 'preg_trimester_3';
     } else {
         if (phase === getText('menstruation')) phaseKey = 'menstruation';
-        else if (phase === getText('follicular')) phaseKey = 'follicular';
         else if (phase === getText('ovulation')) phaseKey = 'ovulation';
-        else if (phase === getText('luteal')) phaseKey = 'luteal';
         else if (phase === getText('heat')) phaseKey = (settings.gender === 'male_omega') ? 'heat_male' : 'heat_female';
     }
 
@@ -261,204 +244,158 @@ function checkPregnancyComplications(data) {
     }
 }
 
-function parseRpDateFromText(rawText) {
-    if (!rawText) return null;
-    
-    // Очистка от брайлевских пробелов (джелбрейков) и спецсимволов
-    const text = rawText.replace(/[\u2800\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+// Функции времени без часовых поясов
+function dateToDays(year, month, day) {
+    return Math.floor(Date.UTC(year, month, day) / 86400000);
+}
 
-    // 1. Формат ГГГГ/ММ/ДД, ГГГГ.ММ.ДД, ГГГГ-ММ-ДД (например: 2026/07/20, 1453-05-15)
-    const isoRegex = /(\d{4})[\.\/\-](\d{1,2})[\.\/\-](\d{1,2})/;
-    const isoMatch = text.match(isoRegex);
-    if (isoMatch) {
-        const year = parseInt(isoMatch[1], 10);
-        const month = parseInt(isoMatch[2], 10) - 1;
-        const day = parseInt(isoMatch[3], 10);
-        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-            return new Date(Date.UTC(year, month, day));
-        }
-    }
+function daysToDateString(days) {
+    const d = new Date(days * 86400000);
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
-    // 2. Формат ДД/ММ/ГГГГ, ДД.ММ.ГГГГ, ДД-ММ-ГГГГ (например: 20.07.2026)
-    const dmyRegex = /(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})/;
-    const dmyMatch = text.match(dmyRegex);
-    if (dmyMatch) {
-        const day = parseInt(dmyMatch[1], 10);
-        const month = parseInt(dmyMatch[2], 10) - 1;
-        const year = parseInt(dmyMatch[3], 10);
-        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-            return new Date(Date.UTC(year, month, day));
-        }
-    }
-
-    // 3. Текстовый формат RU с окончаниями: "20-го июля 2026", "15-е мая 1453", "20 июля 2026"
-    const textRuRegex = /(\d{1,2})(?:-(?:го|е|я|й|го|ое|ее))?\s+([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{4})/i;
-    const textRuMatch = text.match(textRuRegex);
-    if (textRuMatch) {
-        const day = parseInt(textRuMatch[1], 10);
-        const monthStr = textRuMatch[2].toLowerCase();
-        const year = parseInt(textRuMatch[3], 10);
+function parseRpDateFromText(text) {
+    if (!text) return null;
+    const textRegex = /(\d{1,2})\s+([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,4})/i;
+    const textMatch = text.match(textRegex);
+    if (textMatch) {
+        const day = parseInt(textMatch[1], 10);
+        const monthStr = textMatch[2].toLowerCase();
+        const year = parseInt(textMatch[3], 10);
         if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
-            return new Date(Date.UTC(year, MONTHS[monthStr], day));
+            return { year, month: MONTHS[monthStr], day };
         }
     }
-
-    // 4. Текстовый формат EN: "July 20th, 2026", "July 20, 2026"
-    const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:st|nd|rd|th)?\,?\s+(\d{4})/i;
-    const mdyMatch = text.match(mdyTextRegex);
-    if (mdyMatch) {
-        const monthStr = mdyMatch[1].toLowerCase();
-        const day = parseInt(mdyMatch[2], 10);
-        const year = parseInt(mdyMatch[3], 10);
-        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
-            return new Date(Date.UTC(year, MONTHS[monthStr], day));
+    const numRegex = /(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{1,4})/;
+    const numMatch = text.match(numRegex);
+    if (numMatch) {
+        const day = parseInt(numMatch[1], 10);
+        const month = parseInt(numMatch[2], 10) - 1;
+        const year = parseInt(numMatch[3], 10);
+        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+            return { year, month, day };
         }
     }
-
     return null;
 }
 
-function calculateDaysOffset(count, unit) {
-    const data = getChatBodyData();
-    if (data.lastRpDate) {
-        const parts = data.lastRpDate.split('-');
-        const futureDate = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
-        const baseDate = new Date(futureDate.getTime());
+function parseRelativeDaysFromText(text) {
+    if (!text) return 0;
+    const ruRegex = /прошло\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
+    const ruMatch = text.match(ruRegex);
+    const enRegex = /(?:passed\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later))/i;
+    const enMatch = text.match(enRegex);
 
-        if (unit.startsWith('дн') || unit.startsWith('day')) futureDate.setUTCDate(futureDate.getUTCDate() + count);
-        else if (unit.startsWith('нед') || unit.startsWith('week')) futureDate.setUTCDate(futureDate.getUTCDate() + (count * 7));
-        else if (unit.startsWith('мес') || unit.startsWith('month')) futureDate.setUTCMonth(futureDate.getUTCMonth() + count);
-        else if (unit.startsWith('ле') || unit.startsWith('год') || unit.startsWith('year')) futureDate.setUTCFullYear(futureDate.getUTCFullYear() + count);
-
-        const totalDays = Math.floor((futureDate - baseDate) / (1000 * 60 * 60 * 24));
-        data.lastRpDate = futureDate.toISOString().split('T')[0];
-        return totalDays;
+    let count = 0, unit = '';
+    if (ruMatch) { 
+        count = parseInt(ruMatch[1], 10); 
+        unit = ruMatch[2].toLowerCase(); 
+    } else if (enMatch) { 
+        count = parseInt(enMatch[1] || enMatch[3], 10); 
+        unit = (enMatch[2] || enMatch[4]).toLowerCase(); 
+    } else {
+        return 0;
     }
 
     if (unit.startsWith('дн') || unit.startsWith('day')) return count;
     if (unit.startsWith('нед') || unit.startsWith('week')) return count * 7;
     if (unit.startsWith('мес') || unit.startsWith('month')) return count * 30;
-    return count * 365;
+    if (unit.startsWith('ле') || unit.startsWith('год') || unit.startsWith('year')) return count * 365;
+    return 0;
 }
 
-function parseRelativeTimeFromText(rawText) {
-    if (!rawText) return null;
-    
-    // Очистка от брайлевских пробелов (джелбрейков) и спецсимволов
-    const text = rawText.replace(/[\u2800\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
-
-    // 1. Разговорные и дробные таймскипы ("полгода", "полтора года", "полторы недели")
-    const specialMatch = text.match(/(?:прошл[оаи]|спустя|через|минул[оаи])?\s*(пол-?года|пол\s+года|полтора\s+года|полтора\s+месяца|полторы\s+недели)/i);
-    if (specialMatch) {
-        const phrase = specialMatch[1].toLowerCase().replace('-', ' ').replace(/\s+/g, ' ');
-        if (phrase === 'полгода' || phrase === 'пол года') {
-            return calculateDaysOffset(6, 'месяцев');
-        }
-        if (phrase === 'полтора года') {
-            return calculateDaysOffset(18, 'месяцев');
-        }
-        if (phrase === 'полтора месяца') {
-            return calculateDaysOffset(45, 'дней');
-        }
-        if (phrase === 'полторы недели') {
-            return calculateDaysOffset(10, 'дней');
-        }
-    }
-
-    // Словарь числительных словами
-    const wordNumbers = {
-        'один': 1, 'одна': 1, 'одно': 1,
-        'два': 2, 'две': 2, 'пару': 2, 'пара': 2,
-        'три': 3, 'четыре': 4, 'пять': 5,
-        'шесть': 6, 'семь': 7, 'восемь': 8,
-        'девять': 9, 'десять': 10, 'несколько': 3
-    };
-
-    let count = null;
-    let unit = '';
-
-    // 2. Фразы с цифрами: "прошло 3 дня", "через 6 месяцев", "спустя 2 недели"
-    const digitRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])?\s*(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
-    const digitMatch = text.match(digitRegex);
-
-    if (digitMatch) {
-        count = parseInt(digitMatch[1], 10);
-        unit = digitMatch[2].toLowerCase();
-    } else {
-        // 3. Фразы со словами-числами: "через шесть месяцев", "спустя пару месяцев"
-        const wordNumKeys = Object.keys(wordNumbers).join('|');
-        const wordNumRegex = new RegExp(`(?:прошл[оаи]|спустя|через|минул[оаи])\\s+(${wordNumKeys})\\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)`, 'i');
-        const wordNumMatch = text.match(wordNumRegex);
-
-        if (wordNumMatch) {
-            count = wordNumbers[wordNumMatch[1].toLowerCase()];
-            unit = wordNumMatch[2].toLowerCase();
-        } else {
-            // 4. Одиночные периоды: "прошла неделя", "прошел месяц", "прошел год"
-            const singleRegex = /(?:прошл[оаи]|спустя|через|минул[оаи])\s+(день|неделя|неделю|месяц|год)/i;
-            const singleMatch = text.match(singleRegex);
-
-            if (singleMatch) {
-                count = 1;
-                unit = singleMatch[1].toLowerCase();
-            }
-        }
-    }
-
-    if (!count || !unit) {
-        const enRegex = /(?:passed|after|later)\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later)/i;
-        const enMatch = text.match(enRegex);
-        if (enMatch) {
-            count = parseInt(enMatch[1] || enMatch[3], 10);
-            unit = (enMatch[2] || enMatch[4]).toLowerCase();
-        } else {
-            return null;
-        }
-    }
-
-    return calculateDaysOffset(count, unit);
-}
-function handleTimeProgression(text, isAiMessage = false) {
+function handleUserMessageTime(text) {
     const data = getChatBodyData();
-    const relativeDays = parseRelativeTimeFromText(text);
-    
-    if (relativeDays !== null && relativeDays > 0) {
-        if (isAiMessage && userInitiatedTimeSkip) return; 
+    const relativeDays = parseRelativeDaysFromText(text);
+
+    if (relativeDays > 0) {
+        pendingUserTimeskipDays = relativeDays;
         advanceBodyTime(relativeDays);
         checkPregnancyComplications(data);
 
-        // Уведомление о таймскипе от юзера/текста
-        if (settings.isNotificationsEnabled) {
-            toastr.info(`${getText('toastTimePassed')}${relativeDays}.`);
+        if (data.lastRpDate) {
+            const parts = data.lastRpDate.split('-').map(Number);
+            const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+            data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
         }
 
-        saveSettingsDebounced(); renderUI(); return; 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        return; 
     }
 
-    const currentRpDate = parseRpDateFromText(text);
-    if (!currentRpDate) return;
-    const currentRpDateStr = currentRpDate.toISOString().split('T')[0];
+    const parsedDate = parseRpDateFromText(text);
+    if (parsedDate) {
+        const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
+        const newDateStr = daysToDateString(newTotalDays);
 
-    if (data.lastRpDate && data.lastRpDate !== currentRpDateStr) {
-        const previousDate = new Date(data.lastRpDate);
-        const daysPassed = Math.floor((currentRpDate - previousDate) / (1000 * 60 * 60 * 24));
-        if (daysPassed > 0) {
-            // Если ИИ прислал дату ПОСЛЕ твоего таймскипа — просто синхронизируем календарь без повторной накрутки цикла
-            if (isAiMessage && userInitiatedTimeSkip) {
-                data.lastRpDate = currentRpDateStr;
-                saveSettingsDebounced(); renderUI();
-                return;
-            }
-
-            advanceBodyTime(daysPassed);
-            checkPregnancyComplications(data);
-            if (settings.isNotificationsEnabled) {
-                toastr.info(`${getText('toastTimePassed')}${daysPassed}.`);
+        if (data.lastRpDate && data.lastRpDate !== newDateStr) {
+            const parts = data.lastRpDate.split('-').map(Number);
+            const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+            const diff = newTotalDays - prevTotalDays;
+            if (diff > 0) {
+                advanceBodyTime(diff);
+                checkPregnancyComplications(data);
             }
         }
+        data.lastRpDate = newDateStr;
+        saveSettingsDebounced(); 
+        renderUI();
     }
-    data.lastRpDate = currentRpDateStr;
-    saveSettingsDebounced(); renderUI();
+}
+
+function handleAiMessageTime(text) {
+    const data = getChatBodyData();
+
+    if (pendingUserTimeskipDays > 0) {
+        pendingUserTimeskipDays = 0;
+        const parsedDate = parseRpDateFromText(text);
+        if (parsedDate) {
+            data.lastRpDate = daysToDateString(dateToDays(parsedDate.year, parsedDate.month, parsedDate.day));
+            saveSettingsDebounced();
+            renderUI();
+        }
+        return;
+    }
+
+    const relativeDays = parseRelativeDaysFromText(text);
+    if (relativeDays > 0) {
+        advanceBodyTime(relativeDays);
+        checkPregnancyComplications(data);
+        if (data.lastRpDate) {
+            const parts = data.lastRpDate.split('-').map(Number);
+            const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+            data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
+        }
+        saveSettingsDebounced(); 
+        renderUI(); 
+        return;
+    }
+
+    const parsedDate = parseRpDateFromText(text);
+    if (parsedDate) {
+        const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
+        const newDateStr = daysToDateString(newTotalDays);
+
+        if (data.lastRpDate && data.lastRpDate !== newDateStr) {
+            const parts = data.lastRpDate.split('-').map(Number);
+            const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+            const diff = newTotalDays - prevTotalDays;
+            if (diff > 0) {
+                advanceBodyTime(diff);
+                checkPregnancyComplications(data);
+                if (settings.isNotificationsEnabled) {
+                    toastr.info(`${getText('toastTimePassed')}${diff}.`);
+                }
+            }
+        }
+        data.lastRpDate = newDateStr;
+        saveSettingsDebounced(); 
+        renderUI();
+    }
 }
 
 function advanceBodyTime(days) {
@@ -607,96 +544,32 @@ function triggerPregnancy(data) {
     }
 }
 
-function checkBirthTrigger(text) {
-    const data = getChatBodyData();
-    if (!data.isPregnant) return;
-
-    const hasNaturalTag = /<!--BIRTH_NATURAL-->/i.test(text);
-    const hasCSectionTag = /<!--BIRTH_CSECTION-->/i.test(text);
-
-    if (hasCSectionTag) {
-        processBirthTrigger('c_section');
-    } else if (hasNaturalTag) {
-        processSingleBabyBirth('natural');
-    }
-}
-
-function processSingleBabyBirth(method = 'natural') {
-    const data = getChatBodyData();
-    if (!data.isPregnant) return;
-
-    if (data.deliveredCount === undefined) data.deliveredCount = 0;
-
-    const currentBabyIndex = data.deliveredCount;
-    const babyGender = data.babiesGenders[currentBabyIndex] || (getLanguage() === 'ru' ? 'Ребенок 👶' : 'Baby 👶');
-
-    data.childrenList.push({
-        id: Date.now() + currentBabyIndex,
-        gender: babyGender
-    });
-
-    data.deliveredCount++;
-
-    if (data.deliveredCount >= data.babiesCount) {
-        data.isPregnant = false;
-        data.pregnancyWeeks = 0;
-        data.pregnancyDays = 0;
-        data.babiesCount = 0;
-        data.babiesGenders = [];
-        data.activeComplication = null;
-        data.deliveredCount = 0;
-        data.postpartumDays = 1;
-        data.deliveryMethod = method;
-
-        if (settings.isNotificationsEnabled) {
-            toastr.success(`👶 Все дети успешно родились! Родился последний ребенок (${babyGender}). Запущен период восстановления.`);
-        }
-    } else {
-        const remaining = data.babiesCount - data.deliveredCount;
-        if (settings.isNotificationsEnabled) {
-            toastr.info(`👶 Родился ребенок #${data.deliveredCount} (${babyGender})! В матке остаётся ещё детей: ${remaining}.`);
-        }
-    }
-
-    updatePromptInjection();
-    saveSettingsDebounced();
-    renderUI();
-}
-
 function processBirthTrigger(method = 'natural') {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
 
-    if (data.deliveredCount === undefined) data.deliveredCount = 0;
-
-    while (data.deliveredCount < data.babiesCount) {
-        const idx = data.deliveredCount;
+    for (let i = 0; i < data.babiesCount; i++) {
         data.childrenList.push({
-            id: Date.now() + idx,
-            gender: data.babiesGenders[idx]
+            id: Date.now() + i,
+            gender: data.babiesGenders[i]
         });
-        data.deliveredCount++;
     }
 
     data.isPregnant = false;
-    data.pregnancyWeeks = 0;
-    data.pregnancyDays = 0;
-    data.babiesCount = 0;
-    data.babiesGenders = [];
-    data.activeComplication = null;
-    data.deliveredCount = 0;
-    data.postpartumDays = 1;
-    data.deliveryMethod = method;
+    data.pregnancyWeeks = 0; data.pregnancyDays = 0; data.babiesCount = 0; data.babiesGenders = []; data.activeComplication = null;
+    data.postpartumDays = 1; 
+    data.deliveryMethod = method; 
 
-    updatePromptInjection();
+    updatePromptInjection(); 
     saveSettingsDebounced();
     renderUI();
-
+    
     const methodText = method === 'c_section' ? 'Кесарево сечение' : 'Естественные роды';
     if (settings.isNotificationsEnabled) {
-        toastr.success(`👶 Роды успешно завершены! Способ: ${methodText}. Запущен период восстановления.`);
+        toastr.success(`👶 Роды успешно прошли! Способ: ${methodText}. Статистика беременности сброшена, запущен период восстановления.`);
     }
 }
+
 function processMiscarriageTrigger() {
     const data = getChatBodyData();
     data.isPregnant = false;
@@ -770,27 +643,9 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
         }
 
-        const delivered = data.deliveredCount || 0;
-        const remaining = data.babiesCount - delivered;
-
-        if (delivered > 0) {
-            prompt += `\n[🚨 MULTIPLE BIRTH IN PROGRESS]: {{user}} is currently IN ACTIVE LABOR delivering multiples!
-- Total headcount: ${data.babiesCount}
-- Already delivered: ${delivered} baby/babies
-- REMAINING IN WOMB: ${remaining} baby/babies
-- Next baby to be born right now gender: ${data.babiesGenders[delivered]}\n`;
-        }
-
-        prompt += `\n🚨 CRITICAL SYSTEM LOG DIRECTIVE FOR {{char}} REGARDING DELIVERY:
-At the absolute end of your response text, you MUST append a hidden HTML comment summary ONLY IF a baby is delivered WITHIN THIS SPECIFIC RESPONSE.
-Choose exactly one that matches the action:
-- If a baby is born naturally in this turn (delivers 1 baby from womb): <!--BIRTH_NATURAL-->
-- If surgical C-section is performed (delivers ALL remaining babies at once): <!--BIRTH_CSECTION-->
-⚠️ STRICTION LIMITATION: Append the tag ONLY when a baby has physically emerged and been born in this turn. Do not append if labor is only progressing without an actual birth.\n`;
-
         if (data.pregnancyWeeks >= maxWeeks) {
             prompt += `\n[🚨 CRITICAL MANDATORY SYSTEM DIRECTIVE FOR {{char}}]:\n`;
-            prompt += `{{user}} has reached full term (${data.pregnancyWeeks} weeks) and the labor/delivery process is starting right now! You MUST completely write and vividly describe the scene of childbirth and the delivery of the babies in full detail.\n`;
+            prompt += `{{user}} has reached full term (${data.pregnancyWeeks} weeks) and the labor/delivery process is starting right now! You MUST completely write and vividly describe the scene of childbirth and the delivery of the babies in full detail. Focus on the emotional and physical intensity of the labor.\n`;
         }
     } else {
         prompt += `Current Cycle Day: ${data.cycleDay}/${settings.cycleLength} | Phase: ${phase}\n`;
@@ -816,7 +671,10 @@ function renderUI() {
     checkPregnancyComplications(data);
 
     let displayDate = getText('waitingDate');
-    if (data.lastRpDate) { const parts = data.lastRpDate.split('-'); displayDate = `${parts[2]}.${parts[1]}.${parts[0]}`; }
+    if (data.lastRpDate) { 
+        const parts = data.lastRpDate.split('-'); 
+        displayDate = `${parts[2]}.${parts[1]}.${parts[0]}`; 
+    }
 
     let symptomsHtml = '';
     if (data.currentSymptoms?.length > 0) {
@@ -853,10 +711,10 @@ function renderUI() {
         if (data.lastRpDate) {
             const maxWeeks = settings.maxPregnancyWeeks || (settings.mode === 'omegaverse' ? 36 : 40);
             const daysRemaining = (maxWeeks * 7) - ((data.pregnancyWeeks * 7) + data.pregnancyDays);
-            const parts = data.lastRpDate.split('-');
-            const eddDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
-            eddDate.setUTCDate(eddDate.getUTCDate() + daysRemaining);
-            const eddParts = eddDate.toISOString().split('T')[0].split('-');
+            const parts = data.lastRpDate.split('-').map(Number);
+            const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+            const eddDateStr = daysToDateString(currentTotalDays + daysRemaining);
+            const eddParts = eddDateStr.split('-');
             eddHtml = `<div style="margin-bottom: 4px;"><strong>${getText('eddLabel')}</strong> <span style="color: #f472b6; font-weight: bold;">${eddParts[2]}.${eddParts[1]}.${eddParts[0]}</span></div>`;
         }
     }
@@ -1113,7 +971,10 @@ function renderUI() {
             bodyData.cycleDay = parseInt($('#repro-input-day').val()) || 1; 
         }
 
-        bodyData.currentSymptoms = []; saveSettingsDebounced(); renderUI(); updatePromptInjection(); 
+        bodyData.currentSymptoms = []; 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
         if (settings.isNotificationsEnabled) toastr.success(getText('toastSaved'));
     });
 
@@ -1125,49 +986,89 @@ function renderUI() {
     $('#repro-cure-complication').off('click').on('click', function() {
         if (data.activeComplication) {
             if (settings.isNotificationsEnabled) toastr.success(`Успешно купировано: ${data.activeComplication.name}`);
-            data.activeComplication = null; saveSettingsDebounced(); renderUI(); updatePromptInjection();
+            data.activeComplication = null; 
+            saveSettingsDebounced(); 
+            renderUI(); 
+            updatePromptInjection();
         }
     });
 
     $('.repro-custom-btn-toggle').off('click').on('click', function() {
-        isMenuCollapsed = !isMenuCollapsed; $('#repro-content-wrapper').slideToggle(150);
+        isMenuCollapsed = !isMenuCollapsed; 
+        $('#repro-content-wrapper').slideToggle(150);
         const arrow = $('#repro-toggle-arrow');
-        if (isMenuCollapsed) { arrow.removeClass('fa-chevron-up').addClass('fa-chevron-down'); $('.repro-custom-btn-toggle').css('border-radius', '10px'); }
-        else { arrow.removeClass('fa-chevron-down').addClass('fa-chevron-up'); $('.repro-custom-btn-toggle').css('border-radius', '10px 10px 0 0'); }
+        if (isMenuCollapsed) { 
+            arrow.removeClass('fa-chevron-up').addClass('fa-chevron-down'); 
+            $('.repro-custom-btn-toggle').css('border-radius', '10px'); 
+        } else { 
+            arrow.removeClass('fa-chevron-down').addClass('fa-chevron-up'); 
+            $('.repro-custom-btn-toggle').css('border-radius', '10px 10px 0 0'); 
+        }
     });
 
-    $('#repro-mode').on('change', function() { settings.mode = $(this).val(); getChatBodyData().currentSymptoms = []; saveSettingsDebounced(); renderUI(); updatePromptInjection(); });
-    $('#repro-gender').on('change', function() { settings.gender = $(this).val(); saveSettingsDebounced(); renderUI(); updatePromptInjection(); });
-    $('#repro-awareness').on('change', function() { settings.aiAwareness = $(this).val(); saveSettingsDebounced(); renderUI(); updatePromptInjection(); });
+    $('#repro-mode').on('change', function() { 
+        settings.mode = $(this).val(); 
+        getChatBodyData().currentSymptoms = []; 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
+    });
+    $('#repro-gender').on('change', function() { 
+        settings.gender = $(this).val(); 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
+    });
+    $('#repro-awareness').on('change', function() { 
+        settings.aiAwareness = $(this).val(); 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
+    });
 
     $('#repro-btn-manual-preg').on('click', function() {
         const bodyData = getChatBodyData();
         const weeks = parseInt($('#repro-manual-weeks').val()) || 0;
         const count = parseInt($('#repro-manual-count').val()) || 1;
 
-        bodyData.isPregnant = true; bodyData.pregnancyWeeks = weeks; bodyData.pregnancyDays = 0; bodyData.babiesCount = count; bodyData.currentSymptoms = [];
-        bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; bodyData.activeComplication = null;
+        bodyData.isPregnant = true; 
+        bodyData.pregnancyWeeks = weeks; 
+        bodyData.pregnancyDays = 0; 
+        bodyData.babiesCount = count; 
+        bodyData.currentSymptoms = [];
+        bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
+        bodyData.activeComplication = null;
         bodyData.babiesGenders = [];
         bodyData.fetalDisease = null;
-        data.deliveryMethod = 'none';
+        bodyData.deliveryMethod = 'none';
         
         const lang = getLanguage();
         for (let i = 0; i < count; i++) {
             bodyData.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
         }
 
-        saveSettingsDebounced(); renderUI(); updatePromptInjection(); 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
         if (settings.isNotificationsEnabled) toastr.success(`${getText('toastManualPreg')}${weeks}`);
     });
 
     $('#repro-reset-pregnancy-only').on('click', function() {
         const bodyData = getChatBodyData();
-        bodyData.isPregnant = false; bodyData.pregnancyWeeks = 0; bodyData.pregnancyDays = 0; bodyData.babiesCount = 0; bodyData.babiesGenders = []; bodyData.currentSymptoms = [];
-        bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; bodyData.activeComplication = null;
+        bodyData.isPregnant = false; 
+        bodyData.pregnancyWeeks = 0; 
+        bodyData.pregnancyDays = 0; 
+        bodyData.babiesCount = 0; 
+        bodyData.babiesGenders = []; 
+        bodyData.currentSymptoms = [];
+        bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
+        bodyData.activeComplication = null;
         bodyData.deliveryMethod = 'none';
         bodyData.fetalDisease = null;
 
-        saveSettingsDebounced(); renderUI(); updatePromptInjection(); 
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
         if (settings.isNotificationsEnabled) toastr.info(getText('toastResetPreg'));
     });
 
@@ -1175,51 +1076,49 @@ function renderUI() {
         if (confirm("Вы уверены, что хотите полностью очистить данные этого чата?")) {
             const chatId = getCurrentChatId();
             settings.chatPregnancyData[chatId] = createDefaultBodyData();
-            saveSettingsDebounced(); renderUI(); updatePromptInjection(); 
-            if (settings.isNotificationsEnabled) toastr.warning(getText('toastResetAll'));
+            saveSettingsDebounced(); 
+            renderUI(); 
+            updatePromptInjection(); 
+            if (settings.isNotificationsEnabled) toastr.warning(getText('warningResetAll'));
         }
     });
 }
 
 jQuery(async () => {
     loadSettings();
-    if (typeof eventSource?.on === 'function') { eventSource.on('i18n_language_changed', () => { renderUI(); }); }
+    if (typeof eventSource?.on === 'function') { 
+        eventSource.on('i18n_language_changed', () => { renderUI(); }); 
+    }
 
-    // 1. Слушатель твоих сообщений
     eventSource.on(event_types.MESSAGE_SENT, async (messageIndex) => {
         if (!settings.isEnabled) return; 
         const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
         const chat = context ? context.chat : window.chat;
         if (!chat || !chat[messageIndex]) return;
-        const text = chat[messageIndex].mes; if (!text) return;
+        const text = chat[messageIndex].mes; 
+        if (!text) return;
 
-        // Фиксируем, был ли таймскип в сообщении юзера
-        const hasUserSkip = parseRelativeTimeFromText(text) !== null || parseRpDateFromText(text) !== null;
-        userInitiatedTimeSkip = hasUserSkip;
-
-        handleTimeProgression(text, false);
+        handleUserMessageTime(text);
         checkConceptionTrigger(text);
         updatePromptInjection();
     });
 
-    // 2. Слушатель ответов от ИИ
     eventSource.on(event_types.MESSAGE_RECEIVED, async (messageIndex) => {
         if (!settings.isEnabled) return; 
         const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
         const chat = context ? context.chat : window.chat;
         if (!chat || !chat[messageIndex]) return;
-        const text = chat[messageIndex].mes; if (!text) return;
+        const text = chat[messageIndex].mes; 
+        if (!text) return;
 
-        handleTimeProgression(text, true);
+        handleAiMessageTime(text);
         checkConceptionTrigger(text);
-        checkBirthTrigger(text); // <--- Проверка авто-родов от ИИ
         updatePromptInjection();
-
-        userInitiatedTimeSkip = false;
     });
 
     if (event_types.CHAT_CHANGED) {
         eventSource.on(event_types.CHAT_CHANGED, () => { 
+            pendingUserTimeskipDays = 0;
             loadSettings(); 
         });
     }
