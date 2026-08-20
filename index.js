@@ -12,7 +12,7 @@ const EXTENSION_NAME = 'st-advanced-reproductive-system';
 
 const DEFAULT_SETTINGS = {
     isEnabled: true,
-    isNotificationsEnabled: true, // Галочка для всплывающих уведомлений
+    isNotificationsEnabled: true,
     mode: 'realism',       
     gender: 'female',      
     aiAwareness: 'dynamic', 
@@ -37,7 +37,7 @@ function createDefaultBodyData() {
         rolledTrimesters: { 1: false, 2: false, 3: false },
         activeComplication: null,
         postpartumDays: 0,
-        deliveryMethod: 'none', // Варианты: 'none', 'natural', 'c_section', 'miscarriage'
+        deliveryMethod: 'none', // 'none', 'natural', 'c_section', 'miscarriage'
         childrenList: [],
         contraception: 'none',
         fetalDisease: null 
@@ -46,7 +46,7 @@ function createDefaultBodyData() {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
-let pendingUserTimeskipDays = 0; // Блокировка эхо-перемотки от ИИ
+let pendingUserTimeskipDays = 0; // Флаг для предотвращения повторной перемотки ответа бота
 
 const MONTHS = {
     'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
@@ -66,7 +66,7 @@ const TRANSLATIONS = {
         termInRp: 'Срок в RP:', weeksShort: 'нед.', daysShort: 'дн.',
         wombMap: 'Карта плода:', babiesCount: 'Детей:', babiesSex: 'Пол:',
         sync: 'Синхронизация:', waitingDate: 'Ожидание даты',
-        paramsHeader: 'Параметры', rpDateLabel: 'RP Дата:', cycleLengthLabel: 'Цикл (дней):',
+        paramsHeader: 'Параметры', rpDateLabel: 'RP Дата (ДД.ММ.ГГГГ):', cycleLengthLabel: 'Цикл (дней):',
         pregnancyWeekLabel: 'Неделя:', cycleDayLabel: 'День цикла:',
         applyBtn: '▶ Применить изменения', initPregnancyHeader: 'Задать беременность',
         manualWeeks: 'Срок (нед):', manualCount: 'Плодов:', startPregnancyBtn: '🤰 Начать беременность',
@@ -99,7 +99,7 @@ const TRANSLATIONS = {
         termInRp: 'Term in RP:', weeksShort: 'wks', daysShort: 'days',
         wombMap: 'Womb Content:', babiesCount: 'Babies:', babiesSex: 'Sex:',
         sync: 'Synchronized:', waitingDate: 'Waiting for date',
-        paramsHeader: 'Parameters', rpDateLabel: 'RP Date:', cycleLengthLabel: 'Cycle (days):',
+        paramsHeader: 'Parameters', rpDateLabel: 'RP Date (DD.MM.YYYY):', cycleLengthLabel: 'Cycle (days):',
         pregnancyWeekLabel: 'Week:', cycleDayLabel: 'Cycle Day:',
         applyBtn: '▶ Apply Changes', initPregnancyHeader: 'Initialize Pregnancy',
         manualWeeks: 'Term (wks):', manualCount: 'Babies:', startPregnancyBtn: '🤰 Start Pregnancy',
@@ -244,7 +244,7 @@ function checkPregnancyComplications(data) {
     }
 }
 
-// Функции времени без часовых поясов
+// Функции времени без зависимости от часовых поясов и системного календаря
 function dateToDays(year, month, day) {
     return Math.floor(Date.UTC(year, month, day) / 86400000);
 }
@@ -255,6 +255,28 @@ function daysToDateString(days) {
     const month = String(d.getUTCMonth() + 1).padStart(2, '0');
     const day = String(d.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+function normalizeInputDate(val) {
+    if (!val) return null;
+    val = val.trim();
+    // Формат: ДД.ММ.ГГГГ или ДД/ММ/ГГГГ
+    const dmy = val.match(/^(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{1,4})$/);
+    if (dmy) {
+        const d = String(parseInt(dmy[1], 10)).padStart(2, '0');
+        const m = String(parseInt(dmy[2], 10)).padStart(2, '0');
+        const y = String(parseInt(dmy[3], 10)).padStart(4, '0');
+        return `${y}-${m}-${d}`;
+    }
+    // Формат: ГГГГ-ММ-ДД
+    const ymd = val.match(/^(\d{1,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/);
+    if (ymd) {
+        const y = String(parseInt(ymd[1], 10)).padStart(4, '0');
+        const m = String(parseInt(ymd[2], 10)).padStart(2, '0');
+        const d = String(parseInt(ymd[3], 10)).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+    return null;
 }
 
 function parseRpDateFromText(text) {
@@ -671,9 +693,11 @@ function renderUI() {
     checkPregnancyComplications(data);
 
     let displayDate = getText('waitingDate');
+    let inputDateValue = '';
     if (data.lastRpDate) { 
         const parts = data.lastRpDate.split('-'); 
         displayDate = `${parts[2]}.${parts[1]}.${parts[0]}`; 
+        inputDateValue = `${parts[2]}.${parts[1]}.${parts[0]}`;
     }
 
     let symptomsHtml = '';
@@ -866,7 +890,7 @@ function renderUI() {
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <label style="font-size: 0.9em; opacity: 0.85;">${getText('rpDateLabel')}</label>
-                    <input type="date" id="repro-input-rpdate" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%; font-family: inherit; outline: none;" value="${data.lastRpDate || ''}"/>
+                    <input type="text" id="repro-input-rpdate" placeholder="ДД.ММ.ГГГГ" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%; font-family: inherit; outline: none;" value="${inputDateValue}"/>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -962,7 +986,8 @@ function renderUI() {
         settings.maxPregnancyWeeks = parseInt($('#repro-input-maxweeks').val()) || 40;
         
         const manualDateVal = $('#repro-input-rpdate').val();
-        if (manualDateVal) bodyData.lastRpDate = manualDateVal;
+        const normalized = normalizeInputDate(manualDateVal);
+        if (normalized) bodyData.lastRpDate = normalized;
 
         if (bodyData.isPregnant) { 
             bodyData.pregnancyWeeks = parseInt($('#repro-input-weeks').val()) || 0; 
@@ -1079,7 +1104,7 @@ function renderUI() {
             saveSettingsDebounced(); 
             renderUI(); 
             updatePromptInjection(); 
-            if (settings.isNotificationsEnabled) toastr.warning(getText('warningResetAll'));
+            if (settings.isNotificationsEnabled) toastr.warning(getText('toastResetAll'));
         }
     });
 }
