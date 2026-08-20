@@ -49,7 +49,6 @@ let isMenuCollapsed = true;
 let pendingUserTimeskipDays = 0;
 
 const MONTHS = {
-    // Русский язык (все формы и сокращения)
     'января': 0, 'январь': 0, 'янв': 0,
     'февраля': 1, 'февраль': 1, 'фев': 1,
     'марта': 2, 'март': 2, 'мар': 2,
@@ -62,7 +61,6 @@ const MONTHS = {
     'октября': 9, 'октябрь': 9, 'окт': 9,
     'ноября': 10, 'ноябрь': 10, 'ноя': 10,
     'декабря': 11, 'декабрь': 11, 'дек': 11,
-    // Английский язык
     'january': 0, 'jan': 0,
     'february': 1, 'feb': 1,
     'march': 2, 'mar': 2,
@@ -265,7 +263,6 @@ function checkPregnancyComplications(data) {
     }
 }
 
-// Нормализация двухзначного года (98 -> 1998, 24 -> 2024)
 function normalizeYear(yearStr) {
     let y = parseInt(yearStr, 10);
     if (yearStr.length <= 2) {
@@ -289,7 +286,6 @@ function daysToDateString(days) {
 function normalizeInputDate(val) {
     if (!val) return null;
     val = val.trim();
-    // ДД.ММ.ГГГГ или ДД/ММ/ГГ
     const dmy = val.match(/^(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})$/);
     if (dmy) {
         const d = String(parseInt(dmy[1], 10)).padStart(2, '0');
@@ -297,7 +293,6 @@ function normalizeInputDate(val) {
         const y = String(normalizeYear(dmy[3])).padStart(4, '0');
         return `${y}-${m}-${d}`;
     }
-    // ГГГГ-ММ-ДД
     const ymd = val.match(/^(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/);
     if (ymd) {
         const y = String(parseInt(ymd[1], 10)).padStart(4, '0');
@@ -311,7 +306,7 @@ function normalizeInputDate(val) {
 function parseRpDateFromText(text) {
     if (!text) return null;
 
-    // 1. Формат "15 мая 1998", "15-го мая 98", "15th May 1998", "15th of May, 1998"
+    // 1. "15 мая 1998", "15-го мая 98", "15th of May, 1998"
     const dmyTextRegex = /(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/i;
     const dmyTextMatch = text.match(dmyTextRegex);
     if (dmyTextMatch) {
@@ -323,7 +318,7 @@ function parseRpDateFromText(text) {
         }
     }
 
-    // 2. Формат "May 15, 1998", "May 15th, 1998", "Января 3, 1543"
+    // 2. "May 15, 1998", "May 15th, 1998", "Января 3, 1543"
     const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?[,\s]+(\d{2,4})/i;
     const mdyTextMatch = text.match(mdyTextRegex);
     if (mdyTextMatch) {
@@ -335,7 +330,7 @@ function parseRpDateFromText(text) {
         }
     }
 
-    // 3. Формат ISO "1998-05-15", "1543/01/03", "1998.05.15" (год в начале)
+    // 3. ISO "1998-05-15", "1543/01/03"
     const ymdNumRegex = /(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/;
     const ymdNumMatch = text.match(ymdNumRegex);
     if (ymdNumMatch) {
@@ -347,7 +342,7 @@ function parseRpDateFromText(text) {
         }
     }
 
-    // 4. Формат числовой "15.05.1998", "15/05/98", "15-05-2024" (день в начале)
+    // 4. "15.05.1998", "15/05/98", "15-05-2024"
     const dmyNumRegex = /(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})/;
     const dmyNumMatch = text.match(dmyNumRegex);
     if (dmyNumMatch) {
@@ -362,28 +357,70 @@ function parseRpDateFromText(text) {
     return null;
 }
 
+// Расширенный парсер относительного времени со всеми вариациями
 function parseRelativeDaysFromText(text) {
     if (!text) return 0;
-    const ruRegex = /прошло\s+(\d+)\s+(дне[йяа]|недел[ьия]|месяц[аев]|ле[тв]|год[аоу]?)/i;
-    const ruMatch = text.match(ruRegex);
-    const enRegex = /(?:passed\s+(\d+)\s+(day|week|month|year)s?|(\d+)\s+(day|week|month|year)s?\s+(?:passed|later))/i;
-    const enMatch = text.match(enRegex);
+    const lower = text.toLowerCase();
 
-    let count = 0, unit = '';
-    if (ruMatch) { 
-        count = parseInt(ruMatch[1], 10); 
-        unit = ruMatch[2].toLowerCase(); 
-    } else if (enMatch) { 
-        count = parseInt(enMatch[1] || enMatch[3], 10); 
-        unit = (enMatch[2] || enMatch[4]).toLowerCase(); 
-    } else {
-        return 0;
+    // Быстрая проверка на "полгода" / "half a year"
+    if (/(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?пол[\s-]?года|half\s+a\s+year\s+(?:passed|later)|after\s+half\s+a\s+year/i.test(lower)) {
+        return 180;
     }
 
-    if (unit.startsWith('дн') || unit.startsWith('day')) return count;
-    if (unit.startsWith('нед') || unit.startsWith('week')) return count * 7;
-    if (unit.startsWith('мес') || unit.startsWith('month')) return count * 30;
-    if (unit.startsWith('ле') || unit.startsWith('год') || unit.startsWith('year')) return count * 365;
+    const WORD_NUMBERS = {
+        'один': 1, 'одна': 1, 'одно': 1, 'одну': 1, '1': 1,
+        'два': 2, 'две': 2, 'пара': 2, 'пару': 2, '2': 2,
+        'три': 3, 'четыре': 4, 'пять': 5, 'шесть': 6,
+        'семь': 7, 'восемь': 8, 'девять': 9, 'десять': 10,
+        'a': 1, 'an': 1, 'one': 1, 'two': 2, 'couple': 2,
+        'three': 3, 'four': 4, 'five': 5, 'six': 6,
+        'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
+    };
+
+    const parseCount = (rawCount) => {
+        if (!rawCount) return 1;
+        const cleaned = rawCount.trim().toLowerCase();
+        if (/^\d+$/.test(cleaned)) return parseInt(cleaned, 10);
+        if (WORD_NUMBERS[cleaned] !== undefined) return WORD_NUMBERS[cleaned];
+        return 1;
+    };
+
+    const calculateDays = (count, unitStr) => {
+        const u = unitStr.toLowerCase();
+        if (u.startsWith('дн') || u.startsWith('day')) return count;
+        if (u.startsWith('нед') || u.startsWith('week')) return count * 7;
+        if (u.startsWith('мес') || u.startsWith('month')) return count * 30;
+        if (u.startsWith('ле') || u.startsWith('год') || u.startsWith('year') || u.startsWith('yr')) return count * 365;
+        return 0;
+    };
+
+    // 1. Русский шаблон: "прошла неделя", "прошел 1 месяц", "спустя пару дней", "через 3 года"
+    const ruRegex = /(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?(\d+|од[иннаоу]+|дв[ае]|пар[ау]|три|четыре|пять|шесть|семь|восемь|девять|десять)?\s*(дне[йяа]|день|дня|недел[ьиюяе]+|месяц[аев]*|ле[тв]|год[аоу]?)/i;
+    const ruMatch = lower.match(ruRegex);
+    if (ruMatch) {
+        const count = parseCount(ruMatch[1]);
+        const days = calculateDays(count, ruMatch[2]);
+        if (days > 0) return days;
+    }
+
+    // 2. Английский шаблон с постфиксом: "a week passed", "2 months later", "one day passed"
+    const enSuffixRegex = /(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?\s+(?:passed|later)/i;
+    const enSuffixMatch = lower.match(enSuffixRegex);
+    if (enSuffixMatch) {
+        const count = parseCount(enSuffixMatch[1]);
+        const days = calculateDays(count, enSuffixMatch[2]);
+        if (days > 0) return days;
+    }
+
+    // 3. Английский шаблон с префиксом: "after 2 weeks", "in a month", "after a week"
+    const enPrefixRegex = /(?:after|in|past)\s+(?:about\s+)?(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?/i;
+    const enPrefixMatch = lower.match(enPrefixRegex);
+    if (enPrefixMatch) {
+        const count = parseCount(enPrefixMatch[1]);
+        const days = calculateDays(count, enPrefixMatch[2]);
+        if (days > 0) return days;
+    }
+
     return 0;
 }
 
