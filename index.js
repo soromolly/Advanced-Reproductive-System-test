@@ -37,7 +37,7 @@ function createDefaultBodyData() {
         rolledTrimesters: { 1: false, 2: false, 3: false },
         activeComplication: null,
         postpartumDays: 0,
-        deliveryMethod: 'none', // 'none', 'natural', 'c_section', 'miscarriage'
+        deliveryMethod: 'none',
         childrenList: [],
         contraception: 'none',
         fetalDisease: null 
@@ -46,14 +46,35 @@ function createDefaultBodyData() {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
-let pendingUserTimeskipDays = 0; // Флаг для предотвращения повторной перемотки ответа бота
+let pendingUserTimeskipDays = 0;
 
 const MONTHS = {
-    'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
-    'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11,
-    'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
-    'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11,
-    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    // Русский язык (все формы и сокращения)
+    'января': 0, 'январь': 0, 'янв': 0,
+    'февраля': 1, 'февраль': 1, 'фев': 1,
+    'марта': 2, 'март': 2, 'мар': 2,
+    'апреля': 3, 'апрель': 3, 'апр': 3,
+    'мая': 4, 'май': 4,
+    'июня': 5, 'июнь': 5, 'июн': 5,
+    'июля': 6, 'июль': 6, 'июл': 6,
+    'августа': 7, 'август': 7, 'авг': 7,
+    'сентября': 8, 'сентябрь': 8, 'сен': 8, 'сент': 8,
+    'октября': 9, 'октябрь': 9, 'окт': 9,
+    'ноября': 10, 'ноябрь': 10, 'ноя': 10,
+    'декабря': 11, 'декабрь': 11, 'дек': 11,
+    // Английский язык
+    'january': 0, 'jan': 0,
+    'february': 1, 'feb': 1,
+    'march': 2, 'mar': 2,
+    'april': 3, 'apr': 3,
+    'may': 4,
+    'june': 5, 'jun': 5,
+    'july': 6, 'jul': 6,
+    'august': 7, 'aug': 7,
+    'september': 8, 'sep': 8, 'sept': 8,
+    'october': 9, 'oct': 9,
+    'november': 10, 'nov': 10,
+    'december': 11, 'dec': 11
 };
 
 const TRANSLATIONS = {
@@ -244,7 +265,15 @@ function checkPregnancyComplications(data) {
     }
 }
 
-// Функции времени без зависимости от часовых поясов и системного календаря
+// Нормализация двухзначного года (98 -> 1998, 24 -> 2024)
+function normalizeYear(yearStr) {
+    let y = parseInt(yearStr, 10);
+    if (yearStr.length <= 2) {
+        return y <= 40 ? 2000 + y : 1900 + y;
+    }
+    return y;
+}
+
 function dateToDays(year, month, day) {
     return Math.floor(Date.UTC(year, month, day) / 86400000);
 }
@@ -260,16 +289,16 @@ function daysToDateString(days) {
 function normalizeInputDate(val) {
     if (!val) return null;
     val = val.trim();
-    // Формат: ДД.ММ.ГГГГ или ДД/ММ/ГГГГ
-    const dmy = val.match(/^(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{1,4})$/);
+    // ДД.ММ.ГГГГ или ДД/ММ/ГГ
+    const dmy = val.match(/^(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})$/);
     if (dmy) {
         const d = String(parseInt(dmy[1], 10)).padStart(2, '0');
         const m = String(parseInt(dmy[2], 10)).padStart(2, '0');
-        const y = String(parseInt(dmy[3], 10)).padStart(4, '0');
+        const y = String(normalizeYear(dmy[3])).padStart(4, '0');
         return `${y}-${m}-${d}`;
     }
-    // Формат: ГГГГ-ММ-ДД
-    const ymd = val.match(/^(\d{1,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/);
+    // ГГГГ-ММ-ДД
+    const ymd = val.match(/^(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/);
     if (ymd) {
         const y = String(parseInt(ymd[1], 10)).padStart(4, '0');
         const m = String(parseInt(ymd[2], 10)).padStart(2, '0');
@@ -281,26 +310,55 @@ function normalizeInputDate(val) {
 
 function parseRpDateFromText(text) {
     if (!text) return null;
-    const textRegex = /(\d{1,2})\s+([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,4})/i;
-    const textMatch = text.match(textRegex);
-    if (textMatch) {
-        const day = parseInt(textMatch[1], 10);
-        const monthStr = textMatch[2].toLowerCase();
-        const year = parseInt(textMatch[3], 10);
+
+    // 1. Формат "15 мая 1998", "15-го мая 98", "15th May 1998", "15th of May, 1998"
+    const dmyTextRegex = /(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/i;
+    const dmyTextMatch = text.match(dmyTextRegex);
+    if (dmyTextMatch) {
+        const day = parseInt(dmyTextMatch[1], 10);
+        const monthStr = dmyTextMatch[2].toLowerCase();
+        const year = normalizeYear(dmyTextMatch[3]);
         if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
             return { year, month: MONTHS[monthStr], day };
         }
     }
-    const numRegex = /(\d{1,2})[\.\/](\d{1,2})[\.\/](\d{1,4})/;
-    const numMatch = text.match(numRegex);
-    if (numMatch) {
-        const day = parseInt(numMatch[1], 10);
-        const month = parseInt(numMatch[2], 10) - 1;
-        const year = parseInt(numMatch[3], 10);
+
+    // 2. Формат "May 15, 1998", "May 15th, 1998", "Января 3, 1543"
+    const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?[,\s]+(\d{2,4})/i;
+    const mdyTextMatch = text.match(mdyTextRegex);
+    if (mdyTextMatch) {
+        const monthStr = mdyTextMatch[1].toLowerCase();
+        const day = parseInt(mdyTextMatch[2], 10);
+        const year = normalizeYear(mdyTextMatch[3]);
+        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
+            return { year, month: MONTHS[monthStr], day };
+        }
+    }
+
+    // 3. Формат ISO "1998-05-15", "1543/01/03", "1998.05.15" (год в начале)
+    const ymdNumRegex = /(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/;
+    const ymdNumMatch = text.match(ymdNumRegex);
+    if (ymdNumMatch) {
+        const year = parseInt(ymdNumMatch[1], 10);
+        const month = parseInt(ymdNumMatch[2], 10) - 1;
+        const day = parseInt(ymdNumMatch[3], 10);
         if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
             return { year, month, day };
         }
     }
+
+    // 4. Формат числовой "15.05.1998", "15/05/98", "15-05-2024" (день в начале)
+    const dmyNumRegex = /(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})/;
+    const dmyNumMatch = text.match(dmyNumRegex);
+    if (dmyNumMatch) {
+        const day = parseInt(dmyNumMatch[1], 10);
+        const month = parseInt(dmyNumMatch[2], 10) - 1;
+        const year = normalizeYear(dmyNumMatch[3]);
+        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+            return { year, month, day };
+        }
+    }
+
     return null;
 }
 
@@ -394,7 +452,7 @@ function handleAiMessageTime(text) {
         }
         saveSettingsDebounced(); 
         renderUI(); 
-        return;
+        return; 
     }
 
     const parsedDate = parseRpDateFromText(text);
@@ -452,7 +510,6 @@ function advanceBodyTime(days) {
             data.pregnancyWeeks += Math.floor(data.pregnancyDays / 7);
             data.pregnancyDays %= 7;
 
-            // Уведомление об обнаружении патологии на УЗИ-скрининге (20-я неделя)
             if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled) {
                 toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
             }
@@ -552,7 +609,6 @@ function triggerPregnancy(data) {
         data.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
     }
 
-    // Бросок на врожденную патологию плода (~3% шанс)
     data.fetalDisease = null;
     if (settings.isFetalPathologyEnabled) {
         if (Math.random() * 100 < 3) {
@@ -1104,7 +1160,7 @@ function renderUI() {
             saveSettingsDebounced(); 
             renderUI(); 
             updatePromptInjection(); 
-            if (settings.isNotificationsEnabled) toastr.warning(getText('toastResetAll'));
+            if (settings.isNotificationsEnabled) toastr.warning(getText('warningResetAll'));
         }
     });
 }
