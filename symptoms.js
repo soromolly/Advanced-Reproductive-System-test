@@ -284,79 +284,67 @@ export const POSTPARTUM_STAGES = {
 
 // Расширенная база данных осложнений беременности
 export const COMPLICATIONS_POOL = {
-    ru: {
-        1: [
-            { id: "toxicosis_severe", name: "Тяжелый токсикоз", curable: true, desc: "Непрекращающаяся тошнота, рвота от любой пищи, сильная слабость и истощение." },
-            { id: "miscarriage_threat_early", name: "Угроза выкидыша (ранний срок)", curable: true, desc: "Тянущие, спазматические боли внизу живота, мажущие кровянистые выделения. Требуется полный покой." },
-            { id: "anemia_early", name: "Железодефицитная анемия", curable: true, desc: "Сильная бледность, постоянное головокружение, потемнение в глазах при резком подъеме." },
-            { id: "retrochorial_hematoma", name: "Ретрохориальная гематома", curable: true, desc: "Частичная отслойка плодного яйца от стенки матки с образованием кровяного сгустка. Требует строгого постельного режима." },
-            { id: "hyperemesis_gravidarum", name: "Чрезмерная рвота беременных", curable: true, desc: "Тяжелая форма интоксикации, приводящая к сильному обезвоживанию организма, потере веса и ацетону в моче. Необходимы капельницы." },
-            { id: "low_placentation_early", name: "Низкое прикрепление хориона", curable: false, desc: "Будущая плацента формируется слишком близко к внутреннему зеву матки. Противопоказаны любые физические нагрузки и близость." }
-        ],
-        2: [
-            { id: "hypertonus", name: "Гипертонус матки", curable: true, desc: "Живот периодически становится каменным на ощупь, сопровождается ноющей болью в пояснице." },
-            { id: "gestational_diabetes", name: "Гестационный диабет", curable: false, desc: "Постоянная неутолимая жажда, сухость во рту, быстрая утомляемость. Сохраняется до родов." },
-            { id: "polyhydramnios", name: "Многоводие", curable: false, desc: "Размер живота превышает норму для этого срока, ощущение сильного распирания и тяжести." },
-            { id: "istmic_cervical_insufficiency", name: "Истмико-цервикальная недостаточность (ИЦН)", curable: true, desc: "Преждевременное слабое раскрытие шейки матки под весом плода. Требует срочного медицинского наложения швов или установки пессария." },
-            { id: "oligohydramnios", name: "Маловодие", curable: false, desc: "Критический дефицит околоплодных вод. Движения и пинки плода становятся скованными и весьма болезненными для матери." },
-            { id: "rh_conflict", name: "Резус-конфликт плаценты", curable: true, desc: "Иммунологический конфликт между отрицательным резус-фактором матери и положительным резусом плода. Требует инъекции антирезусного иммуноглобулина." }
-        ],
-        3: [
-            { id: "preeclampsia", name: "Преэклампсия (гестоз)", curable: true, desc: "Сильные отеки ног и лица, головная боль, мушки перед глазами. Опасное состояние." },
-            { id: "premature_labor_threat", name: "Угроза преждевременных родов", curable: true, desc: "Регулярные тянущие боли как при месячных, спазмы матки задолго до 40-й недели." },
-            { id: "sciatica", name: "Защемление седалищного нерва", curable: false, desc: "Острая простреливающая боль в ягодицу или ногу при ходьбе из-за давления веса матки." },
-            { id: "symphysitis", name: "Симфизит (расхождение лона)", curable: false, desc: "Сильное воспаление и расхождение лонного сочленения под влиянием гормона релаксина. Рождает резкую «утиную» походку и боль при подъеме ног." },
-            { id: "gestational_pyelonephritis", name: "Гестационный пиелонефрит", curable: true, desc: "Инфекционное воспаление почек из-за застоя мочи, вызванного сильным давлением тяжелой матки на мочеточники. Сопровождается высокой температурой." },
-            { id: "placental_insufficiency", name: "Фетоплацентарная недостаточность", curable: true, desc: "Нарушение маточно-плацентарного кровотока. Малышу временно не хватает кислорода (гипоксия), из-за чего его шевеления становятся хаотичными или затихают." }
-        ]
-    },
-    en: {
-        1: [
-            { id: "toxicosis_severe", name: "Severe Morning Sickness", curable: true, desc: "Persistent nausea and vomiting, severe fatigue and exhaustion." },
-            { id: "miscarriage_threat_early", name: "Threatened Miscarriage (Early)", curable: true, desc: "Lower abdominal cramping, light spotting. Strict bed rest required." },
-            { id: "anemia_early", name: "Iron Deficiency Anemia", curable: true, desc: "Pale skin, dizziness, dark spots in vision upon sudden standing." },
-            { id: "retrochorial_hematoma", name: "Retrochorial Hematoma", curable: true, desc: "Partial detachment of gestational sac with blood clot. Strict rest needed." },
-            { id: "hyperemesis_gravidarum", name: "Hyperemesis Gravidarum", curable: true, desc: "Severe intractable vomiting leading to dehydration and weight loss. Requires IV therapy." },
-            { id: "low_placentation_early", name: "Low-Lying Chorion", curable: false, desc: "Placenta developing too close to internal os. Physical strain and intimacy restricted." }
-        ],
-        2: [
-            { id: "hypertonus", name: "Uterine Hypertonus", curable: true, desc: "Belly tightens into a hard knot, accompanied by lower back aches." },
-            { id: "gestational_diabetes", name: "Gestational Diabetes", curable: false, desc: "Constant unquenchable thirst, dry mouth, rapid fatigue until delivery." },
-            { id: "polyhydramnios", name: "Polyhydramnios (Excess Fluid)", curable: false, desc: "Abdomen larger than expected for gestational age, feeling of heavy distension." },
-            { id: "istmic_cervical_insufficiency", name: "Cervical Insufficiency (ICN)", curable: true, desc: "Premature weak opening of cervix under fetal weight. Requires emergency cerclage/pessary." },
-            { id: "oligohydramnios", name: "Oligohydramnios (Low Fluid)", curable: false, desc: "Critical deficit of amniotic fluid. Fetal kicks become stiff and painful." },
-            { id: "rh_conflict", name: "Rh Factor Incompatibility", curable: true, desc: "Immune conflict between Rh-negative mother and Rh-positive fetus. Requires anti-D immunoglobulin." }
-        ],
-        3: [
-            { id: "preeclampsia", name: "Preeclampsia", curable: true, desc: "Severe swelling of feet and face, high blood pressure, headaches, blurred vision." },
-            { id: "premature_labor_threat", name: "Threatened Preterm Labor", curable: true, desc: "Regular menstrual-like cramps, uterine contractions well before week 40." },
-            { id: "sciatica", name: "Sciatica Nerve Compression", curable: false, desc: "Shooting sharp pain in buttock or leg when walking due to heavy uterine pressure." },
-            { id: "symphysitis", name: "Symphysis Pubis Dysfunction", curable: false, desc: "Painful inflammation and laxity of pubic joint under relaxin. Causes waddling gait." },
-            { id: "gestational_pyelonephritis", name: "Gestational Pyelonephritis", curable: true, desc: "Kidney infection due to urine stagnation from uterine compression. Causes fever and flank pain." },
-            { id: "placental_insufficiency", name: "Placental Insufficiency", curable: true, desc: "Impaired maternal-fetal blood flow. Fetal movements become frantic or quiet down." }
-        ]
-    }
+    ru: [
+        { id: "toxicosis_severe", trimester: 1, name: "Тяжелый токсикоз", curable: true, desc: "Непрекращающаяся тошнота, рвота от любой пищи, сильная слабость и истощение." },
+        { id: "miscarriage_threat_early", trimester: 1, name: "Угроза выкидыша (ранний срок)", curable: true, desc: "Тянущие, спазматические боли внизу живота, мажущие кровянистые выделения. Требуется полный покой." },
+        { id: "anemia_early", trimester: 1, name: "Железодефицитная анемия", curable: true, desc: "Сильная бледность, постоянное головокружение, потемнение в глазах при резком подъеме." },
+        { id: "retrochorial_hematoma", trimester: 1, name: "Ретрохориальная гематома", curable: true, desc: "Частичная отслойка плодного яйца от стенки матки с образованием кровяного сгустка. Требует строгого постельного режима." },
+        { id: "hyperemesis_gravidarum", trimester: 1, name: "Чрезмерная рвота беременных", curable: true, desc: "Тяжелая форма интоксикации, приводящая к сильному обезвоживанию организма, потере веса и ацетону в моче. Необходимы капельницы." },
+        { id: "low_placentation_early", trimester: 1, name: "Низкое прикрепление хориона", curable: false, desc: "Будущая плацента формируется слишком близко к внутреннему зеву матки. Противопоказаны любые физические нагрузки и близость." },
+        { id: "hypertonus", trimester: 2, name: "Гипертонус матки", curable: true, desc: "Живот периодически становится каменным на ощупь, сопровождается ноющей болью в пояснице." },
+        { id: "gestational_diabetes", trimester: 2, name: "Гестационный диабет", curable: false, desc: "Постоянная неутолимая жажда, сухость во рту, быстрая утомляемость. Сохраняется до родов." },
+        { id: "polyhydramnios", trimester: 2, name: "Многоводие", curable: false, desc: "Размер живота превышает норму для этого срока, ощущение сильного распирания и тяжести." },
+        { id: "istmic_cervical_insufficiency", trimester: 2, name: "Истмико-цервикальная недостаточность (ИЦН)", curable: true, desc: "Преждевременное слабое раскрытие шейки матки под весом плода. Требует срочного медицинского наложения швов или установки пессария." },
+        { id: "oligohydramnios", trimester: 2, name: "Маловодие", curable: false, desc: "Критический дефицит околоплодных вод. Движения и пинки плода становятся скованными и весьма болезненными для матери." },
+        { id: "rh_conflict", trimester: 2, name: "Резус-конфликт плаценты", curable: true, desc: "Иммунологический конфликт между отрицательным резус-фактором матери и положительным резусом плода. Требует инъекции антирезусного иммуноглобулина." },
+        { id: "preeclampsia", trimester: 3, name: "Преэклампсия (гестоз)", curable: true, desc: "Сильные отеки ног и лица, головная боль, мушки перед глазами. Опасное состояние." },
+        { id: "premature_labor_threat", trimester: 3, name: "Угроза преждевременных родов", curable: true, desc: "Регулярные тянущие боли как при месячных, спазмы матки задолго до 40-й недели." },
+        { id: "sciatica", trimester: 3, name: "Защемление седалищного нерва", curable: false, desc: "Острая простреливающая боль в ягодицу или ногу при ходьбе из-за давления веса матки." },
+        { id: "symphysitis", trimester: 3, name: "Симфизит (расхождение лона)", curable: false, desc: "Сильное воспаление и расхождение лонного сочленения под влиянием гормона релаксина. Рождает резкую «утиную» походку и боль при подъеме ног." },
+        { id: "gestational_pyelonephritis", trimester: 3, name: "Гестационный пиелонефрит", curable: true, desc: "Инфекционное воспаление почек из-за застоя мочи, вызванного сильным давлением тяжелой матки на мочеточники. Сопровождается высокой температурой." },
+        { id: "placental_insufficiency", trimester: 3, name: "Фетоплацентарная недостаточность", curable: true, desc: "Нарушение маточно-плацентарного кровотока. Малышу временно не хватает кислорода (гипоксия), из-за чего его шевеления становятся хаотичными или затихают." }
+    ],
+    en: [
+        { id: "toxicosis_severe", trimester: 1, name: "Severe Morning Sickness", curable: true, desc: "Persistent nausea and vomiting, severe fatigue and exhaustion." },
+        { id: "miscarriage_threat_early", trimester: 1, name: "Threatened Miscarriage (Early)", curable: true, desc: "Lower abdominal cramping, light spotting. Strict bed rest required." },
+        { id: "anemia_early", trimester: 1, name: "Iron Deficiency Anemia", curable: true, desc: "Pale skin, dizziness, dark spots in vision upon sudden standing." },
+        { id: "retrochorial_hematoma", trimester: 1, name: "Retrochorial Hematoma", curable: true, desc: "Partial detachment of gestational sac with blood clot. Strict rest needed." },
+        { id: "hyperemesis_gravidarum", trimester: 1, name: "Hyperemesis Gravidarum", curable: true, desc: "Severe intractable vomiting leading to dehydration and weight loss. Requires IV therapy." },
+        { id: "low_placentation_early", trimester: 1, name: "Low-Lying Chorion", curable: false, desc: "Placenta developing too close to internal os. Physical strain and intimacy restricted." },
+        { id: "hypertonus", trimester: 2, name: "Uterine Hypertonus", curable: true, desc: "Belly tightens into a hard knot, accompanied by lower back aches." },
+        { id: "gestational_diabetes", trimester: 2, name: "Gestational Diabetes", curable: false, desc: "Constant unquenchable thirst, dry mouth, rapid fatigue until delivery." },
+        { id: "polyhydramnios", trimester: 2, name: "Polyhydramnios (Excess Fluid)", curable: false, desc: "Abdomen larger than expected for gestational age, feeling of heavy distension." },
+        { id: "istmic_cervical_insufficiency", trimester: 2, name: "Cervical Insufficiency (ICN)", curable: true, desc: "Premature weak opening of cervix under fetal weight. Requires emergency cerclage/pessary." },
+        { id: "oligohydramnios", trimester: 2, name: "Oligohydramnios (Low Fluid)", curable: false, desc: "Critical deficit of amniotic fluid. Fetal kicks become stiff and painful." },
+        { id: "rh_conflict", trimester: 2, name: "Rh Factor Incompatibility", curable: true, desc: "Immune conflict between Rh-negative mother and Rh-positive fetus. Requires anti-D immunoglobulin." },
+        { id: "preeclampsia", trimester: 3, name: "Preeclampsia", curable: true, desc: "Severe swelling of feet and face, high blood pressure, headaches, blurred vision." },
+        { id: "premature_labor_threat", trimester: 3, name: "Threatened Preterm Labor", curable: true, desc: "Regular menstrual-like cramps, uterine contractions well before week 40." },
+        { id: "sciatica", trimester: 3, name: "Sciatica Nerve Compression", curable: false, desc: "Shooting sharp pain in buttock or leg when walking due to heavy uterine pressure." },
+        { id: "symphysitis", trimester: 3, name: "Symphysis Pubis Dysfunction", curable: false, desc: "Painful inflammation and laxity of pubic joint under relaxin. Causes waddling gait." },
+        { id: "gestational_pyelonephritis", trimester: 3, name: "Gestational Pyelonephritis", curable: true, desc: "Kidney infection due to urine stagnation from uterine compression. Causes fever and flank pain." },
+        { id: "placental_insufficiency", trimester: 3, name: "Placental Insufficiency", curable: true, desc: "Impaired maternal-fetal blood flow. Fetal movements become frantic or quiet down." }
+    ]
 };
 
 // База врожденных болезней плода
 export const FETAL_DISEASES = {
     ru: [
-        { name: "Врожденный порок сердца", desc: "Анатомический дефект сердечной мышцы или сосудов. Требует квалифицированного контроля и возможного хирургического вмешательства после рождения." },
-        { name: "Синдром Дауна", desc: "Генетическая патология, обусловленная наличием дополнительной хромосомы. Характеризуется особенностями физического и умственного развития." },
-        { name: "Альбинизм", desc: "Полное или частичное отсутствие пигмента меланина в коже, волосах и радужной оболочке глаз. Требует защиты от ультрафиолета." },
-        { name: "Полидактилия (шестипалость)", desc: "Анатомическая особенность, при которой на конечностях присутствует лишний палец. Легко корректируется хирургическим путем." },
-        { name: "Гетерохромия", desc: "Разный цвет радужной оболочки правого и левого глаза или неодинаковая окраска различных участков одного глаза. Безвредная генетическая особенность." },
-        { name: "Расщелина губы и нёба ('заячья губа')", desc: "Врожденный дефект, представляющий собой расщелину верхней губы. Требует пластической операции в первые месяцы жизни." },
-        { name: "Врожденная гидроцефалия", desc: "Избыточное скопление спинномозговой жидкости в желудочковой системе головного мозга. Требует установки шунтирующей системы." }
+        { id: "heart_defect", name: "Врожденный порок сердца", desc: "Анатомический дефект сердечной мышцы или сосудов. Требует квалифицированного контроля и возможного хирургического вмешательства после рождения." },
+        { id: "down_syndrome", name: "Синдром Дауна", desc: "Генетическая патология, обусловленная наличием дополнительной хромосомы. Характеризуется особенностями физического и умственного развития." },
+        { id: "albinism", name: "Альбинизм", desc: "Полное или частичное отсутствие пигмента меланина в коже, волосах и радужной оболочке глаз. Требует защиты от ультрафиолета." },
+        { id: "polydactyly", name: "Полидактилия (шестипалость)", desc: "Анатомическая особенность, при которой на конечностях присутствует лишний палец. Легко корректируется хирургическим путем." },
+        { id: "heterochromia", name: "Гетерохромия", desc: "Разный цвет радужной оболочки правого и левого глаза или неодинаковая окраска различных участков одного глаза. Безвредная генетическая особенность." },
+        { id: "cleft_lip", name: "Расщелина губы и нёба ('заячья губа')", desc: "Врожденный дефект, представляющий собой расщелину верхней губы. Требует пластической операции в первые месяцы жизни." },
+        { id: "hydrocephalus", name: "Врожденная гидроцефалия", desc: "Избыточное скопление спинномозговой жидкости в желудочковой системе головного мозга. Требует установки шунтирующей системы." }
     ],
     en: [
-        { name: "Congenital Heart Defect", desc: "Anatomical defect of heart muscle or vessels. Requires expert monitoring and possible pediatric surgery after birth." },
-        { name: "Down Syndrome", desc: "Genetic condition caused by extra chromosome 21, characterized by distinct developmental features." },
-        { name: "Albinism", desc: "Complete or partial absence of melanin pigment in skin, hair, and irises. Requires strict UV protection." },
-        { name: "Polydactyly (Extra Digit)", desc: "Presence of an extra finger or toe. Readily corrected surgically in early infancy." },
-        { name: "Heterochromia", desc: "Different colors of the irises in each eye or two distinct colors in one eye. Completely harmless genetic trait." },
-        { name: "Cleft Lip and Palate", desc: "Congenital split in upper lip and roof of mouth. Correctable with reconstructive surgery in early months." },
-        { name: "Congenital Hydrocephalus", desc: "Excessive buildup of cerebrospinal fluid in brain ventricles. Managed via shunt system installation." }
+        { id: "heart_defect", name: "Congenital Heart Defect", desc: "Anatomical defect of heart muscle or vessels. Requires expert monitoring and possible pediatric surgery after birth." },
+        { id: "down_syndrome", name: "Down Syndrome", desc: "Genetic condition caused by extra chromosome 21, characterized by distinct developmental features." },
+        { id: "albinism", name: "Albinism", desc: "Complete or partial absence of melanin pigment in skin, hair, and irises. Requires strict UV protection." },
+        { id: "polydactyly", name: "Polydactyly (Extra Digit)", desc: "Presence of an extra finger or toe. Readily corrected surgically in early infancy." },
+        { id: "heterochromia", name: "Heterochromia", desc: "Different colors of the irises in each eye or two distinct colors in one eye. Completely harmless genetic trait." },
+        { id: "cleft_lip", name: "Cleft Lip and Palate", desc: "Congenital split in upper lip and roof of mouth. Correctable with reconstructive surgery in early months." },
+        { id: "hydrocephalus", name: "Congenital Hydrocephalus", desc: "Excessive buildup of cerebrospinal fluid in brain ventricles. Managed via shunt system installation." }
     ]
 };
 
@@ -381,21 +369,24 @@ export function getPostpartumData(days, method = 'natural', lang = 'ru') {
     return pool[40];
 }
 
-export function getRandomSymptoms(phase, maxCount = 3, lang = 'ru') {
-    const l = (lang === 'en') ? 'en' : 'ru';
-    const langPool = SYMPTOMS[l] || SYMPTOMS['ru'];
-    const list = langPool[phase];
+export function getRandomSymptomIndices(phase, maxCount = 3) {
+    const list = SYMPTOMS['en'][phase] || SYMPTOMS['ru'][phase];
     if (!list || list.length === 0) return [];
-    const shuffled = [...list].sort(() => 0.5 - Math.random());
+    const indices = list.map((_, i) => i).sort(() => 0.5 - Math.random());
     const count = Math.floor(Math.random() * maxCount) + 1;
-    return shuffled.slice(0, count);
+    return indices.slice(0, count);
 }
 
-export function rollComplication(trimester, lang = 'ru') {
-    if (Math.random() * 100 > 20) return null;
+export function getSymptomList(phase, indices, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
-    const langPool = COMPLICATIONS_POOL[l] || COMPLICATIONS_POOL['ru'];
-    const pool = langPool[trimester];
+    const list = SYMPTOMS[l]?.[phase] || SYMPTOMS['ru']?.[phase] || [];
+    if (!indices || indices.length === 0) return [];
+    return indices.map(i => list[i]).filter(Boolean);
+}
+
+export function rollComplication(trimester) {
+    if (Math.random() * 100 > 20) return null;
+    const pool = COMPLICATIONS_POOL['ru'].filter(c => c.trimester === trimester);
     if (!pool || pool.length === 0) return null;
     const selected = pool[Math.floor(Math.random() * pool.length)];
     
@@ -404,12 +395,24 @@ export function rollComplication(trimester, lang = 'ru') {
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
 
-    return { id: selected.id, name: selected.name, desc: selected.desc, curable: selected.curable, triggerWeek: startWeek, isDiscovered: false };
+    return { id: selected.id, curable: selected.curable, triggerWeek: startWeek, isDiscovered: false };
 }
 
-export function getRandomFetalDisease(lang = 'ru') {
+export function getComplication(id, lang = 'ru') {
+    const l = (lang === 'en') ? 'en' : 'ru';
+    const pool = COMPLICATIONS_POOL[l] || COMPLICATIONS_POOL['ru'];
+    return pool.find(c => c.id === id) || COMPLICATIONS_POOL['ru'].find(c => c.id === id);
+}
+
+export function getRandomFetalDiseaseId() {
+    const pool = FETAL_DISEASES['ru'];
+    const selected = pool[Math.floor(Math.random() * pool.length)];
+    return selected.id;
+}
+
+export function getFetalDisease(id, lang = 'ru') {
+    if (!id) return null;
     const l = (lang === 'en') ? 'en' : 'ru';
     const pool = FETAL_DISEASES[l] || FETAL_DISEASES['ru'];
-    const index = Math.floor(Math.random() * pool.length);
-    return pool[index];
+    return pool.find(d => d.id === id) || pool[0];
 }
