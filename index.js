@@ -13,6 +13,7 @@ const EXTENSION_NAME = 'st-advanced-reproductive-system';
 const DEFAULT_SETTINGS = {
     isEnabled: true,
     isNotificationsEnabled: true,
+    language: 'ru',        // 'ru' или 'en'
     mode: 'realism',       
     gender: 'female',      
     aiAwareness: 'dynamic', 
@@ -80,6 +81,8 @@ const MONTHS = {
 const TRANSLATIONS = {
     ru: {
         title: '🧬 Репродуктивная Система',
+        enableExt: 'Включить расширение',
+        enableNotif: 'Показывать уведомления',
         system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс',
         physiology: 'Физиология:', female: 'Женщина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омегa',
         aiLogic: 'Знания ИИ:', ultrasound: 'УЗИ (20 нед)', medieval: 'Средневековье', knowsAll: 'Знает всё',
@@ -107,12 +110,16 @@ const TRANSLATIONS = {
         giveBirthBtn: '🔔 ПРИНЯТЬ ВСЕ РОДЫ ВРУЧНУЮ',
         protectionLabel: 'Контрацепция:', protectionNone: 'Без защиты', protectionCondom: 'Презерватив (Барьерный)',
         protectionPills: 'Оральные контрацептивы (КОК)', protectionIud: 'Внутриматочная спираль (ВМС)',
+        fetalPathologyLabel: '🧬 Разрешить врождённые патологии плода',
+        fetalPathologySub: '(~3% шанс при зачатии)',
         globalRollsLabel: 'Всего скрытых проверок на зачатие:',
         eddLabel: '📅 ПДР (Дата родов):',
         maxWeeksLabel: 'Срок беременности (нед):'
     },
     en: {
-        title: '🧬 Reproductive System V2',
+        title: '🧬 Reproductive System',
+        enableExt: 'Enable Extension',
+        enableNotif: 'Show Notifications',
         system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse',
         physiology: 'Physiology:', female: 'Female', female_omega: 'F-Omega', male_omega: 'M-Omega',
         aiLogic: 'AI Awareness:', ultrasound: 'Ultrasound (20 wk)', medieval: 'Medieval (Blind)', knowsAll: 'Knows Everything',
@@ -140,6 +147,8 @@ const TRANSLATIONS = {
         giveBirthBtn: '🔔 DELIVER ALL BABIES MANUALLY',
         protectionLabel: 'Contraception:', protectionNone: 'No Protection', protectionCondom: 'Condom (Barrier)',
         protectionPills: 'Oral Extraconceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
+        fetalPathologyLabel: '🧬 Allow Congenital Fetal Anomalies',
+        fetalPathologySub: '(~3% chance on conception)',
         globalRollsLabel: 'Total hidden conception checks:',
         eddLabel: '📅 EDD (Due Date):',
         maxWeeksLabel: 'Pregnancy Term (wks):'
@@ -147,14 +156,12 @@ const TRANSLATIONS = {
 };
 
 function getLanguage() {
-    const currentLang = (typeof window.i18n?.language === 'string') ? window.i18n.language.toLowerCase() : 'ru';
-    const sngLanguages = ['ru', 'uk', 'be', 'kk', 'uz', 'az', 'hy', 'tg', 'tk', 'ky'];
-    return sngLanguages.includes(currentLang) ? 'ru' : 'en';
+    return settings.language || 'ru';
 }
 
 function getText(key) {
     const lang = getLanguage();
-    return TRANSLATIONS[lang][key] || TRANSLATIONS['en'][key];
+    return TRANSLATIONS[lang][key] || TRANSLATIONS['ru'][key] || key;
 }
 
 function getCurrentChatId() {
@@ -183,20 +190,17 @@ function generateBabyGender(mode, lang) {
     
     if (mode === 'omegaverse') {
         const roll = Math.random() * 100;
-        let secRu = 'Бета';
-        let secEn = 'Beta';
+        let sec = isRu ? 'Бета' : 'Beta';
         if (roll < 25) { 
-            secRu = 'Альфа'; 
-            secEn = 'Alpha'; 
+            sec = isRu ? 'Альфа' : 'Alpha'; 
         } else if (roll < 50) { 
-            secRu = 'Омега'; 
-            secEn = 'Omega'; 
+            sec = isRu ? 'Омега' : 'Omega'; 
         }
         
         if (isRu) {
-            return isBoy ? `${secRu}-мальчик ♂` : `${secRu}-девочка ♀`;
+            return isBoy ? `${sec}-мальчик ♂` : `${sec}-девочка ♀`;
         } else {
-            return isBoy ? `${secEn} Boy ♂` : `${secEn} Girl ♀`;
+            return isBoy ? `${sec} Boy ♂` : `${sec} Girl ♀`;
         }
     } else {
         if (isRu) {
@@ -212,6 +216,7 @@ function loadSettings() {
         extension_settings[EXTENSION_NAME] = Object.assign({}, DEFAULT_SETTINGS);
     }
     settings = extension_settings[EXTENSION_NAME];
+    if (settings.language === undefined) settings.language = 'ru';
     if (settings.globalRollsCount === undefined) settings.globalRollsCount = 0;
     if (settings.maxPregnancyWeeks === undefined) settings.maxPregnancyWeeks = 40;
     if (settings.isNotificationsEnabled === undefined) settings.isNotificationsEnabled = true;
@@ -725,7 +730,6 @@ function checkBirthTrigger(text, messageIndex) {
     const chatId = getCurrentChatId();
     const msgKey = `${chatId}_${messageIndex}_birth`;
 
-    // 1. Нумерованные теги: <!--BIRTH_NATURAL_1-->, <!--BIRTH_C_SECTION_2-->
     const numberedTagRegex = /<!--\s*BIRTH_(NATURAL|C_SECTION)_(\d+)\s*-->/gi;
     let match;
     const foundNumbered = [];
@@ -747,7 +751,6 @@ function checkBirthTrigger(text, messageIndex) {
         return;
     }
 
-    // 2. Стандартные теги без номера: <!--BIRTH_NATURAL-->, <!--BIRTH_C_SECTION-->
     if (typeof messageIndex === 'number' && processedBirthMessages.has(msgKey)) {
         return;
     }
@@ -1125,14 +1128,22 @@ function renderUI() {
         
         <div id="repro-content-wrapper" style="${isMenuCollapsed ? 'display: none;' : 'display: block;'} background: rgba(0, 0, 0, 0.15); border: 1px solid var(--input-border, #334155); border-top: none; border-radius: 0 0 10px 10px; padding: 14px; box-sizing: border-box;">
             
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); text-align: left;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="repro-is-enabled" ${settings.isEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                    <label for="repro-is-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; font-weight: 600; color: var(--text-color, #f8fafc);">Включить расширение</label>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); text-align: left;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="repro-is-enabled" ${settings.isEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                        <label for="repro-is-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; font-weight: 600; color: var(--text-color, #f8fafc);">${getText('enableExt')}</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="repro-is-notifications-enabled" ${settings.isNotificationsEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc);">${getText('enableNotif')}</label>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="repro-is-notifications-enabled" ${settings.isNotificationsEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                    <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc);">Показывать уведомления</label>
+                <div>
+                    <select id="repro-lang-select" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: #f472b6; font-weight: 700; font-size: 12px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                        <option value="ru" ${settings.language === 'ru' ? 'selected' : ''}>RU</option>
+                        <option value="en" ${settings.language === 'en' ? 'selected' : ''}>EN</option>
+                    </select>
                 </div>
             </div>
 
@@ -1238,7 +1249,7 @@ function renderUI() {
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                             <input type="checkbox" id="repro-fetal-pathology-enabled" ${settings.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0; flex-shrink: 0;"/>
-                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc); line-height: 1.3;">🧬 Разрешить врождённые патологии плода <span style="opacity: 0.55; font-style: italic;">(~3% шанс при зачатии)</span></label>
+                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel')} <span style="opacity: 0.55; font-style: italic;">${getText('fetalPathologySub')}</span></label>
                         </div>
                         <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${getText('startPregnancyBtn')}</button>
                     </div>
@@ -1263,6 +1274,13 @@ function renderUI() {
         $('#extensions_settings').append(container);
     }
     container.html(html);
+
+    $('#repro-lang-select').off('change').on('change', function() {
+        settings.language = $(this).val();
+        saveSettingsDebounced();
+        renderUI();
+        updatePromptInjection();
+    });
 
     $('#repro-is-enabled').off('change').on('change', function() {
         settings.isEnabled = $(this).is(':checked');
@@ -1311,7 +1329,9 @@ function renderUI() {
     });
 
     $('#repro-btn-birth-trigger').off('click').on('click', function() {
-        const method = confirm("Выполнить родоразрешение путем операции Кесарева сечения (КС)? [ОК - Кесарево, Отмена - Естественные роды]") ? 'c_section' : 'natural';
+        const method = confirm(settings.language === 'en' 
+            ? "Perform delivery via Cesarean Section (C-Section)? [OK - C-Section, Cancel - Natural Birth]"
+            : "Выполнить родоразрешение путем операции Кесарева сечения (КС)? [ОК - Кесарево, Отмена - Естественные роды]") ? 'c_section' : 'natural';
         processBirthTrigger(method);
     });
 
@@ -1415,7 +1435,10 @@ function renderUI() {
     });
 
     $('#repro-reset').off('click').on('click', function() {
-        if (confirm("Вы уверены, что хотите полностью очистить данные этого чата?")) {
+        const confirmText = settings.language === 'en' 
+            ? "Are you sure you want to completely clear the reproductive data for this chat?" 
+            : "Вы уверены, что хотите полностью очистить данные этого чата?";
+        if (confirm(confirmText)) {
             const chatId = getCurrentChatId();
             settings.chatPregnancyData[chatId] = createDefaultBodyData();
             processedBirthMessages.clear();
@@ -1486,8 +1509,6 @@ jQuery(async () => {
     scanLastDateFromChat();
 
     if (typeof eventSource?.on === 'function') { 
-        eventSource.on('i18n_language_changed', () => { renderUI(); }); 
-
         eventSource.on(event_types.MESSAGE_SENT, async (messageIndex) => {
             processIncomingMessage(messageIndex, true);
         });
