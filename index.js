@@ -65,7 +65,7 @@ function createDefaultBodyData() {
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
 let pendingUserTimeskipDays = 0;
-let activeChatId = null; // Отслеживание ID предыдущего активного чата для клонирования в ветки
+let activeChatId = null;
 const processedBirthMessages = new Set();
 
 const MONTHS = {
@@ -261,7 +261,6 @@ function getChatBodyData() {
         const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
         const chat = context ? context.chat : window.chat;
         
-        // Если это ответвление существующего чата с историей сообщений — клонируем состояние
         if (activeChatId && activeChatId !== chatId && settings.chatPregnancyData[activeChatId] && Array.isArray(chat) && chat.length > 1) {
             settings.chatPregnancyData[chatId] = JSON.parse(JSON.stringify(settings.chatPregnancyData[activeChatId]));
         } else {
@@ -1569,11 +1568,13 @@ function renderUI() {
 }
 
 function bindGlobalEvents() {
-    $(document).off('click', '.repro-tooltip-icon').on('click', '.repro-tooltip-icon', function(e) {
+    $(document).off('click', '.repro-tooltip-btn, .repro-tooltip-icon').on('click', '.repro-tooltip-btn, .repro-tooltip-icon', function(e) {
         e.stopPropagation();
         e.preventDefault();
-        const tip = $(this).attr('title');
-        if (tip) toastr.info(tip, "Справка / Info", { timeOut: 8000 });
+        const tip = $(this).attr('data-tip') || $(this).attr('title');
+        if (tip && typeof toastr !== 'undefined') {
+            toastr.info(tip, settings.language === 'en' ? "Information" : "Справка", { timeOut: 9000, closeButton: true });
+        }
     });
 
     $(document).off('click', '.repro-custom-btn-toggle').on('click', '.repro-custom-btn-toggle', function() {
@@ -1716,7 +1717,7 @@ function bindGlobalEvents() {
             bodyData.activeComplication = null; 
             saveSettingsDebounced(); 
             renderUI(); 
-            updatePromptInjection();
+            updatePromptInjection(); 
         }
     });
 
