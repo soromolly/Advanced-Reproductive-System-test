@@ -370,7 +370,6 @@ function parseRpDateFromText(rawText) {
     if (!rawText) return null;
     const text = cleanHtmlFromText(rawText);
 
-    // 1. "8 марта 2024", "15-го мая 98", "15th of May, 1998"
     const dmyTextRegex = /(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/i;
     const dmyTextMatch = text.match(dmyTextRegex);
     if (dmyTextMatch) {
@@ -382,7 +381,6 @@ function parseRpDateFromText(rawText) {
         }
     }
 
-    // 2. "May 15, 1998", "May 15th, 1998", "Марта 8, 2024"
     const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?[,\s]+(\d{2,4})/i;
     const mdyTextMatch = text.match(mdyTextRegex);
     if (mdyTextMatch) {
@@ -394,7 +392,6 @@ function parseRpDateFromText(rawText) {
         }
     }
 
-    // 3. ISO "2024-03-08", "1543/01/03"
     const ymdNumRegex = /(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/;
     const ymdNumMatch = text.match(ymdNumRegex);
     if (ymdNumMatch) {
@@ -406,7 +403,6 @@ function parseRpDateFromText(rawText) {
         }
     }
 
-    // 4. "08.03.2024", "15/05/98"
     const dmyNumRegex = /(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})/;
     const dmyNumMatch = text.match(dmyNumRegex);
     if (dmyNumMatch) {
@@ -849,7 +845,6 @@ function updatePromptInjection(isImmediateBirth = false) {
     }
 
     if (data.isPregnant && (data.pregnancyWeeks > 0 || data.cycleDay > settings.cycleLength)) {
-        const maxWeeks = settings.maxPregnancyWeeks || (settings.mode === 'omegaverse' ? 36 : 40);
         prompt += `Status: PREGNANT | Duration: ${data.pregnancyWeeks} weeks.\n`;
         const fetus = getFetusData(data.pregnancyWeeks);
         prompt += `Fetus Size: ${fetus.size} | Maternal Body: ${fetus.belly}. ${fetus.desc}\n`;
@@ -878,17 +873,14 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. Headcount and genders are completely unknown to {{char}}.\n`;
         }
 
-        if (data.pregnancyWeeks >= maxWeeks) {
-            prompt += `\n[🚨 CRITICAL STORY EVENT — LABOR & CHILDBIRTH]:
-{{user}} has reached full term (${data.pregnancyWeeks} weeks) and is in active labor right now!
-Babies currently remaining in the womb: ${data.babiesCount}.
-Genders of babies waiting to be born: ${data.babiesGenders.join(', ')}.
-
-🚨 MANDATORY CHILDBIRTH DIRECTIVE FOR {{char}}:
-When a baby is physically delivered in the roleplay scene, you MUST append a hidden tag at the very end of your response text:
-- For a natural delivery: <!--BIRTH_NATURAL-->
+        // Начиная с 20-й недели (порог жизнеспособности) всегда отправляем правила родов и тегов
+        if (data.pregnancyWeeks >= 20) {
+            prompt += `\n🚨 CRITICAL BIRTH LOGGING DIRECTIVE FOR {{char}}:
+If {{user}} goes into labor, is currently giving birth, or delivers a baby (or babies) in this specific response (natural delivery or C-section, full-term or preterm), you MUST append a hidden HTML tag at the absolute end of your response for EACH baby delivered in this scene:
+- For a natural vaginal delivery: <!--BIRTH_NATURAL-->
 - For a Cesarean section (C-Section): <!--BIRTH_C_SECTION-->
-⚠️ NOTE: If multiple babies are being delivered across multiple responses, append ONE tag per baby when that specific baby is born. You can deliver them sequentially across posts or together.\n`;
+⚠️ Headcount currently waiting in the womb: ${data.babiesCount}.
+If 1 baby is born in this post, append exactly 1 tag. If 2 babies are delivered in the same post, append 2 tags.\n`;
         }
     } else {
         prompt += `Current Cycle Day: ${data.cycleDay}/${settings.cycleLength} | Phase: ${phase}\n`;
