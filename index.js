@@ -96,8 +96,8 @@ const TRANSLATIONS = {
         toastConception: '🚨 ЗАЧАТИЕ ПРОИЗОШЛО! Успешная имплантация в матке.',
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
-        menstruation: 'Менструация 🩸', ovulation: 'Овуляция (Окно зачатия) ✨',
-        follicularLuteal: 'Фолликулярная/Лютеиновая фаза', heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
+        menstruation: 'Менструация 🩸', follicular: 'Фолликулярная фаза 🌸', ovulation: 'Овуляция (Окно зачатия) ✨', luteal: 'Лютеиновая фаза (ПМС) 🍂',
+        heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
         delayed: 'Задержка цикла ⚠️',
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
@@ -129,8 +129,8 @@ const TRANSLATIONS = {
         toastConception: '🚨 CONCEPTION OCCURRED! Successful implantation in the womb.',
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         pregnancy: 'Pregnancy 🤰', pregnancyOmega: 'Pregnancy (Omega) 🤰',
-        menstruation: 'Menstruation 🩸', ovulation: 'Ovulation (Conception Window) ✨',
-        follicularLuteal: 'Follicular/Luteal Phase', heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
+        menstruation: 'Menstruation 🩸', follicular: 'Follicular Phase 🌸', ovulation: 'Ovulation (Conception Window) ✨', luteal: 'Luteal Phase (PMS) 🍂',
+        heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
         delayed: 'Cycle Delayed ⚠️',
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         complicationTitle: '⚠️ Medical Complication:', cureBtn: '💊 Treat / Alleviate Complication',
@@ -214,6 +214,13 @@ function loadSettings() {
     if (settings.isNotificationsEnabled === undefined) settings.isNotificationsEnabled = true;
     if (settings.isFetalPathologyEnabled === undefined) settings.isFetalPathologyEnabled = true;
 
+    // Синхронизируем валидность пола под выбранный режим
+    if (settings.mode === 'realism' && settings.gender !== 'female') {
+        settings.gender = 'female';
+    } else if (settings.mode === 'omegaverse' && settings.gender === 'female') {
+        settings.gender = 'female_omega';
+    }
+
     const data = getChatBodyData();
     updateSymptomsData(data);
     checkPregnancyComplications(data);
@@ -225,7 +232,19 @@ function loadSettings() {
 function getBodyPhase() {
     const data = getChatBodyData();
     if (data.postpartumDays > 0) return getText('postpartumPhase');
-    if (data.isPregnant && data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) return getText('follicularLuteal');
+    
+    // Ранняя скрытая стадия зачатия до задержки
+    if (data.isPregnant && data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) {
+        if (settings.mode === 'realism') {
+            if (data.cycleDay <= 10) return getText('follicular');
+            if (data.cycleDay >= 11 && data.cycleDay <= 16) return getText('ovulation');
+            return getText('luteal');
+        } else {
+            if (data.cycleDay >= 12 && data.cycleDay <= 15) return getText('heat');
+            return getText('quiescence');
+        }
+    }
+
     if (data.isPregnant) return settings.mode === 'realism' ? getText('pregnancy') : getText('pregnancyOmega');
 
     const day = data.cycleDay;
@@ -233,8 +252,9 @@ function getBodyPhase() {
 
     if (settings.mode === 'realism') {
         if (day <= settings.periodDuration) return getText('menstruation');
+        if (day > settings.periodDuration && day <= 10) return getText('follicular');
         if (day >= 11 && day <= 16) return getText('ovulation');
-        return getText('follicularLuteal');
+        return getText('luteal');
     } else {
         if (day >= 12 && day <= 15) return getText('heat');
         return getText('quiescence');
@@ -262,7 +282,9 @@ function updateSymptomsData(data) {
         else phaseKey = 'preg_trimester_3';
     } else {
         if (phase === getText('menstruation')) phaseKey = 'menstruation';
+        else if (phase === getText('follicular')) phaseKey = 'follicular';
         else if (phase === getText('ovulation')) phaseKey = 'ovulation';
+        else if (phase === getText('luteal')) phaseKey = 'luteal';
         else if (phase === getText('heat')) phaseKey = (settings.gender === 'male_omega') ? 'heat_male' : 'heat_female';
     }
 
@@ -568,7 +590,6 @@ function advanceBodyTime(days) {
             data.pregnancyWeeks += Math.floor(data.pregnancyDays / 7);
             data.pregnancyDays %= 7;
 
-            // Уведомление об УЗИ-скрининге на 20 неделе
             if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness !== 'hidden') {
                 toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
             }
@@ -836,10 +857,9 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        // Отображение патологии плода
         if (data.fetalDisease) {
             if (settings.aiAwareness === 'hidden') {
-                // В средневековье ничего не показываем
+                // В средневековье скрыто
             } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                 fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                     <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (обнаружена на УЗИ):</strong>
@@ -853,7 +873,6 @@ function renderUI() {
             }
         }
 
-        // Логика отображения блока "Карта плода"
         if (settings.aiAwareness === 'hidden') {
             wombMapHtml = `
                 <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">
@@ -885,7 +904,6 @@ function renderUI() {
                 `;
             }
         } else {
-            // Режим 'full' (Знает всё)
             wombMapHtml = `
                 <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">
                     ℹ️ <em>${getText('wombMap')}</em><br>
@@ -960,6 +978,17 @@ function renderUI() {
         </div>`;
     }
 
+    // Динамический список физиологии в зависимости от выбранного режима
+    let genderOptionsHtml = '';
+    if (settings.mode === 'realism') {
+        genderOptionsHtml = `<option value="female" ${settings.gender === 'female' ? 'selected' : ''}>${getText('female')}</option>`;
+    } else {
+        genderOptionsHtml = `
+            <option value="female_omega" ${settings.gender === 'female_omega' ? 'selected' : ''}>${getText('female_omega')}</option>
+            <option value="male_omega" ${settings.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega')}</option>
+        `;
+    }
+
     const html = `
         <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
             <span style="color: #f472b6 !important; font-weight: 600;">${getText('title')}</span>
@@ -991,9 +1020,7 @@ function renderUI() {
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <label style="font-size: 0.9em; opacity: 0.85;">${getText('physiology')}</label>
                     <select id="repro-gender" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%; font-family: inherit; outline: none;">
-                        <option value="female" ${settings.gender === 'female' ? 'selected' : ''}>${getText('female')}</option>
-                        <option value="female_omega" ${settings.gender === 'female_omega' ? 'selected' : ''}>${getText('female_omega')}</option>
-                        <option value="male_omega" ${settings.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega')}</option>
+                        ${genderOptionsHtml}
                     </select>
                 </div>
 
@@ -1183,27 +1210,34 @@ function renderUI() {
         }
     });
 
-    $('#repro-mode').on('change', function() { 
+    $('#repro-mode').off('change').on('change', function() { 
         settings.mode = $(this).val(); 
+        if (settings.mode === 'realism') {
+            settings.gender = 'female';
+        } else if (settings.mode === 'omegaverse' && settings.gender === 'female') {
+            settings.gender = 'female_omega';
+        }
         getChatBodyData().currentSymptoms = []; 
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
     });
-    $('#repro-gender').on('change', function() { 
+
+    $('#repro-gender').off('change').on('change', function() { 
         settings.gender = $(this).val(); 
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
     });
-    $('#repro-awareness').on('change', function() { 
+
+    $('#repro-awareness').off('change').on('change', function() { 
         settings.aiAwareness = $(this).val(); 
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
     });
 
-    $('#repro-btn-manual-preg').on('click', function() {
+    $('#repro-btn-manual-preg').off('click').on('click', function() {
         const bodyData = getChatBodyData();
         const weeks = parseInt($('#repro-manual-weeks').val()) || 0;
         const count = parseInt($('#repro-manual-count').val()) || 1;
@@ -1230,7 +1264,7 @@ function renderUI() {
         if (settings.isNotificationsEnabled) toastr.success(`${getText('toastManualPreg')}${weeks}`);
     });
 
-    $('#repro-reset-pregnancy-only').on('click', function() {
+    $('#repro-reset-pregnancy-only').off('click').on('click', function() {
         const bodyData = getChatBodyData();
         bodyData.isPregnant = false; 
         bodyData.pregnancyWeeks = 0; 
@@ -1249,7 +1283,7 @@ function renderUI() {
         if (settings.isNotificationsEnabled) toastr.info(getText('toastResetPreg'));
     });
 
-    $('#repro-reset').on('click', function() {
+    $('#repro-reset').off('click').on('click', function() {
         if (confirm("Вы уверены, что хотите полностью очистить данные этого чата?")) {
             const chatId = getCurrentChatId();
             settings.chatPregnancyData[chatId] = createDefaultBodyData();
