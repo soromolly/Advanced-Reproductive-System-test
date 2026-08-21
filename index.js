@@ -33,7 +33,7 @@ function createDefaultBodyData() {
         pregnancyDays: 0,
         babiesCount: 0,
         babiesGenders: [],
-        currentDeliveredCount: 0, // Количество уже рожденных детей в текущей беременности
+        currentDeliveredCount: 0,
         currentSymptoms: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
         activeComplication: null,
@@ -48,8 +48,7 @@ function createDefaultBodyData() {
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
 let pendingUserTimeskipDays = 0;
-let lastProcessedAiMessageIndex = null;
-let lastProcessedUserMessageIndex = null;
+const processedBirthMessages = new Set();
 
 const MONTHS = {
     'января': 0, 'январь': 0, 'янв': 0,
@@ -630,8 +629,8 @@ function checkConceptionTrigger(text) {
     const phase = getBodyPhase();
     const isFertile = phase.includes('Овуляция') || phase.includes('Течка') || phase.includes('Ovulation') || phase.includes('Heat');
     
-    const hasVaginalTag = /<!--CUM_VAGINAL-->/i.test(text);
-    const hasAnalTag = /<!--CUM_ANAL-->/i.test(text);
+    const hasVaginalTag = /<!--\s*CUM_VAGINAL\s*-->/i.test(text);
+    const hasAnalTag = /<!--\s*CUM_ANAL\s*-->/i.test(text);
 
     let canConceive = false;
 
@@ -719,38 +718,52 @@ function triggerPregnancy(data) {
     }
 }
 
-// Проверка тегов родов с поддержкой многоплодия и нумерации
-function checkBirthTrigger(text) {
+function checkBirthTrigger(text, messageIndex) {
     const data = getChatBodyData();
     if (!data.isPregnant || data.babiesGenders.length === 0) return;
 
-    const totalOriginal = data.babiesGenders.length + (data.currentDeliveredCount || 0);
+    const chatId = getCurrentChatId();
+    const msgKey = `${chatId}_${messageIndex}_birth`;
 
-    if (totalOriginal === 1) {
-        // Одноплодная беременность: ищем стандартные теги или _1
-        const isNatural = /<!--BIRTH_NATURAL(?:_1)?-->/i.test(text);
-        const isCS = /<!--BIRTH_C_SECTION(?:_1)?-->/i.test(text);
-        if (isNatural || isCS) {
-            deliverSingleBaby(data, isCS ? 'c_section' : 'natural');
-        }
-    } else {
-        // Многоплодная беременность: ищем по порядку номеров _1, _2, _3...
-        let deliveredInThisPass = true;
-        while (deliveredInThisPass && data.isPregnant && data.babiesGenders.length > 0) {
-            deliveredInThisPass = false;
-            const nextBabyNum = (data.currentDeliveredCount || 0) + 1;
-            
-            const natRegex = new RegExp(`<!--BIRTH_NATURAL_${nextBabyNum}-->`, 'i');
-            const csRegex = new RegExp(`<!--BIRTH_C_SECTION_${nextBabyNum}-->`, 'i');
+    // 1. Нумерованные теги: <!--BIRTH_NATURAL_1-->, <!--BIRTH_C_SECTION_2-->
+    const numberedTagRegex = /<!--\s*BIRTH_(NATURAL|C_SECTION)_(\d+)\s*-->/gi;
+    let match;
+    const foundNumbered = [];
+    while ((match = numberedTagRegex.exec(text)) !== null) {
+        foundNumbered.push({
+            method: match[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural',
+            num: parseInt(match[2], 10)
+        });
+    }
 
-            if (csRegex.test(text)) {
-                deliverSingleBaby(data, 'c_section');
-                deliveredInThisPass = true;
-            } else if (natRegex.test(text)) {
-                deliverSingleBaby(data, 'natural');
-                deliveredInThisPass = true;
+    if (foundNumbered.length > 0) {
+        foundNumbered.sort((a, b) => a.num - b.num);
+        for (const item of foundNumbered) {
+            const nextExpected = (data.currentDeliveredCount || 0) + 1;
+            if (item.num === nextExpected && data.isPregnant && data.babiesGenders.length > 0) {
+                deliverSingleBaby(data, item.method);
             }
         }
+        return;
+    }
+
+    // 2. Стандартные теги без номера: <!--BIRTH_NATURAL-->, <!--BIRTH_C_SECTION-->
+    if (typeof messageIndex === 'number' && processedBirthMessages.has(msgKey)) {
+        return;
+    }
+
+    const unnumberedRegex = /<!--\s*BIRTH_(NATURAL|C_SECTION)\s*-->/gi;
+    let unnumberedMatch;
+    let deliveredCountInPass = 0;
+    while ((unnumberedMatch = unnumberedRegex.exec(text)) !== null) {
+        if (!data.isPregnant || data.babiesGenders.length === 0) break;
+        const method = unnumberedMatch[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural';
+        deliverSingleBaby(data, method);
+        deliveredCountInPass++;
+    }
+
+    if (deliveredCountInPass > 0 && typeof messageIndex === 'number') {
+        processedBirthMessages.add(msgKey);
     }
 }
 
@@ -900,7 +913,6 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. Headcount and genders are completely unknown to {{char}}.\n`;
         }
 
-        // Директива на роды с 20-й недели
         if (data.pregnancyWeeks >= 20) {
             const totalOriginal = data.babiesGenders.length + (data.currentDeliveredCount || 0);
 
@@ -913,13 +925,13 @@ If {{user}} goes into labor, is currently giving birth, or delivers the baby in 
                 const nextNum = (data.currentDeliveredCount || 0) + 1;
                 prompt += `\n🚨 CRITICAL BIRTH LOGGING DIRECTIVE FOR {{char}} (MULTIPLE PREGNANCY):
 {{user}} is carrying a multiple pregnancy (Total: ${totalOriginal} babies).
-Babies already delivered so far: ${data.currentDeliveredCount || 0}.
+Babies already delivered: ${data.currentDeliveredCount || 0}.
 Babies remaining in womb: ${data.babiesCount} (${data.babiesGenders.join(', ')}).
 
-If a baby is physically delivered in this response, you MUST append the numbered tag matching the baby being born at the absolute end:
-- If Baby #${nextNum} is delivered: <!--BIRTH_NATURAL_${nextNum}--> (or <!--BIRTH_C_SECTION_${nextNum}-->)
-${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered in this same post: <!--BIRTH_NATURAL_${nextNum + 1}--> (or <!--BIRTH_C_SECTION_${nextNum + 1}-->)` : ''}
-⚠️ RULE: Append ONLY the tag for the baby actually delivered in this scene. Do NOT append future tags for babies still in the womb!\n`;
+If a baby is physically delivered in this response, you MUST append the numbered tag for that baby at the absolute end of your response:
+- If Baby #${nextNum} is delivered now: <!--BIRTH_NATURAL_${nextNum}--> (or <!--BIRTH_C_SECTION_${nextNum}-->)
+${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered in this SAME response: <!--BIRTH_NATURAL_${nextNum + 1}--> (or <!--BIRTH_C_SECTION_${nextNum + 1}-->)` : ''}
+⚠️ STRICT RULE: Append ONLY the tag matching the baby actually born in this scene. Do not append tags for unborn babies!\n`;
             }
         }
     } else {
@@ -976,7 +988,7 @@ function renderUI() {
 
         if (data.fetalDisease) {
             if (settings.aiAwareness === 'hidden') {
-                // Скрыто в средневековье
+                // Скрыто
             } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                 fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                     <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (обнаружена на УЗИ):</strong>
@@ -1395,6 +1407,7 @@ function renderUI() {
         bodyData.deliveryMethod = 'none';
         bodyData.fetalDisease = null;
 
+        processedBirthMessages.clear();
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
@@ -1405,6 +1418,7 @@ function renderUI() {
         if (confirm("Вы уверены, что хотите полностью очистить данные этого чата?")) {
             const chatId = getCurrentChatId();
             settings.chatPregnancyData[chatId] = createDefaultBodyData();
+            processedBirthMessages.clear();
             saveSettingsDebounced(); 
             renderUI(); 
             updatePromptInjection(); 
@@ -1420,27 +1434,27 @@ function processIncomingMessage(messageIndex, isUser = false) {
     if (!chat) return;
 
     let text = null;
+    let idx = null;
     if (typeof messageIndex === 'number' && chat[messageIndex]) {
         text = chat[messageIndex].mes;
+        idx = messageIndex;
     } else if (typeof messageIndex === 'object' && messageIndex?.mes) {
         text = messageIndex.mes;
+        idx = messageIndex?.id ?? null;
     } else if (chat.length > 0) {
-        text = chat[chat.length - 1]?.mes;
+        idx = chat.length - 1;
+        text = chat[idx]?.mes;
     }
 
     if (!text) return;
 
     if (isUser) {
-        if (typeof messageIndex === 'number' && lastProcessedUserMessageIndex === messageIndex) return;
-        lastProcessedUserMessageIndex = messageIndex;
         handleUserMessageTime(text);
         checkConceptionTrigger(text);
     } else {
-        if (typeof messageIndex === 'number' && lastProcessedAiMessageIndex === messageIndex) return;
-        lastProcessedAiMessageIndex = messageIndex;
         handleAiMessageTime(text);
         checkConceptionTrigger(text);
-        checkBirthTrigger(text);
+        checkBirthTrigger(text, idx);
     }
     updatePromptInjection();
 }
@@ -1503,8 +1517,7 @@ jQuery(async () => {
         if (event_types.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
                 pendingUserTimeskipDays = 0;
-                lastProcessedAiMessageIndex = null;
-                lastProcessedUserMessageIndex = null;
+                processedBirthMessages.clear();
                 loadSettings(); 
                 scanLastDateFromChat();
             });
