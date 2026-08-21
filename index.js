@@ -873,7 +873,7 @@ function triggerPregnancy(data) {
     }
 
     data.fetalDiseaseId = null;
-    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
+    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
         data.fetalDiseaseId = getRandomFetalDiseaseId();
     }
 
@@ -1782,7 +1782,7 @@ function bindGlobalEvents() {
         }
 
         bodyData.fetalDiseaseId = null;
-        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
+        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
