@@ -33,6 +33,7 @@ function createDefaultBodyData() {
         pregnancyDays: 0,
         babiesCount: 0,
         babiesGenders: [],
+        currentDeliveredCount: 0, // Количество уже рожденных детей в текущей беременности
         currentSymptoms: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
         activeComplication: null,
@@ -47,6 +48,8 @@ function createDefaultBodyData() {
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
 let pendingUserTimeskipDays = 0;
+let lastProcessedAiMessageIndex = null;
+let lastProcessedUserMessageIndex = null;
 
 const MONTHS = {
     'января': 0, 'январь': 0, 'янв': 0,
@@ -171,6 +174,7 @@ function getChatBodyData() {
     if (!data.rolledTrimesters) data.rolledTrimesters = { 1: false, 2: false, 3: false };
     if (data.contraception === undefined) data.contraception = 'none'; 
     if (data.fetalDisease === undefined) data.fetalDisease = null;
+    if (data.currentDeliveredCount === undefined) data.currentDeliveredCount = 0;
     return data;
 }
 
@@ -691,6 +695,7 @@ function triggerPregnancy(data) {
     data.pregnancyWeeks = 0; data.pregnancyDays = 0;
     data.currentSymptoms = []; data.rolledTrimesters = { 1: false, 2: false, 3: false }; data.activeComplication = null;
     data.deliveryMethod = 'none';
+    data.currentDeliveredCount = 0;
 
     const roll = Math.random() * 100;
     data.babiesCount = settings.mode === 'omegaverse' ? (roll > 92 ? 3 : roll > 70 ? 2 : 1) : (roll > 98.5 ? 3 : roll > 95 ? 2 : 1);
@@ -714,19 +719,37 @@ function triggerPregnancy(data) {
     }
 }
 
+// Проверка тегов родов с поддержкой многоплодия и нумерации
 function checkBirthTrigger(text) {
     const data = getChatBodyData();
-    if (!data.isPregnant) return;
+    if (!data.isPregnant || data.babiesGenders.length === 0) return;
 
-    const naturalMatches = (text.match(/<!--BIRTH_NATURAL-->/gi) || []).length;
-    const csMatches = (text.match(/<!--BIRTH_C_SECTION-->/gi) || []).length;
-    const totalBirthTags = naturalMatches + csMatches;
+    const totalOriginal = data.babiesGenders.length + (data.currentDeliveredCount || 0);
 
-    if (totalBirthTags > 0) {
-        for (let i = 0; i < totalBirthTags; i++) {
-            if (!data.isPregnant || data.babiesCount <= 0) break;
-            const method = (i < csMatches) ? 'c_section' : 'natural';
-            deliverSingleBaby(data, method);
+    if (totalOriginal === 1) {
+        // Одноплодная беременность: ищем стандартные теги или _1
+        const isNatural = /<!--BIRTH_NATURAL(?:_1)?-->/i.test(text);
+        const isCS = /<!--BIRTH_C_SECTION(?:_1)?-->/i.test(text);
+        if (isNatural || isCS) {
+            deliverSingleBaby(data, isCS ? 'c_section' : 'natural');
+        }
+    } else {
+        // Многоплодная беременность: ищем по порядку номеров _1, _2, _3...
+        let deliveredInThisPass = true;
+        while (deliveredInThisPass && data.isPregnant && data.babiesGenders.length > 0) {
+            deliveredInThisPass = false;
+            const nextBabyNum = (data.currentDeliveredCount || 0) + 1;
+            
+            const natRegex = new RegExp(`<!--BIRTH_NATURAL_${nextBabyNum}-->`, 'i');
+            const csRegex = new RegExp(`<!--BIRTH_C_SECTION_${nextBabyNum}-->`, 'i');
+
+            if (csRegex.test(text)) {
+                deliverSingleBaby(data, 'c_section');
+                deliveredInThisPass = true;
+            } else if (natRegex.test(text)) {
+                deliverSingleBaby(data, 'natural');
+                deliveredInThisPass = true;
+            }
         }
     }
 }
@@ -734,6 +757,7 @@ function checkBirthTrigger(text) {
 function deliverSingleBaby(data, method = 'natural') {
     const lang = getLanguage();
     const babyGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+    data.currentDeliveredCount = (data.currentDeliveredCount || 0) + 1;
     
     data.childrenList.push({
         id: Date.now() + Math.floor(Math.random() * 1000),
@@ -746,6 +770,7 @@ function deliverSingleBaby(data, method = 'natural') {
         data.isPregnant = false;
         data.pregnancyWeeks = 0;
         data.pregnancyDays = 0;
+        data.currentDeliveredCount = 0;
         data.activeComplication = null;
         data.fetalDisease = null;
         data.postpartumDays = 1;
@@ -783,6 +808,7 @@ function processBirthTrigger(method = 'natural') {
     data.isPregnant = false;
     data.pregnancyWeeks = 0; 
     data.pregnancyDays = 0; 
+    data.currentDeliveredCount = 0;
     data.babiesCount = 0; 
     data.babiesGenders = []; 
     data.activeComplication = null;
@@ -805,6 +831,7 @@ function processMiscarriageTrigger() {
     data.isPregnant = false;
     data.pregnancyWeeks = 0;
     data.pregnancyDays = 0;
+    data.currentDeliveredCount = 0;
     data.babiesCount = 0;
     data.babiesGenders = [];
     data.activeComplication = null;
@@ -873,14 +900,27 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. Headcount and genders are completely unknown to {{char}}.\n`;
         }
 
-        // Начиная с 20-й недели (порог жизнеспособности) всегда отправляем правила родов и тегов
+        // Директива на роды с 20-й недели
         if (data.pregnancyWeeks >= 20) {
-            prompt += `\n🚨 CRITICAL BIRTH LOGGING DIRECTIVE FOR {{char}}:
-If {{user}} goes into labor, is currently giving birth, or delivers a baby (or babies) in this specific response (natural delivery or C-section, full-term or preterm), you MUST append a hidden HTML tag at the absolute end of your response for EACH baby delivered in this scene:
-- For a natural vaginal delivery: <!--BIRTH_NATURAL-->
-- For a Cesarean section (C-Section): <!--BIRTH_C_SECTION-->
-⚠️ Headcount currently waiting in the womb: ${data.babiesCount}.
-If 1 baby is born in this post, append exactly 1 tag. If 2 babies are delivered in the same post, append 2 tags.\n`;
+            const totalOriginal = data.babiesGenders.length + (data.currentDeliveredCount || 0);
+
+            if (totalOriginal === 1) {
+                prompt += `\n🚨 CRITICAL BIRTH LOGGING DIRECTIVE FOR {{char}}:
+If {{user}} goes into labor, is currently giving birth, or delivers the baby in this specific response (natural delivery or C-section, full-term or preterm), you MUST append a hidden HTML tag at the absolute end of your response:
+- For a natural delivery: <!--BIRTH_NATURAL-->
+- For a Cesarean section (C-Section): <!--BIRTH_C_SECTION-->\n`;
+            } else {
+                const nextNum = (data.currentDeliveredCount || 0) + 1;
+                prompt += `\n🚨 CRITICAL BIRTH LOGGING DIRECTIVE FOR {{char}} (MULTIPLE PREGNANCY):
+{{user}} is carrying a multiple pregnancy (Total: ${totalOriginal} babies).
+Babies already delivered so far: ${data.currentDeliveredCount || 0}.
+Babies remaining in womb: ${data.babiesCount} (${data.babiesGenders.join(', ')}).
+
+If a baby is physically delivered in this response, you MUST append the numbered tag matching the baby being born at the absolute end:
+- If Baby #${nextNum} is delivered: <!--BIRTH_NATURAL_${nextNum}--> (or <!--BIRTH_C_SECTION_${nextNum}-->)
+${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered in this same post: <!--BIRTH_NATURAL_${nextNum + 1}--> (or <!--BIRTH_C_SECTION_${nextNum + 1}-->)` : ''}
+⚠️ RULE: Append ONLY the tag for the baby actually delivered in this scene. Do NOT append future tags for babies still in the womb!\n`;
+            }
         }
     } else {
         prompt += `Current Cycle Day: ${data.cycleDay}/${settings.cycleLength} | Phase: ${phase}\n`;
@@ -936,7 +976,7 @@ function renderUI() {
 
         if (data.fetalDisease) {
             if (settings.aiAwareness === 'hidden') {
-                // В средневековье скрыто
+                // Скрыто в средневековье
             } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                 fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                     <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (обнаружена на УЗИ):</strong>
@@ -1322,6 +1362,7 @@ function renderUI() {
         bodyData.pregnancyWeeks = weeks; 
         bodyData.pregnancyDays = 0; 
         bodyData.babiesCount = count; 
+        bodyData.currentDeliveredCount = 0;
         bodyData.currentSymptoms = [];
         bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
         bodyData.activeComplication = null;
@@ -1345,6 +1386,7 @@ function renderUI() {
         bodyData.isPregnant = false; 
         bodyData.pregnancyWeeks = 0; 
         bodyData.pregnancyDays = 0; 
+        bodyData.currentDeliveredCount = 0;
         bodyData.babiesCount = 0; 
         bodyData.babiesGenders = []; 
         bodyData.currentSymptoms = [];
@@ -1389,12 +1431,17 @@ function processIncomingMessage(messageIndex, isUser = false) {
     if (!text) return;
 
     if (isUser) {
+        if (typeof messageIndex === 'number' && lastProcessedUserMessageIndex === messageIndex) return;
+        lastProcessedUserMessageIndex = messageIndex;
         handleUserMessageTime(text);
+        checkConceptionTrigger(text);
     } else {
+        if (typeof messageIndex === 'number' && lastProcessedAiMessageIndex === messageIndex) return;
+        lastProcessedAiMessageIndex = messageIndex;
         handleAiMessageTime(text);
+        checkConceptionTrigger(text);
         checkBirthTrigger(text);
     }
-    checkConceptionTrigger(text);
     updatePromptInjection();
 }
 
@@ -1456,6 +1503,8 @@ jQuery(async () => {
         if (event_types.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
                 pendingUserTimeskipDays = 0;
+                lastProcessedAiMessageIndex = null;
+                lastProcessedUserMessageIndex = null;
                 loadSettings(); 
                 scanLastDateFromChat();
             });
