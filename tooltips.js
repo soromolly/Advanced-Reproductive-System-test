@@ -31,5 +31,5 @@ export const TOOLTIPS = {
 export function getTooltipHtml(key, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const text = TOOLTIPS[l]?.[key] || TOOLTIPS['ru']?.[key] || '';
-    return `<i class="fa-solid fa-circle-info repro-tooltip-icon" title="${text}" style="cursor: pointer; opacity: 0.7; margin-left: 6px; font-size: 0.9em; color: #f472b6; transition: opacity 0.15s; vertical-align: middle;"></i>`;
+    return `<span class="repro-tooltip-btn" data-tip="${text.replace(/"/g, '&quot;')}" title="${text.replace(/"/g, '&quot;')}" style="display: inline-flex; align-items: center; justify-content: center; padding: 4px 7px; margin-left: 6px; cursor: pointer; color: #f472b6; opacity: 0.85; z-index: 5; position: relative; font-size: 0.9em; touch-action: manipulation; user-select: none;"><i class="fa-solid fa-circle-info" style="pointer-events: none;"></i></span>`;
 }
