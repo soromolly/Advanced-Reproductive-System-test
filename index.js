@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
     isEnabled: true,
     isNotificationsEnabled: true,
     isSecretConception: true,
-    isIrregularCycle: true, // Нерегулярность цикла включена
+    isIrregularCycle: true,
     language: 'ru',
     mode: 'realism',       
     gender: 'female',      
@@ -49,7 +49,7 @@ function createDefaultBodyData() {
         babiesCount: 0,
         babiesGenders: [],
         currentDeliveredCount: 0,
-        currentCycleTargetLength: 28, // Динамическая длина текущего цикла
+        currentCycleTargetLength: 28,
         symptomPhaseKey: null,
         symptomIndices: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
@@ -115,8 +115,10 @@ const TRANSLATIONS = {
         manualWeeks: 'Срок (акуш. нед):', manualCount: 'Плодов:', startPregnancyBtn: '🤰 Начать беременность',
         resetPregnancyBtn: '🚼 Сбросить беременность', resetAllBtn: 'Полный сброс данных',
         takeTestBtn: '🧪 Сделать тест на беременность',
+        abortBtn: '🛑 Прервать беременность (Аборт)',
         toastSaved: 'Параметры успешно сохранены!', toastManualPreg: 'Беременность установлена вручную: ',
         toastResetPreg: 'Беременность сброшена.', toastResetAll: 'Данные чата полностью очищены.',
+        toastAbort: 'Беременность была искусственно прервана. Запущен период восстановления.',
         toastTimePassed: 'Репродуктивная система: В РП прошло дней: ',
         toastConception: '🚨 ЗАЧАТИЕ ПРОИЗОШЛО! Успешная имплантация в матке.',
         toastTestPositive: '🤰 Тест ПОЛОЖИТЕЛЬНЫЙ (2 полоски)! Беременность подтверждена: ',
@@ -172,8 +174,10 @@ const TRANSLATIONS = {
         manualWeeks: 'Term (Obstetric wks):', manualCount: 'Babies:', startPregnancyBtn: '🤰 Start Pregnancy',
         resetPregnancyBtn: '🚼 Reset Pregnancy Only', resetAllBtn: 'Full Data Reset',
         takeTestBtn: '🧪 Take Pregnancy Test',
+        abortBtn: '🛑 Terminate Pregnancy (Abortion)',
         toastSaved: 'Parameters successfully saved!', toastManualPreg: 'Pregnancy set manually: ',
         toastResetPreg: 'Pregnancy has been reset.', toastResetAll: 'Chat data fully cleared.',
+        toastAbort: 'Pregnancy was terminated. Postpartum recovery begun.',
         toastTimePassed: 'Reproductive system: Days passed in RP: ',
         toastConception: '🚨 CONCEPTION OCCURRED! Successful implantation in the womb.',
         toastTestPositive: '🤰 Test is POSITIVE (2 lines)! Pregnancy confirmed: ',
@@ -277,11 +281,11 @@ function rollNewCycleTarget() {
     const roll = Math.random() * 100;
     let variance = 0;
     if (roll < 65) {
-        variance = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 день
+        variance = Math.floor(Math.random() * 3) - 1;
     } else if (roll < 90) {
-        variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2; // +2...+5 дней
+        variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2;
     } else {
-        variance = Math.floor(Math.random() * 7) + 6; // +6...+12 дней (стресс/сбой)
+        variance = Math.floor(Math.random() * 7) + 6;
     }
     return Math.max((settings.periodDuration || 5) + 6, base + variance);
 }
@@ -350,7 +354,6 @@ function getBodyPhase(lang = 'ru') {
         if (day > targetLength) return T['delayed'];
         if (day <= periodDays) return T['menstruation'];
         
-        // Овуляция рассчитывается как (Длина цикла - 14)
         const ovulPeak = Math.max(periodDays + 2, targetLength - 14);
         const ovulStart = Math.max(periodDays + 1, ovulPeak - 3);
         const ovulEnd = ovulPeak + 1;
@@ -359,7 +362,6 @@ function getBodyPhase(lang = 'ru') {
         if (day >= ovulStart && day <= ovulEnd) return T['ovulation'];
         return T['luteal'];
     } else {
-        // В Омегаверсе течка идет первыми днями цикла
         if (day > targetLength) return T['delayedHeat'];
         if (day <= periodDays) return T['heat'];
         return T['quiescence'];
@@ -639,7 +641,7 @@ function handleUserMessageTime(text) {
         }
         data.lastRpDate = newDateStr;
         saveSettingsDebounced(); 
-        renderUI();
+        renderUI(); 
     }
 }
 
@@ -690,7 +692,7 @@ function handleAiMessageTime(text) {
         }
         data.lastRpDate = newDateStr;
         saveSettingsDebounced(); 
-        renderUI();
+        renderUI(); 
     }
 }
 
@@ -752,7 +754,6 @@ function advanceBodyTime(days) {
         data.cycleDay += days;
 
         if (data.cycleDay > target) {
-            // Закончился цикл без зачатия — перезапуск на новый период
             data.cycleDay = ((data.cycleDay - 1) % target) + 1;
             data.currentCycleTargetLength = rollNewCycleTarget();
             data.symptomPhaseKey = null;
@@ -839,8 +840,6 @@ function checkConceptionTrigger(text) {
 
 function triggerPregnancy(data) {
     data.isPregnant = true;
-    
-    // Акушерский подсчёт: дни от начала цикла (LMP / 1-й день последней течки)
     data.pregnancyDaysTotal = Math.max(14, data.cycleDay || 14);
     data.pregnancyWeeks = Math.floor(data.pregnancyDaysTotal / 7);
     data.pregnancyDays = data.pregnancyDaysTotal % 7;
@@ -890,6 +889,30 @@ function performPregnancyTest() {
         if (settings.isNotificationsEnabled) {
             toastr.info(getText('toastTestNegative'));
         }
+    }
+}
+
+function processAbortionTrigger() {
+    const data = getChatBodyData();
+    data.isPregnant = false;
+    data.isDiscovered = false;
+    data.pregnancyDaysTotal = 0;
+    data.pregnancyWeeks = 0;
+    data.pregnancyDays = 0;
+    data.currentDeliveredCount = 0;
+    data.babiesCount = 0;
+    data.babiesGenders = [];
+    data.activeComplication = null;
+    data.fetalDiseaseId = null;
+    data.postpartumDays = 1;
+    data.deliveryMethod = 'miscarriage'; 
+
+    updatePromptInjection(); 
+    saveSettingsDebounced();
+    renderUI(); 
+    
+    if (settings.isNotificationsEnabled) {
+        toastr.info(getText('toastAbort'));
     }
 }
 
@@ -1132,8 +1155,8 @@ ${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered i
             }
         }
     } else {
-        prompt += `Current Cycle Day: ${data.cycleDay} | Target Length: ${data.currentCycleTargetLength || settings.cycleLength || 28} days | Phase: ${phaseEn}\n`;
         const target = data.currentCycleTargetLength || settings.cycleLength || 28;
+        prompt += `Current Cycle Day: ${data.cycleDay} | Target Length: ${target} days | Phase: ${phaseEn}\n`;
         if (data.cycleDay > target) {
             prompt += `[CYCLE DELAY NOTICE]: Menstrual period is late by ${data.cycleDay - target} days. {{user}} has not officially confirmed pregnancy yet.\n`;
         }
@@ -1346,6 +1369,16 @@ function renderUI() {
     const isCurrentlyPregnantDiscovered = data.isPregnant && data.isDiscovered;
     const targetCycle = data.currentCycleTargetLength || settings.cycleLength || 28;
 
+    // Условия доступности кнопки аборта
+    let canAbort = false;
+    if (isCurrentlyPregnantDiscovered) {
+        if (data.pregnancyWeeks <= 12) {
+            canAbort = true;
+        } else if (data.pregnancyWeeks >= 20 && data.fetalDiseaseId) {
+            canAbort = true;
+        }
+    }
+
     const html = `
         <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
             <span style="color: #f472b6 !important; font-weight: 600;">${getText('title')}</span>
@@ -1446,6 +1479,10 @@ function renderUI() {
                     <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('giveBirthBtn')}</button>
                 ` : ''}
 
+                ${canAbort ? `
+                    <button id="repro-btn-abort" class="menu_button" style="width: 100%; background: #991b1b; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('abortBtn')}</button>
+                ` : ''}
+
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('rpDateLabel')} ${getTooltipHtml('rpDate', lang)}</label>
                     <input type="text" id="repro-input-rpdate" placeholder="ДД.ММ.ГГГГ" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%; font-family: inherit; outline: none;" value="${inputDateValue}"/>
@@ -1522,7 +1559,6 @@ function renderUI() {
     container.html(html);
 }
 
-// Делегированные обработчики событий
 function bindGlobalEvents() {
     $(document).off('click', '.repro-tooltip-icon').on('click', '.repro-tooltip-icon', function(e) {
         e.stopPropagation();
@@ -1617,6 +1653,15 @@ function bindGlobalEvents() {
         performPregnancyTest();
     });
 
+    $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
+        const confirmText = settings.language === 'en' 
+            ? "Are you sure you want to terminate the pregnancy?" 
+            : "Вы уверены, что хотите провести процедуру прерывания беременности?";
+        if (confirm(confirmText)) {
+            processAbortionTrigger();
+        }
+    });
+
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const bodyData = getChatBodyData();
@@ -1662,7 +1707,7 @@ function bindGlobalEvents() {
             bodyData.activeComplication = null; 
             saveSettingsDebounced(); 
             renderUI(); 
-            updatePromptInjection();
+            updatePromptInjection(); 
         }
     });
 
