@@ -1450,95 +1450,18 @@ function renderUI() {
         $('#extensions_settings').append(container);
     }
     container.html(html);
+}
 
-    $('#repro-lang-select').off('change').on('change', function() {
-        settings.language = $(this).val();
-        saveSettingsDebounced();
-        updateSymptomsData(data);
-        renderUI();
-        updatePromptInjection();
+// Глобальная привязка событий через делегирование (работает всегда на ПК и смартфонах)
+function bindGlobalEvents() {
+    $(document).off('click', '.repro-tooltip-icon').on('click', '.repro-tooltip-icon', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const tip = $(this).attr('title');
+        if (tip) toastr.info(tip, "Справка / Info", { timeOut: 8000 });
     });
 
-    $('#repro-is-enabled').off('change').on('change', function() {
-        settings.isEnabled = $(this).is(':checked');
-        saveSettingsDebounced();
-        updatePromptInjection();
-        renderUI(); 
-    });
-
-    $('#repro-is-notifications-enabled').off('change').on('change', function() {
-        settings.isNotificationsEnabled = $(this).is(':checked');
-        saveSettingsDebounced();
-    });
-
-    $('#repro-is-secret-conception').off('change').on('change', function() {
-        settings.isSecretConception = $(this).is(':checked');
-        saveSettingsDebounced();
-    });
-
-    $('#repro-contraception').off('change').on('change', function() {
-        data.contraception = $(this).val();
-        saveSettingsDebounced();
-        updatePromptInjection();
-    });
-
-    $('#repro-fetal-pathology-enabled').off('change').on('change', function() {
-        settings.isFetalPathologyEnabled = $(this).is(':checked');
-        saveSettingsDebounced();
-    });
-
-    $('#repro-btn-take-test').off('click').on('click', function() {
-        performPregnancyTest();
-    });
-
-    $('#repro-apply-params').on('click', function() {
-        const bodyData = getChatBodyData();
-        settings.cycleLength = parseInt($('#repro-input-cycle').val()) || 28;
-        settings.maxPregnancyWeeks = parseInt($('#repro-input-maxweeks').val()) || 40;
-        
-        const manualDateVal = $('#repro-input-rpdate').val();
-        const normalized = normalizeInputDate(manualDateVal);
-        if (normalized) bodyData.lastRpDate = normalized;
-
-        if (bodyData.isPregnant && bodyData.isDiscovered) { 
-            bodyData.pregnancyWeeks = parseInt($('#repro-input-weeks').val()) || 0; 
-            bodyData.pregnancyDays = 0; 
-            bodyData.pregnancyDaysTotal = bodyData.pregnancyWeeks * 7;
-        } else if (bodyData.postpartumDays === 0) { 
-            bodyData.cycleDay = parseInt($('#repro-input-day').val()) || 1; 
-        }
-
-        updateSymptomsData(bodyData);
-        saveSettingsDebounced(); 
-        renderUI(); 
-        updatePromptInjection(); 
-        if (settings.isNotificationsEnabled) toastr.success(getText('toastSaved'));
-    });
-
-    $('#repro-btn-birth-trigger').off('click').on('click', function() {
-        const method = confirm(settings.language === 'en' 
-            ? "Perform delivery via Cesarean Section (C-Section)? [OK - C-Section, Cancel - Natural Birth]"
-            : "Выполнить родоразрешение путем операции Кесарева сечения (КС)? [ОК - Кесарево, Отмена - Естественные роды]") ? 'c_section' : 'natural';
-        processBirthTrigger(method);
-    });
-
-    $('#repro-cure-complication').off('click').on('click', function() {
-        if (data.activeComplication) {
-            const lang = getLanguage();
-            const comp = getComplication(data.activeComplication.id, lang);
-            if (settings.isNotificationsEnabled && comp) {
-                toastr.success(lang === 'en'
-                    ? `Successfully treated: ${comp.name}`
-                    : `Успешно купировано: ${comp.name}`);
-            }
-            data.activeComplication = null; 
-            saveSettingsDebounced(); 
-            renderUI(); 
-            updatePromptInjection();
-        }
-    });
-
-    $('.repro-custom-btn-toggle').off('click').on('click', function() {
+    $(document).off('click', '.repro-custom-btn-toggle').on('click', '.repro-custom-btn-toggle', function() {
         isMenuCollapsed = !isMenuCollapsed; 
         $('#repro-content-wrapper').slideToggle(150);
         const arrow = $('#repro-toggle-arrow');
@@ -1551,7 +1474,32 @@ function renderUI() {
         }
     });
 
-    $('#repro-mode').off('change').on('change', function() { 
+    $(document).off('change', '#repro-lang-select').on('change', '#repro-lang-select', function() {
+        settings.language = $(this).val();
+        saveSettingsDebounced();
+        updateSymptomsData(getChatBodyData());
+        renderUI();
+        updatePromptInjection();
+    });
+
+    $(document).off('change', '#repro-is-enabled').on('change', '#repro-is-enabled', function() {
+        settings.isEnabled = $(this).is(':checked');
+        saveSettingsDebounced();
+        updatePromptInjection();
+        renderUI(); 
+    });
+
+    $(document).off('change', '#repro-is-notifications-enabled').on('change', '#repro-is-notifications-enabled', function() {
+        settings.isNotificationsEnabled = $(this).is(':checked');
+        saveSettingsDebounced();
+    });
+
+    $(document).off('change', '#repro-is-secret-conception').on('change', '#repro-is-secret-conception', function() {
+        settings.isSecretConception = $(this).is(':checked');
+        saveSettingsDebounced();
+    });
+
+    $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
         settings.mode = $(this).val(); 
         if (settings.mode === 'realism') {
             settings.gender = 'female';
@@ -1564,24 +1512,89 @@ function renderUI() {
         updatePromptInjection(); 
     });
 
-    $('#repro-gender').off('change').on('change', function() { 
+    $(document).off('change', '#repro-gender').on('change', '#repro-gender', function() { 
         settings.gender = $(this).val(); 
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
     });
 
-    $('#repro-awareness').off('change').on('change', function() { 
+    $(document).off('change', '#repro-awareness').on('change', '#repro-awareness', function() { 
         settings.aiAwareness = $(this).val(); 
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
     });
 
-    $('#repro-btn-manual-preg').off('click').on('click', function() {
+    $(document).off('change', '#repro-contraception').on('change', '#repro-contraception', function() {
         const bodyData = getChatBodyData();
-        const weeks = parseInt($('#repro-manual-weeks').val()) || 0;
-        const count = parseInt($('#repro-manual-count').val()) || 1;
+        bodyData.contraception = $(this).val();
+        saveSettingsDebounced();
+        updatePromptInjection();
+    });
+
+    $(document).off('change', '#repro-fetal-pathology-enabled').on('change', '#repro-fetal-pathology-enabled', function() {
+        settings.isFetalPathologyEnabled = $(this).is(':checked');
+        saveSettingsDebounced();
+    });
+
+    $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
+        performPregnancyTest();
+    });
+
+    $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
+        const root = $(this).closest('#repro-content-wrapper');
+        const bodyData = getChatBodyData();
+        
+        settings.cycleLength = parseInt(root.find('#repro-input-cycle').val() || $('#repro-input-cycle').val(), 10) || 28;
+        settings.maxPregnancyWeeks = parseInt(root.find('#repro-input-maxweeks').val() || $('#repro-input-maxweeks').val(), 10) || 40;
+        
+        const manualDateVal = root.find('#repro-input-rpdate').val() || $('#repro-input-rpdate').val();
+        const normalized = normalizeInputDate(manualDateVal);
+        if (normalized) bodyData.lastRpDate = normalized;
+
+        if (bodyData.isPregnant && bodyData.isDiscovered) { 
+            bodyData.pregnancyWeeks = parseInt(root.find('#repro-input-weeks').val() || $('#repro-input-weeks').val(), 10) || 0; 
+            bodyData.pregnancyDays = 0; 
+            bodyData.pregnancyDaysTotal = bodyData.pregnancyWeeks * 7;
+        } else if (bodyData.postpartumDays === 0) { 
+            bodyData.cycleDay = parseInt(root.find('#repro-input-day').val() || $('#repro-input-day').val(), 10) || 1; 
+        }
+
+        updateSymptomsData(bodyData);
+        saveSettingsDebounced(); 
+        renderUI(); 
+        updatePromptInjection(); 
+        if (settings.isNotificationsEnabled) toastr.success(getText('toastSaved'));
+    });
+
+    $(document).off('click', '#repro-btn-birth-trigger').on('click', '#repro-btn-birth-trigger', function() {
+        const method = confirm(settings.language === 'en' 
+            ? "Perform delivery via Cesarean Section (C-Section)? [OK - C-Section, Cancel - Natural Birth]"
+            : "Выполнить родоразрешение путем операции Кесарева сечения (КС)? [ОК - Кесарево, Отмена - Естественные роды]") ? 'c_section' : 'natural';
+        processBirthTrigger(method);
+    });
+
+    $(document).off('click', '#repro-cure-complication').on('click', '#repro-cure-complication', function() {
+        const bodyData = getChatBodyData();
+        if (bodyData.activeComplication) {
+            const lang = getLanguage();
+            const comp = getComplication(bodyData.activeComplication.id, lang);
+            if (settings.isNotificationsEnabled && comp) {
+                toastr.success(lang === 'en' ? `Successfully treated: ${comp.name}` : `Успешно купировано: ${comp.name}`);
+            }
+            bodyData.activeComplication = null; 
+            saveSettingsDebounced(); 
+            renderUI(); 
+            updatePromptInjection();
+        }
+    });
+
+    $(document).off('click', '#repro-btn-manual-preg').on('click', '#repro-btn-manual-preg', function() {
+        const root = $(this).closest('#repro-content-wrapper');
+        const bodyData = getChatBodyData();
+        const weeks = parseInt(root.find('#repro-manual-weeks').val() || $('#repro-manual-weeks').val(), 10) || 0;
+        const count = parseInt(root.find('#repro-manual-count').val() || $('#repro-manual-count').val(), 10) || 1;
 
         bodyData.isPregnant = true; 
         bodyData.isDiscovered = true;
@@ -1611,7 +1624,7 @@ function renderUI() {
         if (settings.isNotificationsEnabled) toastr.success(`${getText('toastManualPreg')}${weeks}`);
     });
 
-    $('#repro-reset-pregnancy-only').off('click').on('click', function() {
+    $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
         const bodyData = getChatBodyData();
         bodyData.isPregnant = false; 
         bodyData.isDiscovered = false;
@@ -1634,7 +1647,7 @@ function renderUI() {
         if (settings.isNotificationsEnabled) toastr.info(getText('toastResetPreg'));
     });
 
-    $('#repro-reset').off('click').on('click', function() {
+    $(document).off('click', '#repro-reset').on('click', '#repro-reset', function() {
         const confirmText = settings.language === 'en' 
             ? "Are you sure you want to completely clear the reproductive data for this chat?" 
             : "Вы уверены, что хотите полностью очистить данные этого чата?";
@@ -1705,12 +1718,11 @@ function scanLastDateFromChat() {
 }
 
 jQuery(async () => {
+    bindGlobalEvents();
     loadSettings();
     scanLastDateFromChat();
 
     if (typeof eventSource?.on === 'function') { 
-        eventSource.on('i18n_language_changed', () => { renderUI(); }); 
-
         eventSource.on(event_types.MESSAGE_SENT, async (messageIndex) => {
             processIncomingMessage(messageIndex, true);
         });
