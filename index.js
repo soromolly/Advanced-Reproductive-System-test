@@ -151,7 +151,7 @@ const TRANSLATIONS = {
         protectionLabel: 'Контрацепция:', protectionNone: 'Без защиты', protectionCondom: 'Презерватив (Барьерный)',
         protectionPills: 'Оральные контрацептивы (КОК)', protectionIud: 'Внутриматочная спираль (ВМС)',
         fetalPathologyLabel: '🧬 Разрешить врождённые патологии',
-        fetalPathologySub: '(~5% шанс при зачатии)',
+        fetalPathologySub: '(~3% шанс при зачатии)',
         globalRollsLabel: 'Всего скрытых проверок на зачатие:',
         eddLabel: '📅 ПДР (Дата родов):',
         maxWeeksLabel: 'Срок беременности (нед):'
@@ -211,7 +211,7 @@ const TRANSLATIONS = {
         protectionLabel: 'Contraception:', protectionNone: 'No Protection', protectionCondom: 'Condom (Barrier)',
         protectionPills: 'Oral Extraconceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
         fetalPathologyLabel: '🧬 Allow Congenital Anomalies',
-        fetalPathologySub: '(~5% chance on conception)',
+        fetalPathologySub: '(~3% chance on conception)',
         globalRollsLabel: 'Total hidden conception checks:',
         eddLabel: '📅 EDD (Due Date):',
         maxWeeksLabel: 'Pregnancy Term (wks):'
@@ -873,7 +873,7 @@ function triggerPregnancy(data) {
     }
 
     data.fetalDiseaseId = null;
-    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 6) {
+    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
         data.fetalDiseaseId = getRandomFetalDiseaseId();
     }
 
@@ -1782,7 +1782,7 @@ function bindGlobalEvents() {
         }
 
         bodyData.fetalDiseaseId = null;
-        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 8) {
+        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
