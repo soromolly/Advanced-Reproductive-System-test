@@ -174,6 +174,36 @@ function getChatBodyData() {
     return data;
 }
 
+function generateBabyGender(mode, lang) {
+    const isBoy = Math.random() > 0.5;
+    const isRu = lang === 'ru';
+    
+    if (mode === 'omegaverse') {
+        const roll = Math.random() * 100;
+        let secRu = 'Бета';
+        let secEn = 'Beta';
+        if (roll < 25) { 
+            secRu = 'Альфа'; 
+            secEn = 'Alpha'; 
+        } else if (roll < 50) { 
+            secRu = 'Омега'; 
+            secEn = 'Omega'; 
+        }
+        
+        if (isRu) {
+            return isBoy ? `${secRu}-мальчик ♂` : `${secRu}-девочка ♀`;
+        } else {
+            return isBoy ? `${secEn} Boy ♂` : `${secEn} Girl ♀`;
+        }
+    } else {
+        if (isRu) {
+            return isBoy ? 'Мальчик ♂' : 'Девочка ♀';
+        } else {
+            return isBoy ? 'Boy ♂' : 'Girl ♀';
+        }
+    }
+}
+
 function loadSettings() {
     if (!extension_settings[EXTENSION_NAME]) {
         extension_settings[EXTENSION_NAME] = Object.assign({}, DEFAULT_SETTINGS);
@@ -306,7 +336,6 @@ function normalizeInputDate(val) {
 function parseRpDateFromText(text) {
     if (!text) return null;
 
-    // 1. "15 мая 1998", "15-го мая 98", "15th of May, 1998"
     const dmyTextRegex = /(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/i;
     const dmyTextMatch = text.match(dmyTextRegex);
     if (dmyTextMatch) {
@@ -318,7 +347,6 @@ function parseRpDateFromText(text) {
         }
     }
 
-    // 2. "May 15, 1998", "May 15th, 1998", "Января 3, 1543"
     const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?[,\s]+(\d{2,4})/i;
     const mdyTextMatch = text.match(mdyTextRegex);
     if (mdyTextMatch) {
@@ -330,7 +358,6 @@ function parseRpDateFromText(text) {
         }
     }
 
-    // 3. ISO "1998-05-15", "1543/01/03"
     const ymdNumRegex = /(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/;
     const ymdNumMatch = text.match(ymdNumRegex);
     if (ymdNumMatch) {
@@ -342,7 +369,6 @@ function parseRpDateFromText(text) {
         }
     }
 
-    // 4. "15.05.1998", "15/05/98", "15-05-2024"
     const dmyNumRegex = /(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})/;
     const dmyNumMatch = text.match(dmyNumRegex);
     if (dmyNumMatch) {
@@ -357,12 +383,10 @@ function parseRpDateFromText(text) {
     return null;
 }
 
-// Расширенный парсер относительного времени со всеми вариациями
 function parseRelativeDaysFromText(text) {
     if (!text) return 0;
     const lower = text.toLowerCase();
 
-    // Быстрая проверка на "полгода" / "half a year"
     if (/(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?пол[\s-]?года|half\s+a\s+year\s+(?:passed|later)|after\s+half\s+a\s+year/i.test(lower)) {
         return 180;
     }
@@ -394,7 +418,6 @@ function parseRelativeDaysFromText(text) {
         return 0;
     };
 
-    // 1. Русский шаблон: "прошла неделя", "прошел 1 месяц", "спустя пару дней", "через 3 года"
     const ruRegex = /(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?(\d+|од[иннаоу]+|дв[ае]|пар[ау]|три|четыре|пять|шесть|семь|восемь|девять|десять)?\s*(дне[йяа]|день|дня|недел[ьиюяе]+|месяц[аев]*|ле[тв]|год[аоу]?)/i;
     const ruMatch = lower.match(ruRegex);
     if (ruMatch) {
@@ -403,7 +426,6 @@ function parseRelativeDaysFromText(text) {
         if (days > 0) return days;
     }
 
-    // 2. Английский шаблон с постфиксом: "a week passed", "2 months later", "one day passed"
     const enSuffixRegex = /(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?\s+(?:passed|later)/i;
     const enSuffixMatch = lower.match(enSuffixRegex);
     if (enSuffixMatch) {
@@ -412,7 +434,6 @@ function parseRelativeDaysFromText(text) {
         if (days > 0) return days;
     }
 
-    // 3. Английский шаблон с префиксом: "after 2 weeks", "in a month", "after a week"
     const enPrefixRegex = /(?:after|in|past)\s+(?:about\s+)?(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?/i;
     const enPrefixMatch = lower.match(enPrefixRegex);
     if (enPrefixMatch) {
@@ -547,7 +568,8 @@ function advanceBodyTime(days) {
             data.pregnancyWeeks += Math.floor(data.pregnancyDays / 7);
             data.pregnancyDays %= 7;
 
-            if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled) {
+            // Уведомление об УЗИ-скрининге на 20 неделе
+            if (data.fetalDisease && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness !== 'hidden') {
                 toastr.warning(`🧬 УЗИ-скрининг (20 нед): Обнаружена врождённая патология — «${data.fetalDisease.name}»!`);
             }
         }
@@ -643,7 +665,7 @@ function triggerPregnancy(data) {
     
     const lang = getLanguage();
     for (let i = 0; i < data.babiesCount; i++) {
-        data.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
+        data.babiesGenders.push(generateBabyGender(settings.mode, lang));
     }
 
     data.fetalDisease = null;
@@ -745,15 +767,15 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[MEDICAL RECORD - FIRST TRIMESTER ULTRASOUND COMPLETED]: Medical scans officially confirm a MULTIPLE PREGNANCY. {{user}} is carrying exactly ${data.babiesCount} baby/babies inside the womb. {{char}} is fully aware of the twin/multiple headcount.\n`;
             
             if (revealGenders) {
-                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Fetal development is sufficient to determine sex. Scans confirm the genders are: ${data.babiesGenders.join(', ')}.\n`;
+                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Fetal development is sufficient to determine sex and secondary gender. Scans confirm the genders are: ${data.babiesGenders.join(', ')}.\n`;
                 if (data.fetalDisease) {
                     prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN)]: The anatomy scan has revealed a congenital condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is aware of this diagnosis and should reference it naturally in the roleplay where relevant.\n`;
                 }
             } else {
-                prompt += `[ULTRASOUND STAGE NOTICE]: Fetal genders are still completely OBSCURED and hidden from {{char}} (too early to visually see their sex). {{char}} MUST NOT mention or guess their genders yet.\n`;
+                prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex and secondary gender are still completely OBSCURED and hidden from {{char}} (too early to visually determine them before week 20). {{char}} MUST NOT mention or guess their genders yet.\n`;
             }
         } else if (settings.aiAwareness === 'hidden') {
-            prompt += `[SECRET DATA]: The number of babies and their genders are strictly CONCEALED from {{char}} right now (Medieval/Blind mode).\n`;
+            prompt += `[SECRET DATA]: The number of babies and their genders are strictly CONCEALED from {{char}} right now (Medieval/Blind mode). {{char}} must not know the headcount or sex until birth.\n`;
         } else {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
         }
@@ -804,6 +826,7 @@ function renderUI() {
     let fetusHtml = '';
     let eddHtml = '';
     let fetalDiseaseHtml = '';
+    let wombMapHtml = '';
 
     if (data.isPregnant && (data.pregnancyWeeks > 0 || data.cycleDay > settings.cycleLength)) {
         const fetus = getFetusData(data.pregnancyWeeks);
@@ -813,16 +836,63 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        if (data.fetalDisease && data.pregnancyWeeks >= 20) {
-            fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (обнаружена на УЗИ):</strong>
-                <b style="color: #fcd34d;">${data.fetalDisease.name}</b><br>
-                <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${data.fetalDisease.desc}</span>
-            </div>`;
-        } else if (data.fetalDisease && data.pregnancyWeeks < 20) {
-            fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 8px 10px; background: rgba(251, 191, 36, 0.06); border-left: 3px solid rgba(251, 191, 36, 0.35); border-radius: 4px; text-align: left; font-size: 0.82em; color: #92400e; font-style: italic;">
-                🔒 Патология плода будет выявлена на скрининговом УЗИ (20-я неделя).
-            </div>`;
+        // Отображение патологии плода
+        if (data.fetalDisease) {
+            if (settings.aiAwareness === 'hidden') {
+                // В средневековье ничего не показываем
+            } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
+                fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                    <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">🧬 Врожденная патология плода (обнаружена на УЗИ):</strong>
+                    <b style="color: #fcd34d;">${data.fetalDisease.name}</b><br>
+                    <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${data.fetalDisease.desc}</span>
+                </div>`;
+            } else if (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks < 20) {
+                fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 8px 10px; background: rgba(251, 191, 36, 0.06); border-left: 3px solid rgba(251, 191, 36, 0.35); border-radius: 4px; text-align: left; font-size: 0.82em; color: #92400e; font-style: italic;">
+                    🔒 Патология плода будет выявлена на скрининговом УЗИ (20-я неделя).
+                </div>`;
+            }
+        }
+
+        // Логика отображения блока "Карта плода"
+        if (settings.aiAwareness === 'hidden') {
+            wombMapHtml = `
+                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">
+                    🔒 Режим Средневековье: количество и пол плода скрыты до момента родов.
+                </div>
+            `;
+        } else if (settings.aiAwareness === 'dynamic') {
+            if (data.pregnancyWeeks >= 20) {
+                wombMapHtml = `
+                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">
+                        ℹ️ <em>${getText('wombMap')}</em><br>
+                        • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
+                        • ${getText('babiesSex')} <b>${data.babiesGenders.join(', ')}</b>
+                    </div>
+                `;
+            } else if (data.pregnancyWeeks >= 12) {
+                wombMapHtml = `
+                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">
+                        ℹ️ <em>${getText('wombMap')}</em><br>
+                        • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
+                        <span style="color: #a1a1aa; font-style: italic;">🔒 Пол плода будет определен на скрининговом УЗИ (20-я неделя).</span>
+                    </div>
+                `;
+            } else {
+                wombMapHtml = `
+                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">
+                        🔒 УЗИ-скрининг (1-й триместр): количество и пол плода пока не исследованы (до 12 нед).
+                    </div>
+                `;
+            }
+        } else {
+            // Режим 'full' (Знает всё)
+            wombMapHtml = `
+                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">
+                    ℹ️ <em>${getText('wombMap')}</em><br>
+                    • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
+                    • ${getText('babiesSex')} <b>${data.babiesGenders.join(', ')}</b>
+                </div>
+            `;
         }
 
         if (data.lastRpDate) {
@@ -959,18 +1029,7 @@ function renderUI() {
                     ${(data.isPregnant && (data.pregnancyWeeks > 0 || data.cycleDay > settings.cycleLength)) ? `
                         <div style="margin-bottom: 4px;"><strong>${getText('termInRp')}</strong> ${data.pregnancyWeeks} ${getText('weeksShort')} ${data.pregnancyDays} ${getText('daysShort')}</div>
                         ${eddHtml}
-
-                        ${(settings.aiAwareness === 'hidden') ? `
-                             <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic;">
-                                🔒 Режим Средневековье: пол младенца скрыт до момента родов.
-                             </div>
-                        ` : `
-                            <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6;">
-                                ℹ️ <em>${getText('wombMap')}</em><br>
-                                • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
-                                • ${getText('babiesSex')} <b>${data.babiesGenders.join(', ')}</b>
-                            </div>
-                        `}
+                        ${wombMapHtml}
                     ` : `
                         ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} из ${settings.cycleLength}</div>` : ''}
                     `}
@@ -1162,7 +1221,7 @@ function renderUI() {
         
         const lang = getLanguage();
         for (let i = 0; i < count; i++) {
-            bodyData.babiesGenders.push(Math.random() > 0.5 ? (lang === 'ru' ? 'Мальчик ♂' : 'Boy ♂') : (lang === 'ru' ? 'Девочка ♀' : 'Girl ♀'));
+            bodyData.babiesGenders.push(generateBabyGender(settings.mode, lang));
         }
 
         saveSettingsDebounced(); 
@@ -1197,7 +1256,7 @@ function renderUI() {
             saveSettingsDebounced(); 
             renderUI(); 
             updatePromptInjection(); 
-            if (settings.isNotificationsEnabled) toastr.warning(getText('warningResetAll'));
+            if (settings.isNotificationsEnabled) toastr.warning(getText('toastResetAll'));
         }
     });
 }
