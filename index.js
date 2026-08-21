@@ -13,7 +13,7 @@ const EXTENSION_NAME = 'st-advanced-reproductive-system';
 const DEFAULT_SETTINGS = {
     isEnabled: true,
     isNotificationsEnabled: true,
-    language: 'ru',        // 'ru' или 'en'
+    language: 'ru',
     mode: 'realism',       
     gender: 'female',      
     aiAwareness: 'dynamic', 
@@ -184,6 +184,32 @@ function getLanguage() {
 function getText(key) {
     const lang = getLanguage();
     return TRANSLATIONS[lang][key] || TRANSLATIONS['ru'][key] || key;
+}
+
+function translateGender(genderStr, targetLang) {
+    if (!genderStr) return '';
+    const isEn = targetLang === 'en';
+    const clean = genderStr.trim();
+
+    const map = {
+        'Мальчик ♂': isEn ? 'Boy ♂' : 'Мальчик ♂',
+        'Boy ♂': isEn ? 'Boy ♂' : 'Мальчик ♂',
+        'Девочка ♀': isEn ? 'Girl ♀' : 'Девочка ♀',
+        'Girl ♀': isEn ? 'Girl ♀' : 'Девочка ♀',
+        'Альфа-мальчик ♂': isEn ? 'Alpha Boy ♂' : 'Альфа-мальчик ♂',
+        'Alpha Boy ♂': isEn ? 'Alpha Boy ♂' : 'Альфа-мальчик ♂',
+        'Омега-мальчик ♂': isEn ? 'Omega Boy ♂' : 'Омега-мальчик ♂',
+        'Omega Boy ♂': isEn ? 'Omega Boy ♂' : 'Омега-мальчик ♂',
+        'Бета-мальчик ♂': isEn ? 'Beta Boy ♂' : 'Бета-мальчик ♂',
+        'Beta Boy ♂': isEn ? 'Beta Boy ♂' : 'Бета-мальчик ♂',
+        'Альфа-девочка ♀': isEn ? 'Alpha Girl ♀' : 'Альфа-девочка ♀',
+        'Alpha Girl ♀': isEn ? 'Alpha Girl ♀' : 'Альфа-девочка ♀',
+        'Омега-девочка ♀': isEn ? 'Omega Girl ♀' : 'Омега-девочка ♀',
+        'Omega Girl ♀': isEn ? 'Omega Girl ♀' : 'Омега-девочка ♀',
+        'Бета-девочка ♀': isEn ? 'Beta Girl ♀' : 'Бета-девочка ♀',
+        'Beta Girl ♀': isEn ? 'Beta Girl ♀' : 'Бета-девочка ♀'
+    };
+    return map[clean] || clean;
 }
 
 function getCurrentChatId() {
@@ -811,7 +837,8 @@ function checkBirthTrigger(text, messageIndex) {
 
 function deliverSingleBaby(data, method = 'natural') {
     const lang = getLanguage();
-    const babyGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+    const rawGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+    const babyGender = translateGender(rawGender, lang);
     data.currentDeliveredCount = (data.currentDeliveredCount || 0) + 1;
     
     data.childrenList.push({
@@ -858,7 +885,8 @@ function processBirthTrigger(method = 'natural') {
     const lang = getLanguage();
 
     while (data.babiesCount > 0 || data.babiesGenders.length > 0) {
-        const babyGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+        const rawGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+        const babyGender = translateGender(rawGender, lang);
         data.childrenList.push({
             id: Date.now() + Math.floor(Math.random() * 1000),
             gender: babyGender
@@ -920,14 +948,13 @@ function updatePromptInjection(isImmediateBirth = false) {
     if (!settings.isEnabled) { setExtensionPrompt(EXTENSION_NAME, '', extension_prompt_types.IN_CHAT, 0); return; }
     const data = getChatBodyData();
     const phase = getBodyPhase();
-    const lang = getLanguage();
     
     let prompt = `\n[OOC: SYSTEM NOTE — {{user}} Physiological Status]\n`;
     
     if (isImmediateBirth) {
         const lastChildren = data.childrenList.slice(-data.childrenList.length);
         prompt += `🚨 CRITICAL STORY EVENT: {{user}} is GIVING BIRTH right now in this exact scene!\n`;
-        prompt += `Baby details to describe: ${lastChildren.map((c, i) => `Child #${i+1}: ${c.gender}`).join('; ')}.\n`;
+        prompt += `Baby details to describe: ${lastChildren.map((c, i) => `Child #${i+1}: ${translateGender(c.gender, 'en')}`).join('; ')}.\n`;
         setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
         return;
     }
@@ -956,7 +983,7 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `[MEDICAL RECORD - FIRST TRIMESTER ULTRASOUND COMPLETED]: Medical scans confirm {{user}} is carrying ${data.babiesCount} baby/babies in the womb.\n`;
             
             if (revealGenders) {
-                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm the genders are: ${data.babiesGenders.join(', ')}.\n`;
+                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm the genders are: ${data.babiesGenders.map(g => translateGender(g, 'en')).join(', ')}.\n`;
                 if (data.fetalDisease) {
                     prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN)]: The anatomy scan revealed a condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is aware of this diagnosis and should reference it naturally.\n`;
                 }
@@ -982,7 +1009,7 @@ If {{user}} goes into labor, is currently giving birth, or delivers the baby in 
                 prompt += `\n🚨 CRITICAL BIRTH LOGGING DIRECTIVE FOR {{char}} (MULTIPLE PREGNANCY):
 {{user}} is carrying a multiple pregnancy (Total: ${totalOriginal} babies).
 Babies already delivered: ${data.currentDeliveredCount || 0}.
-Babies remaining in womb: ${data.babiesCount} (${data.babiesGenders.join(', ')}).
+Babies remaining in womb: ${data.babiesCount} (${data.babiesGenders.map(g => translateGender(g, 'en')).join(', ')}).
 
 If a baby is physically delivered in this response, you MUST append the numbered tag for that baby at the absolute end of your response:
 - If Baby #${nextNum} is delivered now: <!--BIRTH_NATURAL_${nextNum}--> (or <!--BIRTH_C_SECTION_${nextNum}-->)
@@ -1073,7 +1100,7 @@ function renderUI() {
                     <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">
                         ℹ️ <em>${getText('wombMap')}</em><br>
                         • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
-                        • ${getText('babiesSex')} <b>${data.babiesGenders.join(', ')}</b>
+                        • ${getText('babiesSex')} <b>${data.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b>
                     </div>
                 `;
             } else if (data.pregnancyWeeks >= 12) {
@@ -1096,7 +1123,7 @@ function renderUI() {
                 <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">
                     ℹ️ <em>${getText('wombMap')}</em><br>
                     • ${getText('babiesCount')} <b>${data.babiesCount}</b><br>
-                    • ${getText('babiesSex')} <b>${data.babiesGenders.join(', ')}</b>
+                    • ${getText('babiesSex')} <b>${data.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b>
                 </div>
             `;
         }
@@ -1176,7 +1203,7 @@ function renderUI() {
     if (data.childrenList?.length > 0) {
         familyHtml = `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; text-align: left; font-size: 0.85em;">
             <strong style="color: #f472b6; display: block; margin-bottom: 6px;">${getText('newbornTitle')}</strong>
-            ${data.childrenList.map((c, i) => `<div style="margin-bottom: 4px;">👶 ${getText('childLabel')} ${i+1}: <b>${c.gender}</b></div>`).join('')}
+            ${data.childrenList.map((c, i) => `<div style="margin-bottom: 4px;">👶 ${getText('childLabel')} ${i+1}: <b>${translateGender(c.gender, lang)}</b></div>`).join('')}
         </div>`;
     }
 
