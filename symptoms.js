@@ -156,7 +156,6 @@ export const SYMPTOMS = {
     }
 };
 
-// Понедельное развитие плода (с 1 по 40 неделю)
 export const PREGNANCY_STAGES = {
     ru: {
         1: { size: "Размер клетки", weight: "Менее 0.01 г", belly: "Живот незаметен", desc: "1-я акушерская неделя. Фактической беременности еще нет." },
@@ -244,7 +243,6 @@ export const PREGNANCY_STAGES = {
     }
 };
 
-// Физиология послеродового периода и восстановления
 export const POSTPARTUM_STAGES = {
     ru: {
         natural: {
@@ -282,7 +280,6 @@ export const POSTPARTUM_STAGES = {
     }
 };
 
-// Расширенная база данных осложнений беременности
 export const COMPLICATIONS_POOL = {
     ru: [
         { id: "toxicosis_severe", trimester: 1, name: "Тяжелый токсикоз", curable: true, desc: "Непрекращающаяся тошнота, рвота от любой пищи, сильная слабость и истощение." },
@@ -326,25 +323,119 @@ export const COMPLICATIONS_POOL = {
     ]
 };
 
-// База врожденных болезней плода
+// Полная база патологий плода и новорожденных (Group A - Пренатальные / Group B - Постнатальные)
 export const FETAL_DISEASES = {
     ru: [
-        { id: "heart_defect", name: "Врожденный порок сердца", desc: "Анатомический дефект сердечной мышцы или сосудов. Требует квалифицированного контроля и возможного хирургического вмешательства после рождения." },
-        { id: "down_syndrome", name: "Синдром Дауна", desc: "Генетическая патология, обусловленная наличием дополнительной хромосомы. Характеризуется особенностями физического и умственного развития." },
-        { id: "albinism", name: "Альбинизм", desc: "Полное или частичное отсутствие пигмента меланина в коже, волосах и радужной оболочке глаз. Требует защиты от ультрафиолета." },
-        { id: "polydactyly", name: "Полидактилия (шестипалость)", desc: "Анатомическая особенность, при которой на конечностях присутствует лишний палец. Легко корректируется хирургическим путем." },
-        { id: "heterochromia", name: "Гетерохромия", desc: "Разный цвет радужной оболочки правого и левого глаза или неодинаковая окраска различных участков одного глаза. Безвредная генетическая особенность." },
-        { id: "cleft_lip", name: "Расщелина губы и нёба ('заячья губа')", desc: "Врожденный дефект, представляющий собой расщелину верхней губы. Требует пластической операции в первые месяцы жизни." },
-        { id: "hydrocephalus", name: "Врожденная гидроцефалия", desc: "Избыточное скопление спинномозговой жидкости в желудочковой системе головного мозга. Требует установки шунтирующей системы." }
+        // --- Group A: Выявляются на УЗИ (Пренатально с 20-й недели) ---
+        // 1. Хромосомные и генетические синдромы
+        { id: "down_syndrome", type: "prenatal", name: "Синдром Дауна (Трисомия 21)", desc: "Генетическая особенность, влияющая на анатомические маркеры лица, тонус мышц и темпы общего развития." },
+        { id: "edwards_syndrome", type: "prenatal", name: "Синдром Эдвардса (Трисомия 18)", desc: "Тяжелая хромосомная патология с задержкой развития плода, аномалиями пальцев кистей и пороками сердца." },
+        { id: "patau_syndrome", type: "prenatal", name: "Синдром Патау (Трисомия 13)", desc: "Хромосомное нарушение со сложными пороками развития центральной нервной системы, глаз и лицевого черепа." },
+        { id: "turner_syndrome", type: "prenatal", name: "Синдром Шерешевского — Тёрнера", desc: "Хромосомная особенность у девочек (моносомия X), влияющая на формирование лимфатической и репродуктивной системы." },
+
+        // 2. Челюстно-лицевые и костно-мышечные аномалии
+        { id: "cleft_lip", type: "prenatal", name: "Заячья губа (Хейлосхизис)", desc: "Несращение тканей верхней губы. Легко и бесследно корректируется небольшой пластической операцией в первые месяцы жизни." },
+        { id: "cleft_palate", type: "prenatal", name: "Волчья пасть (Палатосхизис)", desc: "Анатомическое расщепление верхнего нёба. Требует бережного вскармливания и хирургической коррекции в раннем возрасте." },
+        { id: "polydactyly", type: "prenatal", name: "Полидактилия (шестипалость)", desc: "Формирование дополнительного пальчика на ручках или ножках. Абсолютно безвредно и легко удаляется хирургически." },
+        { id: "syndactyly", type: "prenatal", name: "Синдактилия", desc: "Врождённое сращение двух или более соседних пальчиков на ручках или ножках." },
+        { id: "clubfoot", type: "prenatal", name: "Косолапость (Talipes equinovarus)", desc: "Разворот стопы внутрь из-за натяжения связок. Успешно и мягко выправляется массажем и фиксацией с первых недель жизни." },
+        { id: "achondroplasia", type: "prenatal", name: "Ахондроплазия (карликовость)", desc: "Особенность роста трубчатых костей: туловище развивается нормально, а ручки и ножки остаются аккуратно укороченными." },
+        { id: "phocomelia", type: "prenatal", name: "Фокомелия", desc: "Редкая аномалия конечностей, при которой ручки или ножки развиваются укороченными («ластовидными»)." },
+
+        // 3. Пороки нервной системы, брюшной стенки и внутренних органов
+        { id: "spina_bifida", type: "prenatal", name: "Спина бифида (расщепление позвоночника)", desc: "Неполное закрытие позвоночного канала плода. Требует деликатного родоразрешения и контроля детских нейрохирургов." },
+        { id: "anencephaly", type: "prenatal", name: "Анэнцефалия", desc: "Крайне тяжелый дефект нервной трубки с недоразвитием полушарий головного мозга и костей свода черепа." },
+        { id: "omphalocele", type: "prenatal", name: "Омпфалоцеле", desc: "Выход части органов брюшной полости в прозрачный грыжевой мешок у основания пуповины. Вправляется операцией после родов." },
+        { id: "gastroschisis", type: "prenatal", name: "Гастрошизис", desc: "Небольшой дефект брюшной стенки около пупка, при котором петли кишечника временно находятся снаружи. Корректируется сразу после рождения." },
+        { id: "hydrocephalus", type: "prenatal", name: "Врожденная гидроцефалия", desc: "Избыточное скопление спинномозговой жидкости в желудочках мозга, увеличивающее объем головки." },
+
+        // 4. Врожденные пороки сердца (ВПС)
+        { id: "tetralogy_of_fallot", type: "prenatal", name: "Тетрада Фалло", desc: "Сложный порок сердца, сочетающий четыре анатомические особенности. Успешно оперируется кардиохирургами на первом году жизни." },
+        { id: "tga", type: "prenatal", name: "Транспозиция магистральных артерий (ТМА)", desc: "Анатомическое переключение главных сосудов сердца. Требует плановой хирургической коррекции в первые дни жизни." },
+        { id: "hlhs", type: "prenatal", name: "Синдром гипоплазии левых отделов сердца (СГЛОС)", desc: "Недоразвитие левого желудочка сердца. Требует специализированной многоэтапной помощи детских кардиохирургов." },
+        { id: "aortic_coarctation", type: "prenatal", name: "Коарктация аорты", desc: "Сужение главного артериального ствола, затрудняющее ток крови. Эффективно устраняется малоинвазивным вмешательством." },
+        { id: "vsd", type: "prenatal", name: "Дефект межжелудочковой перегородки (ДМЖП)", desc: "Крошечное отверстие между желудочками сердца. Небольшие дефекты часто закрываются сами по мере роста малыша." },
+        { id: "asd", type: "prenatal", name: "Дефект межпредсердной перегородки (ДМПП)", desc: "Небольшое окно в перегородке между предсердиями. Благоприятная особенность, часто протекающая бессимптомно." },
+        { id: "ebstein_anomaly", type: "prenatal", name: "Аномалия Эбштейна", desc: "Смещение трехстворчатого клапана сердца в полость правого желудочка. Требует индивидуального контроля кардиолога." },
+
+        // 5. Другие тяжелые пороки внутренних органов
+        { id: "renal_agenesis", type: "prenatal", name: "Агенезия почек (Синдром Поттера)", desc: "Врожденное отсутствие одной или обеих почек. Односторонняя позволяет жить полной жизнью без ограничений." },
+        { id: "polycystic_kidneys", type: "prenatal", name: "Поликистоз почек", desc: "Формирование мелких жидкостных кист в ткани почек, требующее бережного наблюдения детских нефрологов." },
+        { id: "hydronephrosis", type: "prenatal", name: "Врожденный гидронефроз", desc: "Расширение почечной лоханки из-за временного затруднения оттока мочи. Часто проходит самостоятельно или легко корректируется." },
+        { id: "esophageal_atresia", type: "prenatal", name: "Атрезия пищевода / дуоденальная атрезия", desc: "Врожденная непроходимость верхних отделов ЖКТ. Успешно восстанавливается детскими хирургами в первые сутки." },
+        { id: "diaphragmatic_hernia", type: "prenatal", name: "Диафрагмальная грыжа", desc: "Отверстие в диафрагме, через которое органы брюшной полости смещаются в грудную клетку. Вправляется операцией после рождения." },
+        { id: "pulmonary_hypoplasia", type: "prenatal", name: "Гипоплазия легких", desc: "Неполный объем легочной ткани плода, требующий деликатной кислородной поддержки малыша в первые дни." },
+        { id: "cpam", type: "prenatal", name: "Кистозно-аденоматозный порок легких (КАМЛ)", desc: "Доброкачественное кистозное образование в одном сегменте легкого, подлежащее наблюдению или удалению." },
+
+        // --- Group B: Проявляются только после рождения (Постнатально) ---
+        { id: "pda", type: "postnatal", name: "Открытый артериальный проток (ОАП)", desc: "Временный внутриутробный сосуд не закрылся сам после первых вдохов. Легко закрывается медикаментозно в роддоме." },
+        { id: "hearing_loss", type: "postnatal", name: "Врожденная тугоухость / Глухота", desc: "Снижение слуха, определяемое неонатальным аудиотестом. Успешно компенсируется слуховыми аппаратами или имплантами." },
+        { id: "congenital_cataract", type: "postnatal", name: "Врожденная катаракта / Анофтальмия", desc: "Помутнение хрусталика или особенность строения глаза. Требует ранней оптической или микрохирургической коррекции." },
+        { id: "anal_atresia", type: "postnatal", name: "Атрезия ануса", desc: "Врожденное отсутствие естественного анального выхода. Полностью восстанавливается хирургами в первые дни жизни." },
+        { id: "albinism", type: "postnatal", name: "Альбинизм (Глазо-кожный)", desc: "Отсутствие меланина: белоснежные волосики, очень светлая кожа и розовато-голубые глаза. Нуждается в защите от яркого солнца." },
+        { id: "vitiligo", type: "postnatal", name: "Врождённое витилиго", desc: "Очаговое отсутствие пигмента на коже в виде молочно-белых пятнышек или островков. Полностью безвредно для здоровья." },
+        { id: "heterochromia", type: "postnatal", name: "Врождённая гетерохромия", desc: "Разный цвет радужки правого и левого глаза (например, один карий, а другой небесно-голубой). Безвредная изюминка." },
+        { id: "waardenburg", type: "postnatal", name: "Синдром Ваарденбурга", desc: "Генетическая особенность: белоснежная прядка волос надо лбом, необычайно яркие льдисто-синие глаза и чуткий слух." },
+        { id: "marfan", type: "postnatal", name: "Синдром Марфана (ранние признаки)", desc: "Высокий рост, удлиненные изящные пальчики («паучьи пальцы») и повышенная гибкость суставов." },
+        { id: "pku", type: "postnatal", name: "Фенилкетонурия (ФКУ)", desc: "Особенность расщепления аминокислоты фенилаланина (выявляется пяточным тестом). Малышу требуется специальная диета." },
+        { id: "cystic_fibrosis", type: "postnatal", name: "Муковисцидоз", desc: "Наследственная особенность секреторных желез, требующая специального ферментного питания и ингаляций." },
+        { id: "galactosemia", type: "postnatal", name: "Галактоземия", desc: "Врождённая непереносимость молочного сахара (галактозы). Требует перевода малыша на специальное безлактозное питание." }
     ],
     en: [
-        { id: "heart_defect", name: "Congenital Heart Defect", desc: "Anatomical defect of heart muscle or vessels. Requires expert monitoring and possible pediatric surgery after birth." },
-        { id: "down_syndrome", name: "Down Syndrome", desc: "Genetic condition caused by extra chromosome 21, characterized by distinct developmental features." },
-        { id: "albinism", name: "Albinism", desc: "Complete or partial absence of melanin pigment in skin, hair, and irises. Requires strict UV protection." },
-        { id: "polydactyly", name: "Polydactyly (Extra Digit)", desc: "Presence of an extra finger or toe. Readily corrected surgically in early infancy." },
-        { id: "heterochromia", name: "Heterochromia", desc: "Different colors of the irises in each eye or two distinct colors in one eye. Completely harmless genetic trait." },
-        { id: "cleft_lip", name: "Cleft Lip and Palate", desc: "Congenital split in upper lip and roof of mouth. Correctable with reconstructive surgery in early months." },
-        { id: "hydrocephalus", name: "Congenital Hydrocephalus", desc: "Excessive buildup of cerebrospinal fluid in brain ventricles. Managed via shunt system installation." }
+        // --- Group A: Ultrasound detectable (Prenatal from week 20) ---
+        // 1. Chromosomal & Genetic syndromes
+        { id: "down_syndrome", type: "prenatal", name: "Down Syndrome (Trisomy 21)", desc: "Genetic condition caused by extra chromosome 21, influencing muscle tone and developmental pace." },
+        { id: "edwards_syndrome", type: "prenatal", name: "Edwards Syndrome (Trisomy 18)", desc: "Severe chromosomal disorder involving growth restriction, heart defects, and clenched fingers." },
+        { id: "patau_syndrome", type: "prenatal", name: "Patau Syndrome (Trisomy 13)", desc: "Chromosomal abnormality associated with central nervous system, facial, and cardiac anomalies." },
+        { id: "turner_syndrome", type: "prenatal", name: "Turner Syndrome (Monosomy X)", desc: "Chromosomal condition in females (single X chromosome), affecting lymphatic and reproductive development." },
+
+        // 2. Craniofacial & Musculoskeletal
+        { id: "cleft_lip", type: "prenatal", name: "Cleft Lip (Cheiloschisis)", desc: "Congenital split in the upper lip. Easily and seamlessly repaired with minor pediatric surgery in early infancy." },
+        { id: "cleft_palate", type: "prenatal", name: "Cleft Palate (Palatoschisis)", desc: "Opening in the roof of the mouth. Requires specialized feeding bottles and early surgical repair." },
+        { id: "polydactyly", type: "prenatal", name: "Polydactyly (Extra Digits)", desc: "Presence of an extra finger or toe. Harmless anatomical feature, readily corrected surgically." },
+        { id: "syndactyly", type: "prenatal", name: "Syndactyly (Webbed Digits)", desc: "Congenital fusion or webbing between adjacent fingers or toes." },
+        { id: "clubfoot", type: "prenatal", name: "Clubfoot (Talipes equinovarus)", desc: "Inward turning of the foot due to shortened tendons. Gently corrected with physiotherapy and casting." },
+        { id: "achondroplasia", type: "prenatal", name: "Achondroplasia (Dwarfism)", desc: "Disproportionate limb development: torso develops normally while limbs remain shortened." },
+        { id: "phocomelia", type: "prenatal", name: "Phocomelia", desc: "Rare condition where limbs develop shortened or flipper-like." },
+
+        // 3. Neural tube & Abdominal wall
+        { id: "spina_bifida", type: "prenatal", name: "Spina Bifida", desc: "Incomplete closure of the fetal neural tube/spine. Managed carefully via pediatric neurosurgery." },
+        { id: "anencephaly", type: "prenatal", name: "Anencephaly", desc: "Severe neural tube defect involving absence of a major portion of the brain and cranial vault." },
+        { id: "omphalocele", type: "prenatal", name: "Omphalocele", desc: "Protrusion of abdominal organs into the base of the umbilical cord within a protective sac. Surgically repaired." },
+        { id: "gastroschisis", type: "prenatal", name: "Gastroschisis", desc: "Defect in the abdominal wall beside the navel where intestines protrude. Repaired immediately after birth." },
+        { id: "hydrocephalus", type: "prenatal", name: "Congenital Hydrocephalus", desc: "Buildup of cerebrospinal fluid within brain ventricles, managed via shunt placement." },
+
+        // 4. Congenital Heart Defects (CHD)
+        { id: "tetralogy_of_fallot", type: "prenatal", name: "Tetralogy of Fallot", desc: "Complex heart condition involving 4 anatomical features, surgically corrected during early infancy." },
+        { id: "tga", type: "prenatal", name: "Transposition of the Great Arteries (TGA)", desc: "Switch of the two main heart arteries, corrected via arterial switch surgery in the first days of life." },
+        { id: "hlhs", type: "prenatal", name: "Hypoplastic Left Heart Syndrome (HLHS)", desc: "Underdevelopment of the left side of the heart, managed via staged pediatric cardiac surgeries." },
+        { id: "aortic_coarctation", type: "prenatal", name: "Coarctation of the Aorta", desc: "Narrowing of the aorta restricting blood flow, corrected via catheterization or minor surgery." },
+        { id: "vsd", type: "prenatal", name: "Ventricular Septal Defect (VSD)", desc: "Small opening in the wall separating the ventricles. Frequently closes on its own as the baby grows." },
+        { id: "asd", type: "prenatal", name: "Atrial Septal Defect (ASD)", desc: "Small opening between the heart's upper chambers. Usually benign and well-tolerated." },
+        { id: "ebstein_anomaly", type: "prenatal", name: "Ebstein's Anomaly", desc: "Downward displacement of the tricuspid valve into the right ventricle, monitored by pediatric cardiologists." },
+
+        // 5. Other severe visceral organ anomalies
+        { id: "renal_agenesis", type: "prenatal", name: "Renal Agenesis (Potter Syndrome)", desc: "Congenital absence of one or both kidneys. Single kidney allows a normal, healthy life." },
+        { id: "polycystic_kidneys", type: "prenatal", name: "Polycystic Kidney Disease", desc: "Presence of small fluid-filled cysts in renal tissue, monitored by pediatric nephrologists." },
+        { id: "hydronephrosis", type: "prenatal", name: "Congenital Hydronephrosis", desc: "Enlargement of the kidney pelvis due to fluid buildup. Often resolves spontaneously." },
+        { id: "esophageal_atresia", type: "prenatal", name: "Esophageal / Duodenal Atresia", desc: "Congenital discontinuity of the upper gastrointestinal tract, repaired surgically in the first days." },
+        { id: "diaphragmatic_hernia", type: "prenatal", name: "Diaphragmatic Hernia", desc: "Opening in the diaphragm allowing abdominal contents into the chest cavity, surgically repaired after birth." },
+        { id: "pulmonary_hypoplasia", type: "prenatal", name: "Pulmonary Hypoplasia", desc: "Underdeveloped lung tissue volume requiring gentle respiratory support after delivery." },
+        { id: "cpam", type: "prenatal", name: "Congenital Pulmonary Airway Malformation (CPAM)", desc: "Benign cystic lung mass monitored and electively treated if necessary." },
+
+        // --- Group B: Postnatal (Diagnosed after birth) ---
+        { id: "pda", type: "postnatal", name: "Patent Ductus Arteriosus (PDA)", desc: "Fetal vessel fails to close naturally after birth. Easily managed with medication in the nursery." },
+        { id: "hearing_loss", type: "postnatal", name: "Congenital Hearing Loss / Deafness", desc: "Hearing impairment diagnosed on newborn auditory screening, supported with hearing aids or implants." },
+        { id: "congenital_cataract", type: "postnatal", name: "Congenital Cataract / Anophthalmia", desc: "Clouding of the ocular lens or eye structural feature, managed via early pediatric ophthalmology." },
+        { id: "anal_atresia", type: "postnatal", name: "Imperforate Anus (Anal Atresia)", desc: "Congenital absence of normal anal opening, surgically restored in the first days of life." },
+        { id: "albinism", type: "postnatal", name: "Albinism (Oculocutaneous)", desc: "Absence of melanin: pure white hair, delicate pale skin, and light blue/violet eyes. Requires UV protection." },
+        { id: "vitiligo", type: "postnatal", name: "Congenital Vitiligo", desc: "Focal loss of skin pigmentation creating distinct white patches. Harmless cosmetic feature." },
+        { id: "heterochromia", type: "postnatal", name: "Congenital Heterochromia", desc: "Different coloration in each iris (e.g. one hazel, one crystal blue). Harmless and striking genetic trait." },
+        { id: "waardenburg", type: "postnatal", name: "Waardenburg Syndrome", desc: "Genetic feature causing a white forelock of hair, brilliant pale-blue eyes, and sensitive hearing." },
+        { id: "marfan", type: "postnatal", name: "Marfan Syndrome (Early Signs)", desc: "Tall stature, elongated slender fingers (arachnodactyly), and hypermobile joints." },
+        { id: "pku", type: "postnatal", name: "Phenylketonuria (PKU)", desc: "Inability to metabolize phenylalanine, diagnosed via newborn heel-prick blood test. Managed with strict diet." },
+        { id: "cystic_fibrosis", type: "postnatal", name: "Cystic Fibrosis", desc: "Genetic disorder affecting mucus glands, causing thicker secretions in lungs and digestive tract." },
+        { id: "galactosemia", type: "postnatal", name: "Galactosemia", desc: "Inability to process galactose (milk sugar), managed safely with lactose-free infant formula." }
     ]
 };
 
