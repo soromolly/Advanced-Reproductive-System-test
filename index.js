@@ -333,6 +333,19 @@ function daysToDateString(days) {
     return `${year}-${month}-${day}`;
 }
 
+function cleanHtmlFromText(text) {
+    if (!text) return '';
+    return text
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\u00A0/g, ' ')
+        .replace(/✦|★|•|\|/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function normalizeInputDate(val) {
     if (!val) return null;
     val = val.trim();
@@ -353,9 +366,11 @@ function normalizeInputDate(val) {
     return null;
 }
 
-function parseRpDateFromText(text) {
-    if (!text) return null;
+function parseRpDateFromText(rawText) {
+    if (!rawText) return null;
+    const text = cleanHtmlFromText(rawText);
 
+    // 1. "8 марта 2024", "15-го мая 98", "15th of May, 1998"
     const dmyTextRegex = /(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/i;
     const dmyTextMatch = text.match(dmyTextRegex);
     if (dmyTextMatch) {
@@ -367,6 +382,7 @@ function parseRpDateFromText(text) {
         }
     }
 
+    // 2. "May 15, 1998", "May 15th, 1998", "Марта 8, 2024"
     const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?[,\s]+(\d{2,4})/i;
     const mdyTextMatch = text.match(mdyTextRegex);
     if (mdyTextMatch) {
@@ -378,6 +394,7 @@ function parseRpDateFromText(text) {
         }
     }
 
+    // 3. ISO "2024-03-08", "1543/01/03"
     const ymdNumRegex = /(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/;
     const ymdNumMatch = text.match(ymdNumRegex);
     if (ymdNumMatch) {
@@ -389,6 +406,7 @@ function parseRpDateFromText(text) {
         }
     }
 
+    // 4. "08.03.2024", "15/05/98"
     const dmyNumRegex = /(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})/;
     const dmyNumMatch = text.match(dmyNumRegex);
     if (dmyNumMatch) {
@@ -403,9 +421,9 @@ function parseRpDateFromText(text) {
     return null;
 }
 
-function parseRelativeDaysFromText(text) {
-    if (!text) return 0;
-    const lower = text.toLowerCase();
+function parseRelativeDaysFromText(rawText) {
+    if (!rawText) return 0;
+    const lower = cleanHtmlFromText(rawText).toLowerCase();
 
     if (/(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?пол[\s-]?года|half\s+a\s+year\s+(?:passed|later)|after\s+half\s+a\s+year/i.test(lower)) {
         return 180;
@@ -454,7 +472,7 @@ function parseRelativeDaysFromText(text) {
         if (days > 0) return days;
     }
 
-    const enPrefixRegex = /(?:after|in|past)\s+(?:about\s+)?(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?/i;
+    const enPrefixRegex = /\b(?:after|in|past)\s+(?:about\s+)?(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?\b/i;
     const enPrefixMatch = lower.match(enPrefixRegex);
     if (enPrefixMatch) {
         const count = parseCount(enPrefixMatch[1]);
@@ -700,7 +718,6 @@ function triggerPregnancy(data) {
     }
 }
 
-// Автоматическая проверка тегов родов из текста
 function checkBirthTrigger(text) {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
@@ -718,7 +735,6 @@ function checkBirthTrigger(text) {
     }
 }
 
-// Рождение одного ребёнка
 function deliverSingleBaby(data, method = 'natural') {
     const lang = getLanguage();
     const babyGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
@@ -754,7 +770,6 @@ function deliverSingleBaby(data, method = 'natural') {
     renderUI();
 }
 
-// Ручной сброс/принятие всех оставшихся родов одной кнопкой
 function processBirthTrigger(method = 'natural') {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
@@ -1364,44 +1379,94 @@ function renderUI() {
     });
 }
 
-jQuery(async () => {
-    loadSettings();
-    if (typeof eventSource?.on === 'function') { 
-        eventSource.on('i18n_language_changed', () => { renderUI(); }); 
+function processIncomingMessage(messageIndex, isUser = false) {
+    if (!settings.isEnabled) return; 
+    const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
+    const chat = context ? context.chat : window.chat;
+    if (!chat) return;
+
+    let text = null;
+    if (typeof messageIndex === 'number' && chat[messageIndex]) {
+        text = chat[messageIndex].mes;
+    } else if (typeof messageIndex === 'object' && messageIndex?.mes) {
+        text = messageIndex.mes;
+    } else if (chat.length > 0) {
+        text = chat[chat.length - 1]?.mes;
     }
 
-    eventSource.on(event_types.MESSAGE_SENT, async (messageIndex) => {
-        if (!settings.isEnabled) return; 
-        const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
-        const chat = context ? context.chat : window.chat;
-        if (!chat || !chat[messageIndex]) return;
-        const text = chat[messageIndex].mes; 
-        if (!text) return;
+    if (!text) return;
 
+    if (isUser) {
         handleUserMessageTime(text);
-        checkConceptionTrigger(text);
-        checkBirthTrigger(text);
-        updatePromptInjection();
-    });
-
-    eventSource.on(event_types.MESSAGE_RECEIVED, async (messageIndex) => {
-        if (!settings.isEnabled) return; 
-        const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
-        const chat = context ? context.chat : window.chat;
-        if (!chat || !chat[messageIndex]) return;
-        const text = chat[messageIndex].mes; 
-        if (!text) return;
-
+    } else {
         handleAiMessageTime(text);
-        checkConceptionTrigger(text);
         checkBirthTrigger(text);
-        updatePromptInjection();
-    });
+    }
+    checkConceptionTrigger(text);
+    updatePromptInjection();
+}
 
-    if (event_types.CHAT_CHANGED) {
-        eventSource.on(event_types.CHAT_CHANGED, () => { 
-            pendingUserTimeskipDays = 0;
-            loadSettings(); 
+function scanLastDateFromChat() {
+    const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
+    const chat = context ? context.chat : window.chat;
+    if (!chat || chat.length === 0) return;
+
+    for (let i = chat.length - 1; i >= 0; i--) {
+        const mesText = chat[i]?.mes;
+        if (mesText) {
+            const parsed = parseRpDateFromText(mesText);
+            if (parsed) {
+                const bodyData = getChatBodyData();
+                if (!bodyData.lastRpDate) {
+                    bodyData.lastRpDate = daysToDateString(dateToDays(parsed.year, parsed.month, parsed.day));
+                    saveSettingsDebounced();
+                    renderUI();
+                }
+                break;
+            }
+        }
+    }
+}
+
+jQuery(async () => {
+    loadSettings();
+    scanLastDateFromChat();
+
+    if (typeof eventSource?.on === 'function') { 
+        eventSource.on('i18n_language_changed', () => { renderUI(); }); 
+
+        eventSource.on(event_types.MESSAGE_SENT, async (messageIndex) => {
+            processIncomingMessage(messageIndex, true);
         });
+
+        eventSource.on(event_types.MESSAGE_RECEIVED, async (messageIndex) => {
+            processIncomingMessage(messageIndex, false);
+        });
+
+        if (event_types.CHARACTER_MESSAGE_RENDERED) {
+            eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (messageIndex) => {
+                processIncomingMessage(messageIndex, false);
+            });
+        }
+
+        if (event_types.MESSAGE_EDITED) {
+            eventSource.on(event_types.MESSAGE_EDITED, async (messageIndex) => {
+                processIncomingMessage(messageIndex, false);
+            });
+        }
+
+        if (event_types.MESSAGE_SWIPED) {
+            eventSource.on(event_types.MESSAGE_SWIPED, async (messageIndex) => {
+                processIncomingMessage(messageIndex, false);
+            });
+        }
+
+        if (event_types.CHAT_CHANGED) {
+            eventSource.on(event_types.CHAT_CHANGED, () => { 
+                pendingUserTimeskipDays = 0;
+                loadSettings(); 
+                scanLastDateFromChat();
+            });
+        }
     }
 });
