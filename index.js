@@ -22,7 +22,7 @@ const EXTENSION_NAME = 'st-advanced-reproductive-system';
 const DEFAULT_SETTINGS = {
     isEnabled: true,
     isNotificationsEnabled: true,
-    isSecretConception: true, // Реалистичное скрытое зачатие до теста/задержки
+    isSecretConception: true,
     language: 'ru',
     mode: 'realism',       
     gender: 'female',      
@@ -40,8 +40,8 @@ function createDefaultBodyData() {
         cycleDay: 1,
         lastRpDate: null,
         isPregnant: false,
-        isDiscovered: false, // Известно ли о беременности персонажу
-        pregnancyDaysTotal: 0, // Общее количество акушерских дней от 1-го дня цикла
+        isDiscovered: false,
+        pregnancyDaysTotal: 0,
         pregnancyWeeks: 0,
         pregnancyDays: 0,
         babiesCount: 0,
@@ -96,8 +96,7 @@ const TRANSLATIONS = {
         title: '🧬 Репродуктивная Система',
         enableExt: 'Включить расширение',
         enableNotif: 'Показывать уведомления',
-        secretConceptionLabel: '🤫 Реалистичное зачатие (Сюрприз)',
-        secretConceptionSub: '(тест/задержка на 5-6 нед, без спойлеров)',
+        secretConceptionLabel: 'Реалистичное зачатие',
         system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс',
         physiology: 'Физиология:', female: 'Женщина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омегa',
         aiLogic: 'Знания ИИ:', ultrasound: 'УЗИ (20 нед)', medieval: 'Средневековье', knowsAll: 'Знает всё',
@@ -150,8 +149,7 @@ const TRANSLATIONS = {
         title: '🧬 Reproductive System',
         enableExt: 'Enable Extension',
         enableNotif: 'Show Notifications',
-        secretConceptionLabel: '🤫 Realistic Conception (Surprise)',
-        secretConceptionSub: '(test/missed period at 5-6 wks, spoiler-free)',
+        secretConceptionLabel: 'Realistic Conception',
         system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse',
         physiology: 'Physiology:', female: 'Female', female_omega: 'F-Omega', male_omega: 'M-Omega',
         aiLogic: 'AI Awareness:', ultrasound: 'Ultrasound (20 wk)', medieval: 'Medieval (Blind)', knowsAll: 'Knows Everything',
@@ -311,12 +309,10 @@ function getBodyPhase(lang = 'ru') {
 
     if (data.postpartumDays > 0) return T['postpartumPhase'];
     
-    // Если беременность подтверждена и раскрыта
     if (data.isPregnant && data.isDiscovered) {
         return settings.mode === 'realism' ? T['pregnancy'] : T['pregnancyOmega'];
     }
 
-    // Если беременность тайная (или её нет) — обычный цикл
     const day = data.cycleDay;
     if (day > settings.cycleLength) return T['delayed']; 
 
@@ -685,9 +681,8 @@ function advanceBodyTime(days) {
         data.pregnancyDaysTotal += days;
         data.pregnancyWeeks = Math.floor(data.pregnancyDaysTotal / 7);
         data.pregnancyDays = data.pregnancyDaysTotal % 7;
-        data.cycleDay += days; // День цикла продолжает расти (задержка)
+        data.cycleDay += days;
 
-        // Автоматическое обнаружение при большой задержке (6 акушерских недель = 2 недели задержки)
         if (!data.isDiscovered && data.pregnancyWeeks >= 6) {
             data.isDiscovered = true;
             if (settings.isNotificationsEnabled) {
@@ -767,7 +762,6 @@ function checkConceptionTrigger(text) {
         const lang = getLanguage();
 
         if (isSuccessful) {
-            // Если тайное зачатие выключено — показываем уведомление
             if (!settings.isSecretConception && settings.isNotificationsEnabled) {
                 toastr.success(lang === 'en'
                     ? `🎲 Conception roll made! Result: ${rollResult.toFixed(1)}% of ${finalChance}% required. SUCCESSFUL CONCEPTION!`
@@ -790,14 +784,11 @@ function triggerPregnancy(data) {
     const lang = getLanguage();
     data.isPregnant = true;
     
-    // Акушерский подсчёт: дни от начала менструального цикла (LMP)
     data.pregnancyDaysTotal = Math.max(14, data.cycleDay || 14);
     data.pregnancyWeeks = Math.floor(data.pregnancyDaysTotal / 7);
     data.pregnancyDays = data.pregnancyDaysTotal % 7;
 
-    // В тайном режиме не раскрываем статус сразу
     data.isDiscovered = !settings.isSecretConception;
-
     data.rolledTrimesters = { 1: false, 2: false, 3: false }; 
     data.activeComplication = null;
     data.deliveryMethod = 'none';
@@ -1030,7 +1021,6 @@ function updatePromptInjection(isImmediateBirth = false) {
         return;
     }
 
-    // Если беременность раскрыта персонажу
     if (data.isPregnant && data.isDiscovered) {
         prompt += `Status: PREGNANT (Obstetric Term) | Duration: ${data.pregnancyWeeks} weeks ${data.pregnancyDays} days.\n`;
         const fetus = getFetusData(data.pregnancyWeeks, 'en');
@@ -1086,7 +1076,6 @@ ${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered i
             }
         }
     } else {
-        // Обычный цикл (или скрытая нераскрытая ранняя беременность)
         prompt += `Current Cycle Day: ${data.cycleDay}/${settings.cycleLength} | Phase: ${phaseEn}\n`;
         if (data.cycleDay > settings.cycleLength) {
             prompt += `[CYCLE DELAY NOTICE]: Menstrual period is late by ${data.cycleDay - settings.cycleLength} days. {{user}} has not officially confirmed pregnancy yet.\n`;
@@ -1307,7 +1296,7 @@ function renderUI() {
         
         <div id="repro-content-wrapper" style="${isMenuCollapsed ? 'display: none;' : 'display: block;'} background: rgba(0, 0, 0, 0.15); border: 1px solid var(--input-border, #334155); border-top: none; border-radius: 0 0 10px 10px; padding: 14px; box-sizing: border-box;">
             
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.1); text-align: left;">
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-enabled" ${settings.isEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
@@ -1319,11 +1308,11 @@ function renderUI() {
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-secret-conception" ${settings.isSecretConception ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('secretConceptionLabel')} <span style="opacity: 0.55; font-style: italic;">${getText('secretConceptionSub')}</span></label>
+                        <label for="repro-is-secret-conception" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('secretConceptionLabel')}</label>
                     </div>
                 </div>
-                <div>
-                    <select id="repro-lang-select" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: #f472b6; font-weight: 700; font-size: 12px; padding: 4px 8px; border-radius: 6px; outline: none; cursor: pointer;">
+                <div style="margin-left: 8px; flex-shrink: 0;">
+                    <select id="repro-lang-select" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: #f472b6; font-weight: 700; font-size: 12px; min-width: 58px; height: 32px; padding: 4px 6px; border-radius: 6px; outline: none; cursor: pointer; text-align: center; text-align-last: center; box-sizing: border-box;">
                         <option value="ru" ${settings.language === 'ru' ? 'selected' : ''}>RU</option>
                         <option value="en" ${settings.language === 'en' ? 'selected' : ''}>EN</option>
                     </select>
@@ -1595,7 +1584,7 @@ function renderUI() {
         const count = parseInt($('#repro-manual-count').val()) || 1;
 
         bodyData.isPregnant = true; 
-        bodyData.isDiscovered = true; // При ручной установке сразу раскрываем
+        bodyData.isDiscovered = true;
         bodyData.pregnancyWeeks = weeks; 
         bodyData.pregnancyDays = 0; 
         bodyData.pregnancyDaysTotal = weeks * 7;
