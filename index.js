@@ -83,7 +83,7 @@ const TRANSLATIONS = {
         aiLogic: 'Знания ИИ:', ultrasound: 'УЗИ (20 нед)', medieval: 'Средневековье', knowsAll: 'Знает всё',
         phaseRealism: 'Текущая фаза:', phaseOmega: 'Текущее состояние омеги:',
         termInRp: 'Срок в RP:', weeksShort: 'нед.', daysShort: 'дн.',
-        wombMap: 'Карта плода:', babiesCount: 'Детей:', babiesSex: 'Пол:',
+        wombMap: 'Карта плода:', babiesCount: 'Детей в утробе:', babiesSex: 'Пол:',
         sync: 'Синхронизация:', waitingDate: 'Ожидание даты',
         paramsHeader: 'Параметры', rpDateLabel: 'RP Дата (ДД.ММ.ГГГГ):', cycleLengthLabel: 'Цикл (дней):',
         pregnancyWeekLabel: 'Неделя:', cycleDayLabel: 'День цикла:',
@@ -102,7 +102,7 @@ const TRANSLATIONS = {
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
         postpartumPhase: 'Восстановление после родов 🩹', newbornTitle: '🍼 Рожденные дети в семье:',
-        giveBirthBtn: '🔔 ПРИНЯТЬ РОДЫ (Сюжетный триггер)',
+        giveBirthBtn: '🔔 ПРИНЯТЬ ВСЕ РОДЫ ВРУЧНУЮ',
         protectionLabel: 'Контрацепция:', protectionNone: 'Без защиты', protectionCondom: 'Презерватив (Барьерный)',
         protectionPills: 'Оральные контрацептивы (КОК)', protectionIud: 'Внутриматочная спираль (ВМС)',
         globalRollsLabel: 'Всего скрытых проверок на зачатие:',
@@ -116,7 +116,7 @@ const TRANSLATIONS = {
         aiLogic: 'AI Awareness:', ultrasound: 'Ultrasound (20 wk)', medieval: 'Medieval (Blind)', knowsAll: 'Knows Everything',
         phaseRealism: 'Current Phase:', phaseOmega: 'Current Omega Status:',
         termInRp: 'Term in RP:', weeksShort: 'wks', daysShort: 'days',
-        wombMap: 'Womb Content:', babiesCount: 'Babies:', babiesSex: 'Sex:',
+        wombMap: 'Womb Content:', babiesCount: 'Babies in Womb:', babiesSex: 'Sex:',
         sync: 'Synchronized:', waitingDate: 'Waiting for date',
         paramsHeader: 'Parameters', rpDateLabel: 'RP Date (DD.MM.YYYY):', cycleLengthLabel: 'Cycle (days):',
         pregnancyWeekLabel: 'Week:', cycleDayLabel: 'Cycle Day:',
@@ -135,7 +135,7 @@ const TRANSLATIONS = {
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         complicationTitle: '⚠️ Medical Complication:', cureBtn: '💊 Treat / Alleviate Complication',
         postpartumPhase: 'Postpartum Recovery 🩹', newbornTitle: '🍼 Children in Family:',
-        giveBirthBtn: '🔔 GIVE BIRTH (Story Trigger)',
+        giveBirthBtn: '🔔 DELIVER ALL BABIES MANUALLY',
         protectionLabel: 'Contraception:', protectionNone: 'No Protection', protectionCondom: 'Condom (Barrier)',
         protectionPills: 'Oral Extraconceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
         globalRollsLabel: 'Total hidden conception checks:',
@@ -214,7 +214,6 @@ function loadSettings() {
     if (settings.isNotificationsEnabled === undefined) settings.isNotificationsEnabled = true;
     if (settings.isFetalPathologyEnabled === undefined) settings.isFetalPathologyEnabled = true;
 
-    // Синхронизируем валидность пола под выбранный режим
     if (settings.mode === 'realism' && settings.gender !== 'female') {
         settings.gender = 'female';
     } else if (settings.mode === 'omegaverse' && settings.gender === 'female') {
@@ -233,7 +232,6 @@ function getBodyPhase() {
     const data = getChatBodyData();
     if (data.postpartumDays > 0) return getText('postpartumPhase');
     
-    // Ранняя скрытая стадия зачатия до задержки
     if (data.isPregnant && data.pregnancyWeeks === 0 && data.cycleDay <= settings.cycleLength) {
         if (settings.mode === 'realism') {
             if (data.cycleDay <= 10) return getText('follicular');
@@ -702,19 +700,82 @@ function triggerPregnancy(data) {
     }
 }
 
+// Автоматическая проверка тегов родов из текста
+function checkBirthTrigger(text) {
+    const data = getChatBodyData();
+    if (!data.isPregnant) return;
+
+    const naturalMatches = (text.match(/<!--BIRTH_NATURAL-->/gi) || []).length;
+    const csMatches = (text.match(/<!--BIRTH_C_SECTION-->/gi) || []).length;
+    const totalBirthTags = naturalMatches + csMatches;
+
+    if (totalBirthTags > 0) {
+        for (let i = 0; i < totalBirthTags; i++) {
+            if (!data.isPregnant || data.babiesCount <= 0) break;
+            const method = (i < csMatches) ? 'c_section' : 'natural';
+            deliverSingleBaby(data, method);
+        }
+    }
+}
+
+// Рождение одного ребёнка
+function deliverSingleBaby(data, method = 'natural') {
+    const lang = getLanguage();
+    const babyGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+    
+    data.childrenList.push({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        gender: babyGender
+    });
+    
+    data.babiesCount = data.babiesGenders.length;
+
+    if (data.babiesCount === 0) {
+        data.isPregnant = false;
+        data.pregnancyWeeks = 0;
+        data.pregnancyDays = 0;
+        data.activeComplication = null;
+        data.fetalDisease = null;
+        data.postpartumDays = 1;
+        data.deliveryMethod = method;
+
+        const methodText = method === 'c_section' ? 'Кесарево сечение' : 'Естественные роды';
+        if (settings.isNotificationsEnabled) {
+            toastr.success(`👶 Все роды завершены! Малыш (${babyGender}) успешно родился! Способ: ${methodText}. Запущен восстановительный период.`);
+        }
+    } else {
+        if (settings.isNotificationsEnabled) {
+            toastr.info(`👶 Родился ребёнок (${babyGender})! В утробе остаётся еще малышей: ${data.babiesCount}.`);
+        }
+    }
+
+    updatePromptInjection();
+    saveSettingsDebounced();
+    renderUI();
+}
+
+// Ручной сброс/принятие всех оставшихся родов одной кнопкой
 function processBirthTrigger(method = 'natural') {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
 
-    for (let i = 0; i < data.babiesCount; i++) {
+    while (data.babiesCount > 0 || data.babiesGenders.length > 0) {
+        const lang = getLanguage();
+        const babyGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
         data.childrenList.push({
-            id: Date.now() + i,
-            gender: data.babiesGenders[i]
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            gender: babyGender
         });
+        data.babiesCount = data.babiesGenders.length;
     }
 
     data.isPregnant = false;
-    data.pregnancyWeeks = 0; data.pregnancyDays = 0; data.babiesCount = 0; data.babiesGenders = []; data.activeComplication = null;
+    data.pregnancyWeeks = 0; 
+    data.pregnancyDays = 0; 
+    data.babiesCount = 0; 
+    data.babiesGenders = []; 
+    data.activeComplication = null;
+    data.fetalDisease = null;
     data.postpartumDays = 1; 
     data.deliveryMethod = method; 
 
@@ -724,7 +785,7 @@ function processBirthTrigger(method = 'natural') {
     
     const methodText = method === 'c_section' ? 'Кесарево сечение' : 'Естественные роды';
     if (settings.isNotificationsEnabled) {
-        toastr.success(`👶 Роды успешно прошли! Способ: ${methodText}. Статистика беременности сброшена, запущен период восстановления.`);
+        toastr.success(`👶 Роды успешно завершены вручную! Способ: ${methodText}. Запущен период восстановления.`);
     }
 }
 
@@ -736,6 +797,7 @@ function processMiscarriageTrigger() {
     data.babiesCount = 0;
     data.babiesGenders = [];
     data.activeComplication = null;
+    data.fetalDisease = null;
     data.postpartumDays = 1;
     data.deliveryMethod = 'miscarriage'; 
 
@@ -785,25 +847,33 @@ function updatePromptInjection(isImmediateBirth = false) {
         let revealGenders = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20);
 
         if (revealCount) {
-            prompt += `[MEDICAL RECORD - FIRST TRIMESTER ULTRASOUND COMPLETED]: Medical scans officially confirm a MULTIPLE PREGNANCY. {{user}} is carrying exactly ${data.babiesCount} baby/babies inside the womb. {{char}} is fully aware of the twin/multiple headcount.\n`;
+            prompt += `[MEDICAL RECORD - FIRST TRIMESTER ULTRASOUND COMPLETED]: Medical scans confirm {{user}} is carrying ${data.babiesCount} baby/babies in the womb.\n`;
             
             if (revealGenders) {
-                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Fetal development is sufficient to determine sex and secondary gender. Scans confirm the genders are: ${data.babiesGenders.join(', ')}.\n`;
+                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm the genders are: ${data.babiesGenders.join(', ')}.\n`;
                 if (data.fetalDisease) {
-                    prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN)]: The anatomy scan has revealed a congenital condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is aware of this diagnosis and should reference it naturally in the roleplay where relevant.\n`;
+                    prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN)]: The anatomy scan revealed a condition in the fetus: "${data.fetalDisease.name}". ${data.fetalDisease.desc} {{char}} is aware of this diagnosis and should reference it naturally.\n`;
                 }
             } else {
-                prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex and secondary gender are still completely OBSCURED and hidden from {{char}} (too early to visually determine them before week 20). {{char}} MUST NOT mention or guess their genders yet.\n`;
+                prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex and secondary gender are still completely OBSCURED from {{char}} (too early to visually determine them before week 20).\n`;
             }
         } else if (settings.aiAwareness === 'hidden') {
-            prompt += `[SECRET DATA]: The number of babies and their genders are strictly CONCEALED from {{char}} right now (Medieval/Blind mode). {{char}} must not know the headcount or sex until birth.\n`;
+            prompt += `[SECRET DATA]: The number of babies and their genders are strictly CONCEALED from {{char}} (Medieval/Blind mode). {{char}} must not know headcount or sex until birth.\n`;
         } else {
-            prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. The total headcount of babies and their genders are completely unknown to {{char}} right now.\n`;
+            prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. Headcount and genders are completely unknown to {{char}}.\n`;
         }
 
         if (data.pregnancyWeeks >= maxWeeks) {
-            prompt += `\n[🚨 CRITICAL MANDATORY SYSTEM DIRECTIVE FOR {{char}}]:\n`;
-            prompt += `{{user}} has reached full term (${data.pregnancyWeeks} weeks) and the labor/delivery process is starting right now! You MUST completely write and vividly describe the scene of childbirth and the delivery of the babies in full detail. Focus on the emotional and physical intensity of the labor.\n`;
+            prompt += `\n[🚨 CRITICAL STORY EVENT — LABOR & CHILDBIRTH]:
+{{user}} has reached full term (${data.pregnancyWeeks} weeks) and is in active labor right now!
+Babies currently remaining in the womb: ${data.babiesCount}.
+Genders of babies waiting to be born: ${data.babiesGenders.join(', ')}.
+
+🚨 MANDATORY CHILDBIRTH DIRECTIVE FOR {{char}}:
+When a baby is physically delivered in the roleplay scene, you MUST append a hidden tag at the very end of your response text:
+- For a natural delivery: <!--BIRTH_NATURAL-->
+- For a Cesarean section (C-Section): <!--BIRTH_C_SECTION-->
+⚠️ NOTE: If multiple babies are being delivered across multiple responses, append ONE tag per baby when that specific baby is born. You can deliver them sequentially across posts or together.\n`;
         }
     } else {
         prompt += `Current Cycle Day: ${data.cycleDay}/${settings.cycleLength} | Phase: ${phase}\n`;
@@ -978,7 +1048,6 @@ function renderUI() {
         </div>`;
     }
 
-    // Динамический список физиологии в зависимости от выбранного режима
     let genderOptionsHtml = '';
     if (settings.mode === 'realism') {
         genderOptionsHtml = `<option value="female" ${settings.gender === 'female' ? 'selected' : ''}>${getText('female')}</option>`;
@@ -1311,6 +1380,7 @@ jQuery(async () => {
 
         handleUserMessageTime(text);
         checkConceptionTrigger(text);
+        checkBirthTrigger(text);
         updatePromptInjection();
     });
 
@@ -1324,6 +1394,7 @@ jQuery(async () => {
 
         handleAiMessageTime(text);
         checkConceptionTrigger(text);
+        checkBirthTrigger(text);
         updatePromptInjection();
     });
 
