@@ -656,32 +656,12 @@ function handleUserMessageTime(text) {
     }
 }
 
+// Сообщения ИИ синхронизируются ТОЛЬКО по точной дате (никаких относительных перемоток)
 function handleAiMessageTime(text) {
     const data = getChatBodyData();
 
     if (pendingUserTimeskipDays > 0) {
         pendingUserTimeskipDays = 0;
-        const parsedDate = parseRpDateFromText(text);
-        if (parsedDate) {
-            data.lastRpDate = daysToDateString(dateToDays(parsedDate.year, parsedDate.month, parsedDate.day));
-            saveSettingsDebounced();
-            renderUI();
-        }
-        return;
-    }
-
-    const relativeDays = parseRelativeDaysFromText(text);
-    if (relativeDays > 0) {
-        advanceBodyTime(relativeDays);
-        checkPregnancyComplications(data);
-        if (data.lastRpDate) {
-            const parts = data.lastRpDate.split('-').map(Number);
-            const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
-            data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
-        }
-        saveSettingsDebounced(); 
-        renderUI(); 
-        return; 
     }
 
     const parsedDate = parseRpDateFromText(text);
@@ -873,7 +853,7 @@ function triggerPregnancy(data) {
     }
 
     data.fetalDiseaseId = null;
-    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
+    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
         data.fetalDiseaseId = getRandomFetalDiseaseId();
     }
 
@@ -1248,7 +1228,7 @@ function renderUI() {
             const disease = getFetalDisease(data.fetalDiseaseId, lang);
             if (disease && disease.type === 'prenatal') {
                 if (settings.aiAwareness === 'hidden') {
-                    // Скрыто
+                    // Скрыто в средневековье
                 } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                     fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                         <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
@@ -1782,7 +1762,7 @@ function bindGlobalEvents() {
         }
 
         bodyData.fetalDiseaseId = null;
-        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
+        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
