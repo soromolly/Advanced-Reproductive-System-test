@@ -58,7 +58,8 @@ function createDefaultBodyData() {
         deliveryMethod: 'none',
         childrenList: [],
         contraception: 'none',
-        fetalDiseaseId: null 
+        fetalDiseaseId: null,
+        activityLogs: []
     };
 }
 
@@ -112,11 +113,13 @@ const TRANSLATIONS = {
         paramsHeader: 'Параметры', rpDateLabel: 'RP Дата (ДД.ММ.ГГГГ):', 
         cycleLengthLabel: 'Цикл (дней):', periodDurationLabel: 'Длит. месячных (дн):', periodDurationOmega: 'Длит. течки (дн):',
         pregnancyWeekLabel: 'Акуш. неделя:', cycleDayLabel: 'День цикла:',
+        ofLabel: 'из',
         applyBtn: '▶ Применить изменения', initPregnancyHeader: 'Задать беременность вручную',
         manualWeeks: 'Срок (акуш. нед):', manualCount: 'Плодов:', startPregnancyBtn: '🤰 Начать беременность',
         resetPregnancyBtn: '🚼 Сбросить беременность', resetAllBtn: 'Полный сброс данных',
         takeTestBtn: '🧪 Сделать тест на беременность',
         abortBtn: '🛑 Прервать беременность (Аборт)',
+        exportLogsBtn: '📥 Скачать лог событий (.txt)',
         toastSaved: 'Параметры успешно сохранены!', toastManualPreg: 'Беременность установлена вручную: ',
         toastResetPreg: 'Беременность сброшена.', toastResetAll: 'Данные чата полностью очищены.',
         toastAbort: 'Беременность была искусственно прервана. Запущен период восстановления.',
@@ -128,6 +131,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         toastNewCycle: 'Начался новый менструальный цикл (менструация).',
         toastNewHeat: 'Начался новый цикл: наступила течка!',
+        toastLogsEmpty: 'Логи событий для этого чата пока пусты.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', follicular: 'Фолликулярная фаза 🌸', ovulation: 'Овуляция (Окно зачатия) ✨', luteal: 'Лютеиновая фаза (ПМС) 🍂',
         heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
@@ -172,11 +176,13 @@ const TRANSLATIONS = {
         paramsHeader: 'Parameters', rpDateLabel: 'RP Date (DD.MM.YYYY):', 
         cycleLengthLabel: 'Cycle (days):', periodDurationLabel: 'Period Duration (days):', periodDurationOmega: 'Heat Duration (days):',
         pregnancyWeekLabel: 'Obstetric Week:', cycleDayLabel: 'Cycle Day:',
+        ofLabel: 'of',
         applyBtn: '▶ Apply Changes', initPregnancyHeader: 'Initialize Pregnancy Manually',
         manualWeeks: 'Term (Obstetric wks):', manualCount: 'Babies:', startPregnancyBtn: '🤰 Start Pregnancy',
         resetPregnancyBtn: '🚼 Reset Pregnancy Only', resetAllBtn: 'Full Data Reset',
         takeTestBtn: '🧪 Take Pregnancy Test',
         abortBtn: '🛑 Terminate Pregnancy (Abortion)',
+        exportLogsBtn: '📥 Download Activity Log (.txt)',
         toastSaved: 'Parameters successfully saved!', toastManualPreg: 'Pregnancy set manually: ',
         toastResetPreg: 'Pregnancy has been reset.', toastResetAll: 'Chat data fully cleared.',
         toastAbort: 'Pregnancy was terminated. Postpartum recovery begun.',
@@ -188,6 +194,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         toastNewCycle: 'A new menstrual cycle has begun.',
         toastNewHeat: 'A new cycle has begun: Heat has started!',
+        toastLogsEmpty: 'Activity logs for this chat are currently empty.',
         pregnancy: 'Pregnancy 🤰', pregnancyOmega: 'Pregnancy (Omega) 🤰',
         menstruation: 'Menstruation 🩸', follicular: 'Follicular Phase 🌸', ovulation: 'Ovulation (Conception Window) ✨', luteal: 'Luteal Phase (PMS) 🍂',
         heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
@@ -225,6 +232,17 @@ function getLanguage() {
 function getText(key) {
     const lang = getLanguage();
     return TRANSLATIONS[lang][key] || TRANSLATIONS['ru'][key] || key;
+}
+
+function logReproEvent(message) {
+    const data = getChatBodyData();
+    if (!data.activityLogs) data.activityLogs = [];
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const rpDateStr = data.lastRpDate ? `[RP Date: ${data.lastRpDate}]` : `[RP Date: N/A]`;
+    data.activityLogs.push(`[${timestamp}] ${rpDateStr} ${message}`);
+    if (data.activityLogs.length > 250) {
+        data.activityLogs.shift();
+    }
 }
 
 function translateGender(genderStr, targetLang = 'en') {
@@ -282,6 +300,7 @@ function getChatBodyData() {
     if (data.currentDeliveredCount === undefined) data.currentDeliveredCount = 0;
     if (data.currentCycleTargetLength === undefined) data.currentCycleTargetLength = settings.cycleLength || 28;
     if (!data.symptomIndices) data.symptomIndices = [];
+    if (!data.activityLogs) data.activityLogs = [];
     return data;
 }
 
@@ -298,7 +317,9 @@ function rollNewCycleTarget() {
     } else {
         variance = Math.floor(Math.random() * 7) + 6;
     }
-    return Math.max((settings.periodDuration || 5) + 6, base + variance);
+    const result = Math.max((settings.periodDuration || 5) + 6, base + variance);
+    logReproEvent(`[CYCLE] New cycle target duration secretly rolled: ${result} days (Base: ${base}, Variance: ${variance > 0 ? '+' + variance : variance})`);
+    return result;
 }
 
 function generateBabyGender(mode, lang = 'ru') {
@@ -436,13 +457,17 @@ function checkPregnancyComplications(data) {
     if (!data.rolledTrimesters[currentTrimester] && !data.activeComplication) {
         data.rolledTrimesters[currentTrimester] = true;
         const rolled = rollComplication(currentTrimester);
-        if (rolled) data.activeComplication = rolled;
+        if (rolled) {
+            data.activeComplication = rolled;
+            logReproEvent(`[COMPLICATION] Complication rolled for trimester ${currentTrimester}: ${rolled.id} (Triggers at week ${rolled.triggerWeek})`);
+        }
     }
 
     if (data.activeComplication && !data.activeComplication.isDiscovered) {
         if (currentWeek >= data.activeComplication.triggerWeek) {
             data.activeComplication.isDiscovered = true;
             const comp = getComplication(data.activeComplication.id, getLanguage());
+            logReproEvent(`[COMPLICATION DISCOVERED] ${data.activeComplication.id} diagnosed at week ${currentWeek}`);
             if (settings.isNotificationsEnabled && comp) {
                 toastr.error(`🚨 ${getText('complicationTitle')} «${comp.name}»!`);
             }
@@ -631,6 +656,7 @@ function handleUserMessageTime(text) {
             data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
         }
 
+        logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via relative text.`);
         saveSettingsDebounced(); 
         renderUI(); 
         return; 
@@ -648,6 +674,7 @@ function handleUserMessageTime(text) {
             if (diff > 0) {
                 advanceBodyTime(diff);
                 checkPregnancyComplications(data);
+                logReproEvent(`[USER DATE SYNC] Date changed from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
             }
         }
         data.lastRpDate = newDateStr;
@@ -656,7 +683,7 @@ function handleUserMessageTime(text) {
     }
 }
 
-// Сообщения ИИ синхронизируются ТОЛЬКО по точной дате (никаких относительных перемоток)
+// Сообщения ИИ синхронизируются ТОЛЬКО по точной дате
 function handleAiMessageTime(text) {
     const data = getChatBodyData();
 
@@ -676,6 +703,7 @@ function handleAiMessageTime(text) {
             if (diff > 0) {
                 advanceBodyTime(diff);
                 checkPregnancyComplications(data);
+                logReproEvent(`[AI DATE SYNC] Synced from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
                 if (settings.isNotificationsEnabled) {
                     toastr.info(`${getText('toastTimePassed')}${diff}.`);
                 }
@@ -698,6 +726,7 @@ function advanceBodyTime(days) {
             data.deliveryMethod = 'none';
             data.cycleDay = 1; 
             data.currentCycleTargetLength = rollNewCycleTarget();
+            logReproEvent(`[POSTPARTUM] Recovery completed after 40 days. New cycle initiated.`);
             if (settings.isNotificationsEnabled) {
                 toastr.success(lang === 'en' 
                     ? "Postpartum recovery complete. Reproductive cycle restarted."
@@ -725,15 +754,16 @@ function advanceBodyTime(days) {
 
         if (!data.isDiscovered && data.pregnancyWeeks >= 6) {
             data.isDiscovered = true;
+            logReproEvent(`[PREGNANCY DISCOVERED] Auto-confirmed at 6 obstetric weeks.`);
             if (settings.isNotificationsEnabled) {
                 toastr.success(getText('toastAutoDiscovered'));
             }
         }
 
-        // Пренатальное уведомление только для Group A
         if (data.isDiscovered && data.fetalDiseaseId && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness !== 'hidden') {
             const disease = getFetalDisease(data.fetalDiseaseId, lang);
             if (disease && disease.type === 'prenatal') {
+                logReproEvent(`[ULTRASOUND 20 WEEKS] Diagnosed fetal condition: ${disease.name}`);
                 toastr.warning(`🧬 ${getText('fetalAnomalyTitle')} «${disease.name}»!`);
             }
         }
@@ -751,6 +781,7 @@ function advanceBodyTime(days) {
             data.cycleDay = ((data.cycleDay - 1) % target) + 1;
             data.currentCycleTargetLength = rollNewCycleTarget();
             data.symptomPhaseKey = null;
+            logReproEvent(`[CYCLE RESET] Period started after cycle length of ${target} days.`);
             if (settings.isNotificationsEnabled) {
                 toastr.info(settings.mode === 'omegaverse' ? getText('toastNewHeat') : getText('toastNewCycle'));
             }
@@ -813,6 +844,8 @@ function checkConceptionTrigger(text) {
         const isSuccessful = rollResult <= finalChance;
         const lang = getLanguage();
 
+        logReproEvent(`[CONCEPTION ROLL] Roll: ${rollResult.toFixed(2)}% | Needed <= ${finalChance}% | Phase: ${phase} | Protection: ${data.contraception} | Outcome: ${isSuccessful ? 'SUCCESS' : 'FAILED'}`);
+
         if (isSuccessful) {
             if (!settings.isSecretConception && settings.isNotificationsEnabled) {
                 toastr.success(lang === 'en'
@@ -857,6 +890,8 @@ function triggerPregnancy(data) {
         data.fetalDiseaseId = getRandomFetalDiseaseId();
     }
 
+    logReproEvent(`[PREGNANCY INITIATED] Babies: ${data.babiesCount} (${data.babiesGenders.join(', ')}) | Obstetric Week: ${data.pregnancyWeeks}w ${data.pregnancyDays}d | Pathology: ${data.fetalDiseaseId || 'None'} | Secret Mode: ${settings.isSecretConception}`);
+
     updateSymptomsData(data);
     saveSettingsDebounced(); 
     renderUI(); 
@@ -872,6 +907,7 @@ function performPregnancyTest() {
 
     if (data.isPregnant) {
         data.isDiscovered = true;
+        logReproEvent(`[PREGNANCY TEST] Positive test taken. Confirmed: ${data.pregnancyWeeks}w ${data.pregnancyDays}d.`);
         updateSymptomsData(data);
         saveSettingsDebounced();
         renderUI();
@@ -880,6 +916,7 @@ function performPregnancyTest() {
             toastr.success(`${getText('toastTestPositive')}${data.pregnancyWeeks} ${getText('weeksShort')} ${data.pregnancyDays} ${getText('daysShort')}`);
         }
     } else {
+        logReproEvent(`[PREGNANCY TEST] Negative test taken on cycle day ${data.cycleDay}.`);
         if (settings.isNotificationsEnabled) {
             toastr.info(getText('toastTestNegative'));
         }
@@ -888,6 +925,7 @@ function performPregnancyTest() {
 
 function processAbortionTrigger() {
     const data = getChatBodyData();
+    logReproEvent(`[ABORTION] Terminated pregnancy at ${data.pregnancyWeeks} weeks.`);
     data.isPregnant = false;
     data.isDiscovered = false;
     data.pregnancyDaysTotal = 0;
@@ -972,6 +1010,8 @@ function deliverSingleBaby(data, method = 'natural') {
     const displayGender = translateGender(rawGender, lang);
     const disease = data.fetalDiseaseId ? getFetalDisease(data.fetalDiseaseId, lang) : null;
 
+    logReproEvent(`[BIRTH] Child delivered: ${rawGender} | Method: ${method} | Condition: ${disease ? disease.name : 'None'} | Remaining in womb: ${data.babiesCount}`);
+
     if (data.babiesCount === 0) {
         data.isPregnant = false;
         data.isDiscovered = false;
@@ -1044,6 +1084,8 @@ function processBirthTrigger(method = 'natural') {
     data.postpartumDays = 1; 
     data.deliveryMethod = method; 
 
+    logReproEvent(`[MANUAL BIRTH] All babies delivered manually. Method: ${method}`);
+
     updatePromptInjection(); 
     saveSettingsDebounced();
     renderUI(); 
@@ -1061,6 +1103,7 @@ function processBirthTrigger(method = 'natural') {
 function processMiscarriageTrigger() {
     const data = getChatBodyData();
     const lang = getLanguage();
+    logReproEvent(`[MISCARRIAGE] Spontaneous miscarriage occurred.`);
     data.isPregnant = false;
     data.isDiscovered = false;
     data.pregnancyDaysTotal = 0;
@@ -1083,6 +1126,35 @@ function processMiscarriageTrigger() {
             ? `🚨 CRITICAL EVENT: Due to acute complications, a spontaneous miscarriage occurred. Pregnancy terminated.`
             : `🚨 КРИТИЧЕСКОЕ СОБЫТИЕ: Из-за сильного ухудшения состояния произошел спонтанный выкидыш. Беременность прервана.`);
     }
+}
+
+function exportReproLogs() {
+    const data = getChatBodyData();
+    const lang = getLanguage();
+    if (!data.activityLogs || data.activityLogs.length === 0) {
+        if (typeof toastr !== 'undefined') toastr.info(getText('toastLogsEmpty'));
+        return;
+    }
+
+    const chatId = getCurrentChatId();
+    let textContent = `=====================================================\n`;
+    textContent += `  REPRODUCTIVE SYSTEM EXTENSION - ACTIVITY LOGS\n`;
+    textContent += `  Chat ID: ${chatId}\n`;
+    textContent += `  Export Date: ${new Date().toISOString()}\n`;
+    textContent += `  Current RP Date: ${data.lastRpDate || 'N/A'}\n`;
+    textContent += `  Current State: ${data.isPregnant ? (data.isDiscovered ? 'Pregnant (Discovered)' : 'Pregnant (Secret)') : 'Not Pregnant'}\n`;
+    textContent += `=====================================================\n\n`;
+    textContent += data.activityLogs.join('\n');
+
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `repro_logs_${chatId}_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function updatePromptInjection(isImmediateBirth = false) {
@@ -1164,8 +1236,9 @@ ${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered i
             }
         }
     } else {
-        const target = data.currentCycleTargetLength || settings.cycleLength || 28;
-        prompt += `Current Cycle Day: ${data.cycleDay} | Target Length: ${target} days | Phase: ${phaseEn}\n`;
+        const baseCycle = settings.cycleLength || 28;
+        const target = data.currentCycleTargetLength || baseCycle;
+        prompt += `Current Cycle Day: ${data.cycleDay} | Cycle Length: ${baseCycle} days | Phase: ${phaseEn}\n`;
         if (data.cycleDay > target) {
             prompt += `[CYCLE DELAY NOTICE]: Menstrual period is late by ${data.cycleDay - target} days. {{user}} has not officially confirmed pregnancy yet.\n`;
         }
@@ -1391,7 +1464,7 @@ function renderUI() {
     }
 
     const isCurrentlyPregnantDiscovered = data.isPregnant && data.isDiscovered;
-    const targetCycle = data.currentCycleTargetLength || settings.cycleLength || 28;
+    const baseCycleDisplay = settings.cycleLength || 28;
 
     let canAbort = false;
     if (isCurrentlyPregnantDiscovered) {
@@ -1492,7 +1565,7 @@ function renderUI() {
                         ${eddHtml}
                         ${wombMapHtml}
                     ` : `
-                        ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} из ${targetCycle}</div>` : ''}
+                        ${data.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel')}</strong> ${data.cycleDay} ${getText('ofLabel')} ${baseCycleDisplay}</div>` : ''}
                     `}
                     <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync')} ${displayDate}</div>
                 </div>
@@ -1573,6 +1646,8 @@ function renderUI() {
                 <div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78em; color: #64748b; text-align: center; font-style: italic; user-select: none;">
                     ${getText('globalRollsLabel')} <span id="repro-global-rolls-count" style="font-weight: bold; font-family: monospace; color: #94a3b8; margin-left: 2px;">${settings.globalRollsCount}</span>
                 </div>
+
+                <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 8px; font-size: 11px; padding: 4px; background: #334155; color: #f8fafc; font-weight: 600; justify-content: center;">${getText('exportLogsBtn')}</button>
             </div>
         </div>
     `;
@@ -1690,6 +1765,10 @@ function bindGlobalEvents() {
         }
     });
 
+    $(document).off('click', '#repro-export-logs').on('click', function() {
+        exportReproLogs();
+    });
+
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const bodyData = getChatBodyData();
@@ -1766,6 +1845,8 @@ function bindGlobalEvents() {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
+        logReproEvent(`[MANUAL PREGNANCY] Set to ${weeks} weeks with ${count} baby/babies. Condition: ${bodyData.fetalDiseaseId || 'None'}`);
+
         updateSymptomsData(bodyData);
         saveSettingsDebounced(); 
         renderUI(); 
@@ -1787,6 +1868,8 @@ function bindGlobalEvents() {
         bodyData.activeComplication = null;
         bodyData.deliveryMethod = 'none';
         bodyData.fetalDiseaseId = null;
+
+        logReproEvent(`[RESET] Pregnancy state reset.`);
 
         updateSymptomsData(bodyData);
         processedBirthMessages.clear();
