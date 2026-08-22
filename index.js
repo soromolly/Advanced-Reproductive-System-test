@@ -112,10 +112,10 @@ const TRANSLATIONS = {
         sync: 'Синхронизация:', waitingDate: 'Ожидание даты',
         paramsHeader: 'Параметры', rpDateLabel: 'RP Дата (ДД.ММ.ГГГГ):', 
         cycleLengthLabel: 'Цикл (дней):', periodDurationLabel: 'Длит. месячных (дн):', periodDurationOmega: 'Длит. течки (дн):',
-        pregnancyWeekLabel: 'Акуш. неделя:', cycleDayLabel: 'День цикла:',
+        pregnancyWeekLabel: 'Срок (нед / дн):', cycleDayLabel: 'День цикла:',
         ofLabel: 'из',
         applyBtn: '▶ Применить изменения', initPregnancyHeader: 'Задать беременность вручную',
-        manualWeeks: 'Срок (акуш. нед):', manualCount: 'Плодов:', startPregnancyBtn: '🤰 Начать беременность',
+        manualWeeks: 'Срок (нед / дн):', manualCount: 'Плодов:', startPregnancyBtn: '🤰 Начать беременность',
         resetPregnancyBtn: '🚼 Сбросить беременность', resetAllBtn: 'Полный сброс данных',
         takeTestBtn: '🧪 Сделать тест на беременность',
         abortBtn: '🛑 Прервать беременность (Аборт)',
@@ -174,10 +174,10 @@ const TRANSLATIONS = {
         sync: 'Synchronized:', waitingDate: 'Waiting for date',
         paramsHeader: 'Parameters', rpDateLabel: 'RP Date (DD.MM.YYYY):', 
         cycleLengthLabel: 'Cycle (days):', periodDurationLabel: 'Period Duration (days):', periodDurationOmega: 'Heat Duration (days):',
-        pregnancyWeekLabel: 'Obstetric Week:', cycleDayLabel: 'Cycle Day:',
+        pregnancyWeekLabel: 'Term (wks / days):', cycleDayLabel: 'Cycle Day:',
         ofLabel: 'of',
         applyBtn: '▶ Apply Changes', initPregnancyHeader: 'Initialize Pregnancy Manually',
-        manualWeeks: 'Term (Obstetric wks):', manualCount: 'Babies:', startPregnancyBtn: '🤰 Start Pregnancy',
+        manualWeeks: 'Term (wks / days):', manualCount: 'Babies:', startPregnancyBtn: '🤰 Start Pregnancy',
         resetPregnancyBtn: '🚼 Reset Pregnancy Only', resetAllBtn: 'Full Data Reset',
         takeTestBtn: '🧪 Take Pregnancy Test',
         abortBtn: '🛑 Terminate Pregnancy (Abortion)',
@@ -681,7 +681,6 @@ function handleUserMessageTime(text) {
     }
 }
 
-// Сообщения ИИ синхронизируются ТОЛЬКО по точной дате
 function handleAiMessageTime(text) {
     const data = getChatBodyData();
 
@@ -1297,7 +1296,7 @@ function renderUI() {
             const disease = getFetalDisease(data.fetalDiseaseId, lang);
             if (disease && disease.type === 'prenatal') {
                 if (settings.aiAwareness === 'hidden') {
-                    // Скрыто
+                    // Скрыто в средневековье
                 } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                     fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                         <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
@@ -1494,12 +1493,12 @@ function renderUI() {
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-secret-conception" ${settings.isSecretConception ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-secret-conception" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('secretConceptionLabel')}</label>
+                        <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('secretConceptionLabel')}</label>
                         ${getTooltipHtml('secretConception', lang)}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-irregular-cycle" ${settings.isIrregularCycle ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-irregular-cycle" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('irregularCycleLabel')}</label>
+                        <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('irregularCycleLabel')}</label>
                         ${getTooltipHtml('irregularCycle', lang)}
                     </div>
                 </div>
@@ -1601,7 +1600,10 @@ function renderUI() {
                 ${isCurrentlyPregnantDiscovered ? `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <label style="font-size: 0.9em; opacity: 0.85;">${getText('pregnancyWeekLabel')}</label>
-                        <input type="number" id="repro-input-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%; font-family: inherit; outline: none;" value="${data.pregnancyWeeks}"/>
+                        <div style="display: flex; gap: 6px; width: 55%;">
+                            <input type="number" id="repro-input-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%; font-family: inherit; outline: none;" value="${data.pregnancyWeeks}" min="0" max="50" placeholder="нед / wks"/>
+                            <input type="number" id="repro-input-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%; font-family: inherit; outline: none;" value="${data.pregnancyDays || 0}" min="0" max="6" placeholder="дн / days"/>
+                        </div>
                     </div>
                 ` : `
                     ${data.postpartumDays === 0 ? `
@@ -1618,7 +1620,10 @@ function renderUI() {
                         <div style="font-size: 0.85em; font-weight: 700; color: #f472b6; margin-bottom: 8px; text-transform: uppercase;">${getText('initPregnancyHeader')}</div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualWeeks')}</label>
-                            <input type="number" id="repro-manual-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%; font-family: inherit; outline: none;" value="4" min="0" max="40"/>
+                            <div style="display: flex; gap: 6px; width: 55%;">
+                                <input type="number" id="repro-manual-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%; font-family: inherit; outline: none;" value="4" min="0" max="40" placeholder="нед / wks"/>
+                                <input type="number" id="repro-manual-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%; font-family: inherit; outline: none;" value="0" min="0" max="6" placeholder="дн / days"/>
+                            </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualCount')} </label>
@@ -1778,9 +1783,11 @@ function bindGlobalEvents() {
         if (normalized) bodyData.lastRpDate = normalized;
 
         if (bodyData.isPregnant && bodyData.isDiscovered) { 
-            bodyData.pregnancyWeeks = parseInt(root.find('#repro-input-weeks').val() || $('#repro-input-weeks').val(), 10) || 0; 
-            bodyData.pregnancyDays = 0; 
-            bodyData.pregnancyDaysTotal = bodyData.pregnancyWeeks * 7;
+            const weeks = parseInt(root.find('#repro-input-weeks').val() || $('#repro-input-weeks').val(), 10) || 0;
+            const days = parseInt(root.find('#repro-input-days').val() || $('#repro-input-days').val(), 10) || 0;
+            bodyData.pregnancyWeeks = weeks; 
+            bodyData.pregnancyDays = Math.max(0, Math.min(6, days)); 
+            bodyData.pregnancyDaysTotal = (weeks * 7) + bodyData.pregnancyDays;
         } else if (bodyData.postpartumDays === 0) { 
             bodyData.cycleDay = parseInt(root.find('#repro-input-day').val() || $('#repro-input-day').val(), 10) || 1; 
         }
@@ -1818,13 +1825,14 @@ function bindGlobalEvents() {
         const root = $(this).closest('#repro-content-wrapper');
         const bodyData = getChatBodyData();
         const weeks = parseInt(root.find('#repro-manual-weeks').val() || $('#repro-manual-weeks').val(), 10) || 0;
+        const days = parseInt(root.find('#repro-manual-days').val() || $('#repro-manual-days').val(), 10) || 0;
         const count = parseInt(root.find('#repro-manual-count').val() || $('#repro-manual-count').val(), 10) || 1;
 
         bodyData.isPregnant = true; 
         bodyData.isDiscovered = true;
         bodyData.pregnancyWeeks = weeks; 
-        bodyData.pregnancyDays = 0; 
-        bodyData.pregnancyDaysTotal = weeks * 7;
+        bodyData.pregnancyDays = Math.max(0, Math.min(6, days)); 
+        bodyData.pregnancyDaysTotal = (weeks * 7) + bodyData.pregnancyDays;
         bodyData.babiesCount = count; 
         bodyData.currentDeliveredCount = 0;
         bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
@@ -1841,11 +1849,13 @@ function bindGlobalEvents() {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
+        logReproEvent(`[MANUAL PREGNANCY] Set to ${weeks}w ${bodyData.pregnancyDays}d with ${count} baby/babies. Condition: ${bodyData.fetalDiseaseId || 'None'}`);
+
         updateSymptomsData(bodyData);
         saveSettingsDebounced(); 
         renderUI(); 
         updatePromptInjection(); 
-        if (settings.isNotificationsEnabled) toastr.success(`${getText('toastManualPreg')}${weeks}`);
+        if (settings.isNotificationsEnabled) toastr.success(`${getText('toastManualPreg')}${weeks} ${getText('weeksShort')} ${bodyData.pregnancyDays} ${getText('daysShort')}`);
     });
 
     $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
@@ -1862,6 +1872,8 @@ function bindGlobalEvents() {
         bodyData.activeComplication = null;
         bodyData.deliveryMethod = 'none';
         bodyData.fetalDiseaseId = null;
+
+        logReproEvent(`[RESET] Pregnancy state reset.`);
 
         updateSymptomsData(bodyData);
         processedBirthMessages.clear();
