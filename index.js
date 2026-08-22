@@ -131,7 +131,6 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         toastNewCycle: 'Начался новый менструальный цикл (менструация).',
         toastNewHeat: 'Начался новый цикл: наступила течка!',
-        toastLogsEmpty: 'Логи событий для этого чата пока пусты.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', follicular: 'Фолликулярная фаза 🌸', ovulation: 'Овуляция (Окно зачатия) ✨', luteal: 'Лютеиновая фаза (ПМС) 🍂',
         heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
@@ -194,7 +193,6 @@ const TRANSLATIONS = {
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         toastNewCycle: 'A new menstrual cycle has begun.',
         toastNewHeat: 'A new cycle has begun: Heat has started!',
-        toastLogsEmpty: 'Activity logs for this chat are currently empty.',
         pregnancy: 'Pregnancy 🤰', pregnancyOmega: 'Pregnancy (Omega) 🤰',
         menstruation: 'Menstruation 🩸', follicular: 'Follicular Phase 🌸', ovulation: 'Ovulation (Conception Window) ✨', luteal: 'Luteal Phase (PMS) 🍂',
         heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
@@ -683,6 +681,7 @@ function handleUserMessageTime(text) {
     }
 }
 
+// Сообщения ИИ синхронизируются ТОЛЬКО по точной дате
 function handleAiMessageTime(text) {
     const data = getChatBodyData();
 
@@ -1235,7 +1234,7 @@ ${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered i
     } else {
         const baseCycle = settings.cycleLength || 28;
         const target = data.currentCycleTargetLength || baseCycle;
-        prompt += `Current Cycle Day: ${data.cycleDay} | Target Length: ${target} days | Phase: ${phaseEn}\n`;
+        prompt += `Current Cycle Day: ${data.cycleDay} | Cycle Length: ${baseCycle} days | Phase: ${phaseEn}\n`;
         if (data.cycleDay > target) {
             prompt += `[CYCLE DELAY NOTICE]: Menstrual period is late by ${data.cycleDay - target} days. {{user}} has not officially confirmed pregnancy yet.\n`;
         }
@@ -1259,6 +1258,10 @@ ${data.babiesGenders.length > 1 ? `- If Baby #${nextNum + 1} is ALSO delivered i
 function renderUI() {
     const data = getChatBodyData();
     const lang = getLanguage();
+    const baseCycleDisplay = settings.cycleLength || 28;
+    const targetCycle = data.currentCycleTargetLength || baseCycleDisplay;
+    const isCurrentlyPregnantDiscovered = data.isPregnant && data.isDiscovered;
+
     updateSymptomsData(data);
     checkPregnancyComplications(data);
 
@@ -1298,7 +1301,7 @@ function renderUI() {
             const disease = getFetalDisease(data.fetalDiseaseId, lang);
             if (disease && disease.type === 'prenatal') {
                 if (settings.aiAwareness === 'hidden') {
-                    // Скрыто
+                    // Скрыто в средневековье
                 } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                     fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                         <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
@@ -1399,7 +1402,7 @@ function renderUI() {
                     • Регулярно обрабатывайте антисептиками послеоперационный рубец на животе.<br>
                     • Обязательно используйте послеродовой бандаж при вставании для поддержки брюшной стенки.<br>
                     • Исключите любые нагрузки на мышцы пресса, вставайте с кровати аккуратно через бок.<br>
-                    • Запрещено поднимать любые предметы, вес ত্রিশ превышает вес новорожденного ребенка.
+                    • Запрещено поднимать любые предметы, вес которых превышает вес новорожденного ребенка.
                 `) : (lang === 'en' ? `
                     • Maintain strict postpartum hygiene (warm rinse after every bathroom visit).<br>
                     • Avoid prolonged hard sitting if perineal stitches are present.<br>
@@ -1460,9 +1463,6 @@ function renderUI() {
         `;
     }
 
-    const isCurrentlyPregnantDiscovered = data.isPregnant && data.isDiscovered;
-    const targetCycle = data.currentCycleTargetLength || settings.cycleLength || 28;
-
     let canAbort = false;
     if (isCurrentlyPregnantDiscovered) {
         if (data.pregnancyWeeks <= 12) {
@@ -1491,7 +1491,7 @@ function renderUI() {
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-notifications-enabled" ${settings.isNotificationsEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc);">${getText('enableNotif')}</label>
+                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('enableNotif')}</label>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-secret-conception" ${settings.isSecretConception ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
