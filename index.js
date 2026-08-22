@@ -131,7 +131,6 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         toastNewCycle: 'Начался новый менструальный цикл (менструация).',
         toastNewHeat: 'Начался новый цикл: наступила течка!',
-        toastLogsEmpty: 'Логи событий для этого чата пока пусты.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', follicular: 'Фолликулярная фаза 🌸', ovulation: 'Овуляция (Окно зачатия) ✨', luteal: 'Лютеиновая фаза (ПМС) 🍂',
         heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
@@ -194,7 +193,6 @@ const TRANSLATIONS = {
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         toastNewCycle: 'A new menstrual cycle has begun.',
         toastNewHeat: 'A new cycle has begun: Heat has started!',
-        toastLogsEmpty: 'Activity logs for this chat are currently empty.',
         pregnancy: 'Pregnancy 🤰', pregnancyOmega: 'Pregnancy (Omega) 🤰',
         menstruation: 'Menstruation 🩸', follicular: 'Follicular Phase 🌸', ovulation: 'Ovulation (Conception Window) ✨', luteal: 'Luteal Phase (PMS) 🍂',
         heat: 'Heat (Peak Fertility) 🔥', quiescence: 'Quiescence Period',
@@ -1130,9 +1128,7 @@ function processMiscarriageTrigger() {
 
 function exportReproLogs() {
     const data = getChatBodyData();
-    const lang = getLanguage();
     if (!data.activityLogs || data.activityLogs.length === 0) {
-        if (typeof toastr !== 'undefined') toastr.info(getText('toastLogsEmpty'));
         return;
     }
 
@@ -1278,7 +1274,7 @@ function renderUI() {
     if (currentSymptoms.length > 0) {
         symptomsHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(244, 114, 182, 0.12); border-left: 3px solid #f472b6; border-radius: 4px; text-align: left;">
             <strong style="font-size: 0.9em; color: #f472b6; display: block; margin-bottom: 5px;">${getText('symptomsTitle')}</strong>
-            <ul style="margin: 0; padding-left: 16px; font-size: 0.85em; line-height: 1.4; opacity: 0.95; color: var(--text-color);">${currentSymptoms.map(s => `<li style="margin-bottom: 2px;">• ${s}</li>`).join('')}</ul>
+            <ul style="margin: 0; padding-left: 18px; font-size: 0.85em; line-height: 1.4; opacity: 0.95; color: var(--text-color);">${currentSymptoms.map(s => `<li style="margin-bottom: 2px;">${s}</li>`).join('')}</ul>
         </div>`;
     }
 
@@ -1301,7 +1297,7 @@ function renderUI() {
             const disease = getFetalDisease(data.fetalDiseaseId, lang);
             if (disease && disease.type === 'prenatal') {
                 if (settings.aiAwareness === 'hidden') {
-                    // Скрыто в средневековье
+                    // Скрыто
                 } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
                     fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                         <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
@@ -1490,20 +1486,20 @@ function renderUI() {
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-enabled" ${settings.isEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; font-weight: 600; color: var(--text-color, #f8fafc);">${getText('enableExt')}</label>
+                        <label for="repro-is-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; color: var(--text-color, #f8fafc); opacity: 0.85;">${getText('enableExt')}</label>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-notifications-enabled" ${settings.isNotificationsEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc);">${getText('enableNotif')}</label>
+                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('enableNotif')}</label>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-secret-conception" ${settings.isSecretConception ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('secretConceptionLabel')}</label>
+                        <label for="repro-is-secret-conception" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('secretConceptionLabel')}</label>
                         ${getTooltipHtml('secretConception', lang)}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-irregular-cycle" ${settings.isIrregularCycle ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('irregularCycleLabel')}</label>
+                        <label for="repro-is-irregular-cycle" style="font-size: 0.9em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('irregularCycleLabel')}</label>
                         ${getTooltipHtml('irregularCycle', lang)}
                     </div>
                 </div>
@@ -1630,7 +1626,7 @@ function renderUI() {
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                             <input type="checkbox" id="repro-fetal-pathology-enabled" ${settings.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0; flex-shrink: 0;"/>
-                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.8; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel')} <span style="opacity: 0.55; font-style: italic;">${getText('fetalPathologySub')}</span></label>
+                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; user-select: none; opacity: 0.85; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel')} <span style="opacity: 0.55; font-style: italic;">${getText('fetalPathologySub')}</span></label>
                             ${getTooltipHtml('fetalPathology', lang)}
                         </div>
                         <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${getText('startPregnancyBtn')}</button>
@@ -1845,8 +1841,6 @@ function bindGlobalEvents() {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
-        logReproEvent(`[MANUAL PREGNANCY] Set to ${weeks} weeks with ${count} baby/babies. Condition: ${bodyData.fetalDiseaseId || 'None'}`);
-
         updateSymptomsData(bodyData);
         saveSettingsDebounced(); 
         renderUI(); 
@@ -1868,8 +1862,6 @@ function bindGlobalEvents() {
         bodyData.activeComplication = null;
         bodyData.deliveryMethod = 'none';
         bodyData.fetalDiseaseId = null;
-
-        logReproEvent(`[RESET] Pregnancy state reset.`);
 
         updateSymptomsData(bodyData);
         processedBirthMessages.clear();
