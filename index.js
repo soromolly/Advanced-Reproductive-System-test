@@ -131,6 +131,7 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         toastNewCycle: 'Начался новый менструальный цикл (менструация).',
         toastNewHeat: 'Начался новый цикл: наступила течка!',
+        toastLogsEmpty: 'Логи событий для этого чата пока пусты.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', follicular: 'Фолликулярная фаза 🌸', ovulation: 'Овуляция (Окно зачатия) ✨', luteal: 'Лютеиновая фаза (ПМС) 🍂',
         heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
@@ -681,7 +682,6 @@ function handleUserMessageTime(text) {
     }
 }
 
-// Сообщения ИИ синхронизируются ТОЛЬКО по точной дате
 function handleAiMessageTime(text) {
     const data = getChatBodyData();
 
@@ -1190,7 +1190,11 @@ function updatePromptInjection(isImmediateBirth = false) {
         let revealGenders = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20);
 
         if (revealCount) {
-            prompt += `[MEDICAL RECORD - FIRST TRIMESTER ULTRASOUND COMPLETED]: Medical scans confirm {{user}} is carrying ${data.babiesCount} baby/babies in the womb.\n`;
+            if (data.babiesCount === 1) {
+                prompt += `[SINGLETON PREGNANCY - ULTRASOUND CONFIRMED]: Medical scans confirm {{user}} is carrying EXACTLY ONE SINGLE BABY (SINGLETON). STRICT DIRECTIVE: Under NO circumstances should you describe twins, triplets, or multiple fetuses. There is strictly ONLY 1 child in the womb.\n`;
+            } else {
+                prompt += `[MULTIPLE PREGNANCY - ULTRASOUND CONFIRMED]: Medical scans confirm {{user}} is carrying EXACTLY ${data.babiesCount} babies in the womb.\n`;
+            }
             
             if (revealGenders) {
                 prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm the genders are: ${data.babiesGenders.map(g => translateGender(g, 'en')).join(', ')}.\n`;
