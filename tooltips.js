@@ -1,26 +1,26 @@
 // База данных всплывающих подсказок и руководств (RU / EN)
 export const TOOLTIPS = {
     ru: {
-        secretConception: "При включении зачатие происходит тайно: кубик бросается скрыто без спойлерных уведомлений. В первые недели цикл отображается как обычно, симптомы и плод скрыты в UI и промпте. Беременность раскрывается при проведении теста на задержке или автоматически на 6-й акушерской неделе.",
+        secretConception: "При включении зачатие происходит тайно: кубик бросается скрыто без спойлерных уведомлений. В первые недели цикл отображается как обычно, симптомы и плод скрыты в UI и промпте. Беременность раскрывается при проведении теста/проверки на задержке или автоматически со временем.",
         irregularCycle: "Включает естественные колебания цикла (от -1 до +12 дней). Создает реалистичные задержки без беременности, имитируя гормональные сбои и стресс.",
         mode: "«Реализм» — стандартный женский цикл (40 акушерских недель, овуляция за 14 дней до месячных). «ОмегаВерс» — течка с 1-го дня цикла, пик фертильности, срок 36 недель и возможность мужской беременности.",
         physiology: "Биологическое строение персонажа. В Реализме доступна только Женщина. В Омегаверсе — Женщина-Омега (вагинальное зачатие) и Мужчина-Омега (анальное зачатие со смазкой).",
-        aiAwareness: "«УЗИ (20 нед)» — бот узнает о двойне/тройне на 12 неделе, а пол и патологии плода на 20 неделе. «Средневековье» — пол и число детей строго скрыты до родов. «Знает всё» — боту сразу видны все параметры плода.",
+        aiAwareness: "«УЗИ (20 нед)» — бот узнает о двойне/тройне на 12 неделе, а пол и патологии плода на 20 неделе. «Средневековье» — пол, число детей и патологии строго скрыты до родов, определение беременности позже, а аборт невозможен после 12 недель. «Знает всё» — боту сразу видны все параметры плода.",
         contraception: "Метод защиты от беременности. «Презерватив» снижает шанс до ~2%, «КОК (таблетки)» — до 0.1%, «ВМС (спираль)» — до 0.2%. Без защиты в фертильное окно шанс максимален.",
-        fetalPathology: "Шанс (~3% при зачатии) возникновения генетической или анатомической особенности плода (порок сердца, гетерохромия, синдром Дауна и др.), которая проявится на скрининге 20-й недели.",
+        fetalPathology: "Шанс возникновения врожденных патологий или замирания беременности (1-й трим: ~10%, 2-й: ~1.5%, 3-й: <0.5%). Данные скрыты от игрока и ИИ до УЗИ или выкидыша.",
         rpDate: "Текущая дата в сюжете ролевой игры. Поддерживает форматы ДД.ММ.ГГГГ, ISO и текстовые даты любого века.",
         cycleLength: "Базовая длительность цикла в днях (по умолчанию 28). Овуляция автоматически рассчитывается как (Длина цикла - 14).",
         periodDuration: "Количество дней кровотечения при менструации (или длительность течки у омег).",
         maxWeeks: "Максимальный акушерский срок вынашивания плода (40 недель для Реализма, 36 для Омегаверса), по достижении которого наступают роды."
     },
     en: {
-        secretConception: "When enabled, conception occurs secretly: dice rolls are hidden without spoiler notifications. Early weeks show regular cycle, hiding symptoms and fetus from UI and AI prompt. Discovered via pregnancy test or automatically at 6 weeks missed period.",
+        secretConception: "When enabled, conception occurs secretly: dice rolls are hidden without spoiler notifications. Early weeks show regular cycle, hiding symptoms and fetus from UI and AI prompt. Discovered via test/check or automatically over time.",
         irregularCycle: "Enables natural cycle fluctuations (-1 to +12 days). Simulates realistic pregnancy scares, hormonal delays, and stress.",
         mode: "«Realism» — human female cycle (40 obstetric weeks, ovulation 14 days before menses). «OmegaVerse» — Heat begins on Day 1, 36-week gestation, and male pregnancy support.",
         physiology: "Biological reproductive anatomy. In Realism, only Female is available. In Omegaverse, choose between Female Omega (vaginal) and Male Omega (anal self-lubricating).",
-        aiAwareness: "«Ultrasound (20 wk)» — AI discovers multiples at week 12, sex & anomalies at week 20. «Medieval (Blind)» — sex and headcount hidden until delivery. «Knows Everything» — AI is aware of all fetal data from day one.",
+        aiAwareness: "«Ultrasound (20 wk)» — AI discovers multiples at week 12, sex & anomalies at week 20. «Medieval (Blind)» — sex, headcount, and pathologies hidden until delivery; late pregnancy discovery, abortion strictly locked after 12 wks. «Knows Everything» — AI is aware of all fetal data from day one.",
         contraception: "Birth control method. «Condom» reduces chance to ~2%, «Oral Pills» to 0.1%, «IUD» to 0.2%. Unprotected intercourse during fertility peak carries the highest conception chance.",
-        fetalPathology: "A ~3% chance at conception for a congenital or genetic fetal condition (heart defect, heterochromia, Down syndrome, etc.) to be diagnosed on week 20 anatomy ultrasound.",
+        fetalPathology: "Enables congenital anomalies and missed miscarriages (1st tri: ~10%, 2nd: ~1.5%, 3rd: <0.5%). Kept completely secret from UI and AI until ultrasound or miscarriage.",
         rpDate: "In-character roleplay date. Supports DD.MM.YYYY, ISO, and natural textual dates across any era.",
         cycleLength: "Base menstrual cycle duration in days (default 28). Ovulation is automatically calculated as (Cycle Length - 14).",
         periodDuration: "Duration of menstrual bleeding in days (or heat duration for Omegas).",
