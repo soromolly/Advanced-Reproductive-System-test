@@ -1027,6 +1027,18 @@ function processAbortionTrigger() {
     }
 }
 
+// Автоматический перехват тега аборта/чистки из сообщения ИИ
+function checkAbortionTagTrigger(text) {
+    const data = getChatBodyData();
+    if (!data.isPregnant) return;
+
+    const abortionTagRegex = /<!--\s*(?:ABORTION|MEDICAL_ABORTION|CURETTAGE)\s*-->/i;
+    if (abortionTagRegex.test(text)) {
+        logReproEvent(`[AI ABORTION TRIGGER] Abortion procedure detected via AI hidden tag.`);
+        processAbortionTrigger();
+    }
+}
+
 function checkBirthTrigger(text, messageIndex) {
     const data = getChatBodyData();
     if (!data.isPregnant || data.babiesGenders.length === 0) return;
@@ -1282,7 +1294,7 @@ function updatePromptInjection(isImmediateBirth = false) {
             }
         }
 
-        // Инъекция скрытого замирания беременности для ИИ
+        // Инъекция скрытого замирания беременности с директивами обнаружения
         if (data.fetalDemise && data.fetalDemise.isDead) {
             const dDays = data.fetalDemise.daysSinceDemise;
             let stageDesc = '';
@@ -1300,7 +1312,10 @@ function updatePromptInjection(isImmediateBirth = false) {
 
             prompt += `\n[SECRET MEDICAL EVENT — MISSED MISCARRIAGE / ARRESTED PREGNANCY]:
 - Current Secret Status: ${stageDesc}
-- ⚠️ STRICT AI DIRECTIVE: Neither {{char}} nor {{user}} are consciously aware that the fetus has died unless an official ultrasound/exam takes place or a physical miscarriage begins. DO NOT explicitly mention or spoil this demise diagnosis to the characters yet. Instead, roleplay the subtle physiological symptoms matching the current stage.\n`;
+- ⚠️ STRICT AI DIRECTIVE:
+  1. DO NOT casually spoil or announce this diagnosis to characters in ordinary conversation. Roleplay subtle physiological symptoms only.
+  2. IF {{user}} undergoes an ultrasound scan, visits a gynecologist/doctor, or is examined by a medieval midwife/healer, {{char}} MUST diagnose the non-viable pregnancy / absent heartbeat.
+  3. IF an abortion, curettage (D&C), vacuum extraction, or herbal expulsion procedure is performed in this response, you MUST append the hidden tag at the absolute end of your response: <!--ABORTION-->\n`;
         }
 
         let revealCount = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 12);
@@ -2065,6 +2080,7 @@ function processIncomingMessage(messageIndex, isUser = false) {
     } else {
         handleAiMessageTime(text);
         checkConceptionTrigger(text);
+        checkAbortionTagTrigger(text);
         checkBirthTrigger(text, idx);
     }
     updatePromptInjection();
