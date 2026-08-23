@@ -53,6 +53,8 @@ function createDefaultBodyData() {
         symptomPhaseKey: null,
         symptomIndices: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
+        fetalDemiseRolledTrimesters: { 1: false, 2: false, 3: false },
+        fetalDemise: null, // { isDead: true, daysSinceDemise: 0, hasInfection: false }
         activeComplication: null,
         postpartumDays: 0,
         deliveryMethod: 'none',
@@ -118,11 +120,12 @@ const TRANSLATIONS = {
         manualWeeks: 'Срок (нед / дн):', manualCount: 'Плодов:', startPregnancyBtn: '🤰 Начать беременность',
         resetPregnancyBtn: '🚼 Сбросить беременность', resetAllBtn: 'Полный сброс данных',
         takeTestBtn: '🧪 Сделать тест на беременность',
+        checkPregnancyBtn: '🌿 Проверить признаки беременности',
         abortBtn: '🛑 Прервать беременность (Аборт)',
         exportLogsBtn: '📥 Скачать лог событий (.txt)',
         toastSaved: 'Параметры успешно сохранены!', toastManualPreg: 'Беременность установлена вручную: ',
         toastResetPreg: 'Беременность сброшена.', toastResetAll: 'Данные чата полностью очищены.',
-        toastAbort: 'Беременность была искусственно прервана. Запущен период восстановления.',
+        toastAbort: 'Беременность была прервана. Запущен период восстановления.',
         toastTimePassed: 'Репродуктивная система: В РП прошло дней: ',
         toastConception: '🚨 ЗАЧАТИЕ ПРОИЗОШЛО! Успешная имплантация в матке.',
         toastTestPositive: '🤰 Тест ПОЛОЖИТЕЛЬНЫЙ (2 полоски)! Беременность подтверждена: ',
@@ -131,7 +134,6 @@ const TRANSLATIONS = {
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         toastNewCycle: 'Начался новый менструальный цикл (менструация).',
         toastNewHeat: 'Начался новый цикл: наступила течка!',
-        toastLogsEmpty: 'Логи событий для этого чата пока пусты.',
         pregnancy: 'Беременность 🤰', pregnancyOmega: 'Беременность (Омега) 🤰',
         menstruation: 'Менструация 🩸', follicular: 'Фолликулярная фаза 🌸', ovulation: 'Овуляция (Окно зачатия) ✨', luteal: 'Лютеиновая фаза (ПМС) 🍂',
         heat: 'Течка (Пик фертильности) 🔥', quiescence: 'Период покоя',
@@ -139,12 +141,11 @@ const TRANSLATIONS = {
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         fetusSizeLabel: 'Размер плода:', fetusWeightLabel: 'Вес:', fetusBellyLabel: 'Живот:',
         fetalAnomalyTitle: '🧬 Врожденная патология плода (обнаружена на УЗИ):',
-        fetalAnomalyLocked: '🔒 Патология плода будет выявлена на скрининговом УЗИ (20-я неделя).',
         medievalLocked: '🔒 Режим Средневековье: количество и пол плода скрыты до момента родов.',
         ultrasound12Locked: '🔒 УЗИ-скрининг (1-й триместр): количество и пол плода пока не исследованы (до 12 нед).',
         ultrasound20Locked: '🔒 Пол плода будет определен на скрининговом УЗИ (20-я неделя).',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
-        postpartumPhase: 'Восстановление после родов 🩹', 
+        postpartumPhase: 'Восстановление после родов / прерывания 🩹', 
         postpartumHeader: 'Послеродовое состояние (День ',
         outcomeType: 'Тип исхода:', stageLabel: 'Стадия:',
         careTips: '💡 Рекомендации по уходу:',
@@ -154,8 +155,8 @@ const TRANSLATIONS = {
         giveBirthBtn: '🔔 ПРИНЯТЬ ВСЕ РОДЫ ВРУЧНУЮ',
         protectionLabel: 'Контрацепция:', protectionNone: 'Без защиты', protectionCondom: 'Презерватив (Барьерный)',
         protectionPills: 'Оральные контрацептивы (КОК)', protectionIud: 'Внутриматочная спираль (ВМС)',
-        fetalPathologyLabel: '🧬 Разрешить врождённые патологии',
-        fetalPathologySub: '(~3% шанс при зачатии)',
+        fetalPathologyLabel: '🧬 Врождённые патологии и риски',
+        fetalPathologySub: '(патологии и замирание)',
         globalRollsLabel: 'Всего скрытых проверок на зачатие:',
         eddLabel: '📅 ПДР (Дата родов):',
         maxWeeksLabel: 'Срок беременности (нед):'
@@ -181,6 +182,7 @@ const TRANSLATIONS = {
         manualWeeks: 'Term (wks / days):', manualCount: 'Babies:', startPregnancyBtn: '🤰 Start Pregnancy',
         resetPregnancyBtn: '🚼 Reset Pregnancy Only', resetAllBtn: 'Full Data Reset',
         takeTestBtn: '🧪 Take Pregnancy Test',
+        checkPregnancyBtn: '🌿 Check for Pregnancy Signs',
         abortBtn: '🛑 Terminate Pregnancy (Abortion)',
         exportLogsBtn: '📥 Download Activity Log (.txt)',
         toastSaved: 'Parameters successfully saved!', toastManualPreg: 'Pregnancy set manually: ',
@@ -201,12 +203,11 @@ const TRANSLATIONS = {
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         fetusSizeLabel: 'Fetus Size:', fetusWeightLabel: 'Weight:', fetusBellyLabel: 'Belly:',
         fetalAnomalyTitle: '🧬 Fetal Anomaly Detected (Ultrasound Anatomy Scan):',
-        fetalAnomalyLocked: '🔒 Fetal pathology will be detected at anatomy ultrasound (week 20).',
         medievalLocked: '🔒 Medieval Mode: baby headcount and sex are hidden until labor.',
         ultrasound12Locked: '🔒 1st Trimester Scan: baby count and sex are not yet visible (<12 wks).',
         ultrasound20Locked: '🔒 Fetal sex will be determined on week 20 anatomy ultrasound.',
         complicationTitle: '⚠️ Medical Complication:', cureBtn: '💊 Treat / Alleviate Complication',
-        postpartumPhase: 'Postpartum Recovery 🩹',
+        postpartumPhase: 'Postpartum / Loss Recovery 🩹',
         postpartumHeader: 'Postpartum State (Day ',
         outcomeType: 'Outcome:', stageLabel: 'Stage:',
         careTips: '💡 Recovery Care Guidelines:',
@@ -216,8 +217,8 @@ const TRANSLATIONS = {
         giveBirthBtn: '🔔 DELIVER ALL BABIES MANUALLY',
         protectionLabel: 'Contraception:', protectionNone: 'No Protection', protectionCondom: 'Condom (Barrier)',
         protectionPills: 'Oral Extraconceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
-        fetalPathologyLabel: '🧬 Allow Congenital Anomalies',
-        fetalPathologySub: '(~3% chance on conception)',
+        fetalPathologyLabel: '🧬 Congenital Anomalies & Risks',
+        fetalPathologySub: '(anomalies & missed demise)',
         globalRollsLabel: 'Total hidden conception checks:',
         eddLabel: '📅 EDD (Due Date):',
         maxWeeksLabel: 'Pregnancy Term (wks):'
@@ -292,6 +293,8 @@ function getChatBodyData() {
     if (data.deliveryMethod === undefined) data.deliveryMethod = 'none';
     if (!data.childrenList) data.childrenList = [];
     if (!data.rolledTrimesters) data.rolledTrimesters = { 1: false, 2: false, 3: false };
+    if (!data.fetalDemiseRolledTrimesters) data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+    if (data.fetalDemise === undefined) data.fetalDemise = null;
     if (data.contraception === undefined) data.contraception = 'none'; 
     if (data.isDiscovered === undefined) data.isDiscovered = data.isPregnant;
     if (data.pregnancyDaysTotal === undefined) data.pregnancyDaysTotal = (data.pregnancyWeeks || 0) * 7 + (data.pregnancyDays || 0);
@@ -362,6 +365,7 @@ function loadSettings() {
     const data = getChatBodyData();
     updateSymptomsData(data);
     checkPregnancyComplications(data);
+    checkFetalDemise(data);
 
     renderUI();
     updatePromptInjection();
@@ -470,6 +474,34 @@ function checkPregnancyComplications(data) {
             if (settings.isNotificationsEnabled && comp) {
                 toastr.error(`🚨 ${getText('complicationTitle')} «${comp.name}»!`);
             }
+        }
+    }
+}
+
+function checkFetalDemise(data) {
+    if (!data.isPregnant || !settings.isFetalPathologyEnabled || (data.fetalDemise && data.fetalDemise.isDead)) return;
+    
+    const week = data.pregnancyWeeks;
+    let currentTrimester = 1;
+    if (week >= 13 && week <= 27) currentTrimester = 2;
+    else if (week >= 28) currentTrimester = 3;
+
+    if (!data.fetalDemiseRolledTrimesters[currentTrimester]) {
+        data.fetalDemiseRolledTrimesters[currentTrimester] = true;
+        
+        let demiseChance = 0;
+        if (currentTrimester === 1) demiseChance = 10;      // 1-й триместр: ~10%
+        else if (currentTrimester === 2) demiseChance = 1.5; // 2-й триместр: ~1-2%
+        else if (currentTrimester === 3) demiseChance = 0.4; // 3-й триместр: <0.5%
+
+        const roll = Math.random() * 100;
+        if (roll < demiseChance) {
+            data.fetalDemise = {
+                isDead: true,
+                daysSinceDemise: 0,
+                hasInfection: false
+            };
+            logReproEvent(`[FETAL DEMISE ROLLED] Secret missed miscarriage occurred at week ${week} (Trimester ${currentTrimester}, Roll: ${roll.toFixed(2)}% < ${demiseChance}%).`);
         }
     }
 }
@@ -648,6 +680,7 @@ function handleUserMessageTime(text) {
         pendingUserTimeskipDays = relativeDays;
         advanceBodyTime(relativeDays);
         checkPregnancyComplications(data);
+        checkFetalDemise(data);
 
         if (data.lastRpDate) {
             const parts = data.lastRpDate.split('-').map(Number);
@@ -673,6 +706,7 @@ function handleUserMessageTime(text) {
             if (diff > 0) {
                 advanceBodyTime(diff);
                 checkPregnancyComplications(data);
+                checkFetalDemise(data);
                 logReproEvent(`[USER DATE SYNC] Date changed from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
             }
         }
@@ -701,6 +735,7 @@ function handleAiMessageTime(text) {
             if (diff > 0) {
                 advanceBodyTime(diff);
                 checkPregnancyComplications(data);
+                checkFetalDemise(data);
                 logReproEvent(`[AI DATE SYNC] Synced from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
                 if (settings.isNotificationsEnabled) {
                     toastr.info(`${getText('toastTimePassed')}${diff}.`);
@@ -719,12 +754,13 @@ function advanceBodyTime(days) {
     
     if (data.postpartumDays > 0) {
         data.postpartumDays += days;
-        if (data.postpartumDays > 40) {
+        const maxRecoveryDays = (data.deliveryMethod === 'miscarriage') ? 14 : 40;
+        if (data.postpartumDays > maxRecoveryDays) {
             data.postpartumDays = 0;
             data.deliveryMethod = 'none';
             data.cycleDay = 1; 
             data.currentCycleTargetLength = rollNewCycleTarget();
-            logReproEvent(`[POSTPARTUM] Recovery completed after 40 days. New cycle initiated.`);
+            logReproEvent(`[POSTPARTUM] Recovery completed after ${maxRecoveryDays} days. New cycle initiated.`);
             if (settings.isNotificationsEnabled) {
                 toastr.success(lang === 'en' 
                     ? "Postpartum recovery complete. Reproductive cycle restarted."
@@ -735,6 +771,24 @@ function advanceBodyTime(days) {
     }
 
     if (data.isPregnant) {
+        checkFetalDemise(data);
+
+        // Прогрессия скрытого замирания беременности
+        if (data.fetalDemise && data.fetalDemise.isDead) {
+            data.fetalDemise.daysSinceDemise += days;
+            
+            if (data.fetalDemise.daysSinceDemise >= 16 && !data.fetalDemise.hasInfection) {
+                data.fetalDemise.hasInfection = true;
+                logReproEvent(`[FETAL DEMISE COMPLICATION] Secondary inflammation / infection started due to prolonged unexpelled tissue (>16 days).`);
+            }
+
+            if (data.fetalDemise.daysSinceDemise >= 21) {
+                logReproEvent(`[FETAL DEMISE RESOLUTION] Stage 3 reached (21+ days): spontaneous expulsion / miscarriage triggered.`);
+                processMiscarriageTrigger();
+                return;
+            }
+        }
+
         if (data.activeComplication && data.activeComplication.id === 'miscarriage_threat_early' && data.activeComplication.isDiscovered) {
             for (let i = 0; i < days; i++) {
                 if (Math.random() * 100 < 10) { 
@@ -750,11 +804,18 @@ function advanceBodyTime(days) {
         data.pregnancyDays = data.pregnancyDaysTotal % 7;
         data.cycleDay += days;
 
-        if (!data.isDiscovered && data.pregnancyWeeks >= 6) {
+        const autoDiscoveryWeek = (settings.aiAwareness === 'hidden') ? 9 : 6;
+        if (!data.isDiscovered && data.pregnancyWeeks >= autoDiscoveryWeek) {
             data.isDiscovered = true;
-            logReproEvent(`[PREGNANCY DISCOVERED] Auto-confirmed at 6 obstetric weeks.`);
+            logReproEvent(`[PREGNANCY DISCOVERED] Auto-confirmed at ${data.pregnancyWeeks} obstetric weeks.`);
             if (settings.isNotificationsEnabled) {
-                toastr.success(getText('toastAutoDiscovered'));
+                if (settings.aiAwareness === 'hidden') {
+                    toastr.success(lang === 'en'
+                        ? `🚨 Body changes and visible signs make pregnancy undeniable! (~${data.pregnancyWeeks} weeks).`
+                        : `🚨 Изменения в теле не оставляют сомнений: беременность подтвердилась (~${data.pregnancyWeeks} нед.)!`);
+                } else {
+                    toastr.success(getText('toastAutoDiscovered'));
+                }
             }
         }
 
@@ -871,6 +932,8 @@ function triggerPregnancy(data) {
 
     data.isDiscovered = !settings.isSecretConception;
     data.rolledTrimesters = { 1: false, 2: false, 3: false }; 
+    data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+    data.fetalDemise = null;
     data.activeComplication = null;
     data.deliveryMethod = 'none';
     data.currentDeliveredCount = 0;
@@ -884,11 +947,13 @@ function triggerPregnancy(data) {
     }
 
     data.fetalDiseaseId = null;
-    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
+    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
         data.fetalDiseaseId = getRandomFetalDiseaseId();
     }
 
-    logReproEvent(`[PREGNANCY INITIATED] Babies: ${data.babiesCount} (${data.babiesGenders.join(', ')}) | Obstetric Week: ${data.pregnancyWeeks}w ${data.pregnancyDays}d | Pathology: ${data.fetalDiseaseId || 'None'} | Secret Mode: ${settings.isSecretConception}`);
+    checkFetalDemise(data);
+
+    logReproEvent(`[PREGNANCY INITIATED] Babies: ${data.babiesCount} (${data.babiesGenders.join(', ')}) | Obstetric Week: ${data.pregnancyWeeks}w ${data.pregnancyDays}d | Pathology: ${data.fetalDiseaseId || 'None'} | Demise: ${data.fetalDemise?.isDead || false} | Secret Mode: ${settings.isSecretConception}`);
 
     updateSymptomsData(data);
     saveSettingsDebounced(); 
@@ -902,21 +967,35 @@ function triggerPregnancy(data) {
 
 function performPregnancyTest() {
     const data = getChatBodyData();
+    const lang = getLanguage();
+    const isMedieval = settings.aiAwareness === 'hidden';
 
     if (data.isPregnant) {
         data.isDiscovered = true;
-        logReproEvent(`[PREGNANCY TEST] Positive test taken. Confirmed: ${data.pregnancyWeeks}w ${data.pregnancyDays}d.`);
+        logReproEvent(`[PREGNANCY CHECK] Positive pregnancy test/check. Confirmed: ${data.pregnancyWeeks}w ${data.pregnancyDays}d.`);
         updateSymptomsData(data);
         saveSettingsDebounced();
         renderUI();
         updatePromptInjection();
         if (settings.isNotificationsEnabled) {
-            toastr.success(`${getText('toastTestPositive')}${data.pregnancyWeeks} ${getText('weeksShort')} ${data.pregnancyDays} ${getText('daysShort')}`);
+            if (isMedieval) {
+                toastr.success(lang === 'en'
+                    ? `🌿 Pregnancy signs confirmed! Estimated: ~${data.pregnancyWeeks} weeks.`
+                    : `🌿 Признаки подтвердились: беременность обнаружена (~${data.pregnancyWeeks} нед.)!`);
+            } else {
+                toastr.success(`${getText('toastTestPositive')}${data.pregnancyWeeks} ${getText('weeksShort')} ${data.pregnancyDays} ${getText('daysShort')}`);
+            }
         }
     } else {
-        logReproEvent(`[PREGNANCY TEST] Negative test taken on cycle day ${data.cycleDay}.`);
+        logReproEvent(`[PREGNANCY CHECK] Negative test/check on cycle day ${data.cycleDay}.`);
         if (settings.isNotificationsEnabled) {
-            toastr.info(getText('toastTestNegative'));
+            if (isMedieval) {
+                toastr.info(lang === 'en'
+                    ? `🍃 No signs of pregnancy detected. Just a natural cycle delay.`
+                    : `🍃 Признаков беременности нет. Это обычная задержка цикла.`);
+            } else {
+                toastr.info(getText('toastTestNegative'));
+            }
         }
     }
 }
@@ -934,6 +1013,8 @@ function processAbortionTrigger() {
     data.babiesGenders = [];
     data.activeComplication = null;
     data.fetalDiseaseId = null;
+    data.fetalDemise = null;
+    data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     data.postpartumDays = 1;
     data.deliveryMethod = 'miscarriage'; 
 
@@ -1019,6 +1100,8 @@ function deliverSingleBaby(data, method = 'natural') {
         data.currentDeliveredCount = 0;
         data.activeComplication = null;
         data.fetalDiseaseId = null;
+        data.fetalDemise = null;
+        data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
         data.postpartumDays = 1;
         data.deliveryMethod = method;
 
@@ -1079,6 +1162,8 @@ function processBirthTrigger(method = 'natural') {
     data.babiesGenders = []; 
     data.activeComplication = null;
     data.fetalDiseaseId = null;
+    data.fetalDemise = null;
+    data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     data.postpartumDays = 1; 
     data.deliveryMethod = method; 
 
@@ -1112,6 +1197,8 @@ function processMiscarriageTrigger() {
     data.babiesGenders = [];
     data.activeComplication = null;
     data.fetalDiseaseId = null;
+    data.fetalDemise = null;
+    data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     data.postpartumDays = 1;
     data.deliveryMethod = 'miscarriage'; 
 
@@ -1122,7 +1209,7 @@ function processMiscarriageTrigger() {
     if (settings.isNotificationsEnabled) {
         toastr.error(lang === 'en'
             ? `🚨 CRITICAL EVENT: Due to acute complications, a spontaneous miscarriage occurred. Pregnancy terminated.`
-            : `🚨 КРИТИЧЕСКОЕ СОБЫТИЕ: Из-за сильного ухудшения состояния произошел спонтанный выкидыш. Беременность прервана.`);
+            : `🚨 КРИТИЧЕСКОЕ СОБЫТИЕ: Произошел самопроизвольный выкидыш. Беременность прервана.`);
     }
 }
 
@@ -1170,7 +1257,8 @@ function updatePromptInjection(isImmediateBirth = false) {
 
     if (data.postpartumDays > 0) {
         const pData = getPostpartumData(data.postpartumDays, data.deliveryMethod, 'en');
-        prompt += `Status: RECOVERY PHASE (Day ${data.postpartumDays}/40) | Event Outcome: ${data.deliveryMethod.toUpperCase()}\n`;
+        const maxRecDays = (data.deliveryMethod === 'miscarriage') ? 14 : 40;
+        prompt += `Status: RECOVERY PHASE (Day ${data.postpartumDays}/${maxRecDays}) | Event Outcome: ${data.deliveryMethod.toUpperCase()}\n`;
         prompt += `Physical Condition & Limitations: ${pData.desc}\n`;
         setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
         return;
@@ -1192,6 +1280,27 @@ function updatePromptInjection(isImmediateBirth = false) {
             if (compEn) {
                 prompt += `[ACTIVE MEDICAL COMPLICATION]: {{user}} is experiencing "${compEn.name}". Symptoms/Condition: ${compEn.desc}. {{char}} must realistically acknowledge and react to this health complication and its impact on {{user}}.\n`;
             }
+        }
+
+        // Инъекция скрытого замирания беременности для ИИ
+        if (data.fetalDemise && data.fetalDemise.isDead) {
+            const dDays = data.fetalDemise.daysSinceDemise;
+            let stageDesc = '';
+            if (dDays <= 14) {
+                stageDesc = `Stage 1 (Silent / Hidden phase, Day ${dDays}/14): Non-developing pregnancy. Symptoms: sudden disappearance of morning sickness/toxicosis, drop in health and energy, physiological silent arrest.`;
+            } else if (dDays <= 21) {
+                stageDesc = `Stage 2 (Expulsion onset / Threatened spontaneous miscarriage, Day ${dDays}/21): Inevitable rejection beginning. Symptoms: lower abdominal cramps, brownish spotting/discharge.`;
+            } else {
+                stageDesc = `Stage 3 (Active Expulsion / Miscarriage): Heavy uterine cramping, bleeding, spontaneous expulsion.`;
+            }
+
+            if (data.fetalDemise.hasInfection) {
+                stageDesc += ` [CRITICAL COMPLICATION]: Prolonged unexpelled tissue has developed into an internal inflammatory process / infection debuff (pelvic fever, malaise, pain).`;
+            }
+
+            prompt += `\n[SECRET MEDICAL EVENT — MISSED MISCARRIAGE / ARRESTED PREGNANCY]:
+- Current Secret Status: ${stageDesc}
+- ⚠️ STRICT AI DIRECTIVE: Neither {{char}} nor {{user}} are consciously aware that the fetus has died unless an official ultrasound/exam takes place or a physical miscarriage begins. DO NOT explicitly mention or spoil this demise diagnosis to the characters yet. Instead, roleplay the subtle physiological symptoms matching the current stage.\n`;
         }
 
         let revealCount = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 12);
@@ -1217,7 +1326,7 @@ function updatePromptInjection(isImmediateBirth = false) {
                 prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex and secondary gender are still completely OBSCURED from {{char}} (too early to visually determine them before week 20).\n`;
             }
         } else if (settings.aiAwareness === 'hidden') {
-            prompt += `[SECRET DATA]: The number of babies and their genders are strictly CONCEALED from {{char}} (Medieval/Blind mode). {{char}} must not know headcount or sex until birth.\n`;
+            prompt += `[SECRET DATA]: The number of babies, their genders, and fetal pathologies are strictly CONCEALED from {{char}} (Medieval/Blind mode). {{char}} must not know headcount or sex until birth.\n`;
         } else {
             prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. Headcount and genders are completely unknown to {{char}}.\n`;
         }
@@ -1271,11 +1380,11 @@ function renderUI() {
     const data = getChatBodyData();
     const lang = getLanguage();
     const baseCycleDisplay = settings.cycleLength || 28;
-    const targetCycle = data.currentCycleTargetLength || baseCycleDisplay;
     const isCurrentlyPregnantDiscovered = data.isPregnant && data.isDiscovered;
 
     updateSymptomsData(data);
     checkPregnancyComplications(data);
+    checkFetalDemise(data);
 
     let displayDate = getText('waitingDate');
     let inputDateValue = '';
@@ -1309,21 +1418,18 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
+        // Отображение патологии плода: строго после 20-й недели и только в современных режимах
         if (data.fetalDiseaseId) {
             const disease = getFetalDisease(data.fetalDiseaseId, lang);
             if (disease && disease.type === 'prenatal') {
-                if (settings.aiAwareness === 'hidden') {
-                    // Скрыто в средневековье
-                } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
-                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                        <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
-                        <b style="color: #fcd34d;">${disease.name}</b><br>
-                        <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${disease.desc}</span>
-                    </div>`;
-                } else if (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks < 20) {
-                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 8px 10px; background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; text-align: left; font-size: 0.82em; color: #fcd34d; font-style: italic;">
-                        ${getText('fetalAnomalyLocked')}
-                    </div>`;
+                if (settings.aiAwareness !== 'hidden') {
+                    if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
+                        fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                            <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
+                            <b style="color: #fcd34d;">${disease.name}</b><br>
+                            <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${disease.desc}</span>
+                        </div>`;
+                    }
                 }
             }
         }
@@ -1384,13 +1490,14 @@ function renderUI() {
         const pData = getPostpartumData(data.postpartumDays, data.deliveryMethod, lang);
         const isCS = data.deliveryMethod === 'c_section';
         const isMiscarriage = data.deliveryMethod === 'miscarriage';
+        const maxRecovery = isMiscarriage ? 14 : 40;
         
         let outcomeText = lang === 'en' ? 'Natural Delivery (Vaginal)' : 'Естественные роды (ЕР)';
         if (isCS) outcomeText = lang === 'en' ? 'Cesarean Section (C-Section)' : 'Кесарево сечение (КС)';
-        if (isMiscarriage) outcomeText = lang === 'en' ? 'Miscarriage (Loss)' : 'Выкидыш (Прерывание беременности)';
+        if (isMiscarriage) outcomeText = lang === 'en' ? 'Postgravid Restoration / Loss' : 'Постгравидарное восстановление / Прерывание';
 
         postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: ${isMiscarriage ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border: 1px solid ${isMiscarriage ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}; border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-            <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader')}${data.postpartumDays}/40)</strong>
+            <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader')}${data.postpartumDays}/${maxRecovery})</strong>
             <b>${getText('outcomeType')}</b> <span style="color: ${isMiscarriage ? '#ef4444' : '#10b981'}; font-weight: bold;">${outcomeText}</span><br>
             <b>${getText('stageLabel')}</b> <span>${pData.name}</span><br>
             <span style="opacity: 0.85; display: block; margin-top: 4px; font-style: italic;">${pData.desc}</span>
@@ -1398,13 +1505,13 @@ function renderUI() {
             <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed ${isMiscarriage ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
                 <strong style="color: ${isMiscarriage ? '#f87171' : '#34d399'}; display: block; margin-bottom: 3px;">${getText('careTips')}</strong>
                 ${isMiscarriage ? (lang === 'en' ? `
-                    • Ensure complete physical and emotional rest; strictly eliminate stress.<br>
+                    • Ensure complete physical and emotional rest.<br>
                     • Avoid thermal procedures (hot baths, saunas) and lifting heavy objects.<br>
-                    • Allow reproductive system to naturally heal and clear.
+                    • Allow reproductive system 10–14 days to naturally reset.
                 ` : `
-                    • Обеспечьте полный физический и психоэмоциональный покой, полностью исключите стресс.<br>
-                    • Категорически запрещены любые тепловые процедуры (горячие ванны, сауна) и подъем тяжестей.<br>
-                    • Дайте репродуктивной системе очиститься и восстановиться.
+                    • Обеспечьте полный физический и психоэмоциональный покой, избегайте стресса.<br>
+                    • Категорически запрещены тепловые процедуры (горячие ванны, баня) и подъем тяжестей.<br>
+                    • Дайте репродуктивной системе 10–14 дней на полное очищение и восстановление.
                 `) : (isCS ? (lang === 'en' ? `
                     • Disinfect surgical incision site regularly.<br>
                     • Use a postpartum support band when standing to support abdominal wall.<br>
@@ -1475,18 +1582,29 @@ function renderUI() {
         `;
     }
 
+    // Условия для отображения кнопки аборта
     let canAbort = false;
     if (isCurrentlyPregnantDiscovered) {
         const isUnder12Weeks = (data.pregnancyWeeks < 12) || (data.pregnancyWeeks === 12 && (data.pregnancyDays || 0) === 0);
-        if (isUnder12Weeks) {
-            canAbort = true;
-        } else if (data.pregnancyWeeks >= 20 && data.fetalDiseaseId) {
-            const disease = getFetalDisease(data.fetalDiseaseId, 'en');
-            if (disease && disease.type === 'prenatal') {
+        if (settings.aiAwareness === 'hidden') {
+            // В режиме Средневековья аборт возможен ТОЛЬКО строго до 12 недель
+            if (isUnder12Weeks) {
                 canAbort = true;
+            }
+        } else {
+            // В современном режиме: до 12 недель, либо после 20 при выявленной пренатальной патологии
+            if (isUnder12Weeks) {
+                canAbort = true;
+            } else if (data.pregnancyWeeks >= 20 && data.fetalDiseaseId) {
+                const disease = getFetalDisease(data.fetalDiseaseId, 'en');
+                if (disease && disease.type === 'prenatal') {
+                    canAbort = true;
+                }
             }
         }
     }
+
+    const checkBtnLabel = (settings.aiAwareness === 'hidden') ? getText('checkPregnancyBtn') : getText('takeTestBtn');
 
     const html = `
         <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
@@ -1581,7 +1699,7 @@ function renderUI() {
                 </div>
 
                 ${(!isCurrentlyPregnantDiscovered && data.cycleDay > settings.cycleLength && data.postpartumDays === 0) ? `
-                    <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('takeTestBtn')}</button>
+                    <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
                 ` : ''}
 
                 ${isCurrentlyPregnantDiscovered ? `
@@ -1851,6 +1969,8 @@ function bindGlobalEvents() {
         bodyData.babiesCount = count; 
         bodyData.currentDeliveredCount = 0;
         bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
+        bodyData.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+        bodyData.fetalDemise = null;
         bodyData.activeComplication = null;
         bodyData.babiesGenders = [];
         bodyData.deliveryMethod = 'none';
@@ -1860,11 +1980,13 @@ function bindGlobalEvents() {
         }
 
         bodyData.fetalDiseaseId = null;
-        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
+        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
             bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
         }
 
-        logReproEvent(`[MANUAL PREGNANCY] Set to ${weeks}w ${bodyData.pregnancyDays}d with ${count} baby/babies. Condition: ${bodyData.fetalDiseaseId || 'None'}`);
+        checkFetalDemise(bodyData);
+
+        logReproEvent(`[MANUAL PREGNANCY] Set to ${weeks}w ${bodyData.pregnancyDays}d with ${count} baby/babies. Condition: ${bodyData.fetalDiseaseId || 'None'} | Demise: ${bodyData.fetalDemise?.isDead || false}`);
 
         updateSymptomsData(bodyData);
         saveSettingsDebounced(); 
@@ -1884,6 +2006,8 @@ function bindGlobalEvents() {
         bodyData.babiesCount = 0; 
         bodyData.babiesGenders = []; 
         bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
+        bodyData.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+        bodyData.fetalDemise = null;
         bodyData.activeComplication = null;
         bodyData.deliveryMethod = 'none';
         bodyData.fetalDiseaseId = null;
