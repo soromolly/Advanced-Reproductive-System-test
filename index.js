@@ -1186,6 +1186,14 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `Current Pregnancy Symptoms: ${symptomsEn.join(', ')}.\n`;
         }
 
+        // Инъекция активного открытого осложнения беременности
+        if (data.activeComplication && data.activeComplication.isDiscovered) {
+            const compEn = getComplication(data.activeComplication.id, 'en');
+            if (compEn) {
+                prompt += `[ACTIVE MEDICAL COMPLICATION]: {{user}} is experiencing "${compEn.name}". Symptoms/Condition: ${compEn.desc}. {{char}} must realistically acknowledge and react to this health complication and its impact on {{user}}.\n`;
+            }
+        }
+
         let revealCount = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 12);
         let revealGenders = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20);
 
@@ -1280,7 +1288,7 @@ function renderUI() {
     const currentSymptoms = getSymptomList(data.symptomPhaseKey, data.symptomIndices, lang);
     let symptomsHtml = '';
     if (currentSymptoms.length > 0) {
-        symptomsHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(244, 114, 182, 0.12); border-left: 3px solid #f472b6; border-radius: 4px; text-align: left;">
+        symptomsHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(244, 114, 182, 0.1); border: 1px solid rgba(244, 114, 182, 0.35); border-radius: 6px; text-align: left;">
             <strong style="font-size: 0.9em; color: #f472b6; display: block; margin-bottom: 5px;">${getText('symptomsTitle')}</strong>
             <ul style="margin: 0; padding-left: 18px; font-size: 0.85em; line-height: 1.4; opacity: 0.95; color: var(--text-color);">${currentSymptoms.map(s => `<li style="margin-bottom: 2px;">${s}</li>`).join('')}</ul>
         </div>`;
@@ -1293,7 +1301,7 @@ function renderUI() {
 
     if (data.isPregnant && data.isDiscovered) {
         const fetus = getFetusData(data.pregnancyWeeks, lang);
-        fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+        fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('fetusTitle')}</strong>
             • ${getText('fetusSizeLabel')} <span style="color: #38bdf8; font-weight: bold;">${fetus.size}</span><br>
             • ${getText('fetusWeightLabel')} <span>${fetus.weight}</span><br>
@@ -1307,13 +1315,13 @@ function renderUI() {
                 if (settings.aiAwareness === 'hidden') {
                     // Скрыто в средневековье
                 } else if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
-                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                         <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
                         <b style="color: #fcd34d;">${disease.name}</b><br>
                         <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${disease.desc}</span>
                     </div>`;
                 } else if (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks < 20) {
-                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 8px 10px; background: rgba(251, 191, 36, 0.06); border-left: 3px solid rgba(251, 191, 36, 0.35); border-radius: 4px; text-align: left; font-size: 0.82em; color: #92400e; font-style: italic;">
+                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 8px 10px; background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 6px; text-align: left; font-size: 0.82em; color: #fcd34d; font-style: italic;">
                         ${getText('fetalAnomalyLocked')}
                     </div>`;
                 }
@@ -1381,7 +1389,7 @@ function renderUI() {
         if (isCS) outcomeText = lang === 'en' ? 'Cesarean Section (C-Section)' : 'Кесарево сечение (КС)';
         if (isMiscarriage) outcomeText = lang === 'en' ? 'Miscarriage (Loss)' : 'Выкидыш (Прерывание беременности)';
 
-        postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: ${isMiscarriage ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border-left: 3px solid ${isMiscarriage ? '#ef4444' : '#10b981'}; border-radius: 4px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+        postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: ${isMiscarriage ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border: 1px solid ${isMiscarriage ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}; border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader')}${data.postpartumDays}/40)</strong>
             <b>${getText('outcomeType')}</b> <span style="color: ${isMiscarriage ? '#ef4444' : '#10b981'}; font-weight: bold;">${outcomeText}</span><br>
             <b>${getText('stageLabel')}</b> <span>${pData.name}</span><br>
@@ -1469,7 +1477,8 @@ function renderUI() {
 
     let canAbort = false;
     if (isCurrentlyPregnantDiscovered) {
-        if (data.pregnancyWeeks <= 12) {
+        const isUnder12Weeks = (data.pregnancyWeeks < 12) || (data.pregnancyWeeks === 12 && (data.pregnancyDays || 0) === 0);
+        if (isUnder12Weeks) {
             canAbort = true;
         } else if (data.pregnancyWeeks >= 20 && data.fetalDiseaseId) {
             const disease = getFetalDisease(data.fetalDiseaseId, 'en');
@@ -1654,7 +1663,7 @@ function renderUI() {
                     ${getText('globalRollsLabel')} <span id="repro-global-rolls-count" style="font-weight: bold; font-family: monospace; color: #94a3b8; margin-left: 2px;">${settings.globalRollsCount}</span>
                 </div>
 
-                <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 8px; font-size: 11px; padding: 4px; background: #334155; color: #f8fafc; font-weight: 600; justify-content: center;">${getText('exportLogsBtn')}</button>
+                <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('exportLogsBtn')}</button>
             </div>
         </div>
     `;
