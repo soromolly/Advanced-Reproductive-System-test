@@ -48,6 +48,7 @@ function createDefaultBodyData() {
         pregnancyDays: 0,
         babiesCount: 0,
         babiesGenders: [],
+        babiesDiseases: [],
         currentDeliveredCount: 0,
         currentCycleTargetLength: 28,
         symptomPhaseKey: null,
@@ -128,8 +129,9 @@ const TRANSLATIONS = {
         toastAbort: 'Беременность была прервана. Запущен период восстановления.',
         toastTimePassed: 'Репродуктивная система: В РП прошло дней: ',
         toastConception: '🚨 ЗАЧАТИЕ ПРОИЗОШЛО! Успешная имплантация в матке.',
-        toastTestPositive: '🤰 Тест ПОЛОЖИТЕЛЬНЫЙ (2 полоски)! Беременность подтверждена: ',
+        toastTestPositive: '🤰 Тест ПОЛОЖИТЕЛЬНЫЙ (2 четкие полоски)! Беременность подтверждена: ',
         toastTestNegative: '⚪ Тест ОТРИЦАТЕЛЬНЫЙ (1 полоска). Беременности нет, задержка цикла.',
+        toastTestUncertain: '❔ Тест СОМНИТЕЛЬНЫЙ (1 полоска / слабый призрак). Уровень ХГЧ слишком мал для точного результата на этом сроке.',
         toastAutoDiscovered: '🚨 Задержка цикла 2+ недели! Тест на беременность показал две полоски (Беременность подтверждена)!',
         toastPregEnd: 'Срок беременности подошел к концу! Пора рожать.',
         toastNewCycle: 'Начался новый менструальный цикл (менструация).',
@@ -140,7 +142,7 @@ const TRANSLATIONS = {
         delayed: 'Задержка цикла ⚠️', delayedHeat: 'Задержка течки ⚠️',
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         fetusSizeLabel: 'Размер плода:', fetusWeightLabel: 'Вес:', fetusBellyLabel: 'Живот:',
-        fetalAnomalyTitle: '🧬 Врожденная патология плода (обнаружена на УЗИ):',
+        fetalAnomalyTitle: '🧬 Врожденные особенности плода (УЗИ-скрининг 20 нед):',
         medievalLocked: '🔒 Режим Средневековье: количество и пол плода скрыты до момента родов.',
         ultrasound12Locked: '🔒 УЗИ-скрининг (1-й триместр): количество и пол плода пока не исследованы (до 12 нед).',
         ultrasound20Locked: '🔒 Пол плода будет определен на скрининговом УЗИ (20-я неделя).',
@@ -152,6 +154,7 @@ const TRANSLATIONS = {
         newbornTitle: '🍼 Рожденные дети в семье:',
         childLabel: 'Ребенок',
         congenitalFeatureLabel: 'Врождённая особенность:',
+        healthyFetusLabel: 'Анатомических патологий не выявлено (Здоров)',
         giveBirthBtn: '🔔 ПРИНЯТЬ ВСЕ РОДЫ ВРУЧНУЮ',
         protectionLabel: 'Контрацепция:', protectionNone: 'Без защиты', protectionCondom: 'Презерватив (Барьерный)',
         protectionPills: 'Оральные контрацептивы (КОК)', protectionIud: 'Внутриматочная спираль (ВМС)',
@@ -190,8 +193,9 @@ const TRANSLATIONS = {
         toastAbort: 'Pregnancy was terminated. Postpartum recovery begun.',
         toastTimePassed: 'Reproductive system: Days passed in RP: ',
         toastConception: '🚨 CONCEPTION OCCURRED! Successful implantation in the womb.',
-        toastTestPositive: '🤰 Test is POSITIVE (2 lines)! Pregnancy confirmed: ',
+        toastTestPositive: '🤰 Test is POSITIVE (2 solid lines)! Pregnancy confirmed: ',
         toastTestNegative: '⚪ Test is NEGATIVE (1 line). No pregnancy, just a cycle delay.',
+        toastTestUncertain: '❔ Test is INCONCLUSIVE (1 line / faint phantom line). hCG concentration is too low for a reliable result yet.',
         toastAutoDiscovered: '🚨 2+ weeks missed period! Pregnancy test is positive (Pregnancy confirmed)!',
         toastPregEnd: 'Pregnancy term has ended! Time to give birth.',
         toastNewCycle: 'A new menstrual cycle has begun.',
@@ -202,7 +206,7 @@ const TRANSLATIONS = {
         delayed: 'Cycle Delayed ⚠️', delayedHeat: 'Heat Delayed ⚠️',
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         fetusSizeLabel: 'Fetus Size:', fetusWeightLabel: 'Weight:', fetusBellyLabel: 'Belly:',
-        fetalAnomalyTitle: '🧬 Fetal Anomaly Detected (Ultrasound Anatomy Scan):',
+        fetalAnomalyTitle: '🧬 Fetal Anatomical Findings (Week 20 Anatomy Scan):',
         medievalLocked: '🔒 Medieval Mode: baby headcount and sex are hidden until labor.',
         ultrasound12Locked: '🔒 1st Trimester Scan: baby count and sex are not yet visible (<12 wks).',
         ultrasound20Locked: '🔒 Fetal sex will be determined on week 20 anatomy ultrasound.',
@@ -214,6 +218,7 @@ const TRANSLATIONS = {
         newbornTitle: '🍼 Children in Family:',
         childLabel: 'Child',
         congenitalFeatureLabel: 'Congenital Condition:',
+        healthyFetusLabel: 'No anatomical anomalies detected (Healthy)',
         giveBirthBtn: '🔔 DELIVER ALL BABIES MANUALLY',
         protectionLabel: 'Contraception:', protectionNone: 'No Protection', protectionCondom: 'Condom (Barrier)',
         protectionPills: 'Oral Extraconceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
@@ -299,6 +304,9 @@ function getChatBodyData() {
     if (data.isDiscovered === undefined) data.isDiscovered = data.isPregnant;
     if (data.pregnancyDaysTotal === undefined) data.pregnancyDaysTotal = (data.pregnancyWeeks || 0) * 7 + (data.pregnancyDays || 0);
     if (data.fetalDiseaseId === undefined) data.fetalDiseaseId = data.fetalDisease?.id || null;
+    if (!data.babiesDiseases) {
+        data.babiesDiseases = (data.babiesGenders || []).map((_, i) => (i === 0 ? data.fetalDiseaseId : null));
+    }
     if (data.currentDeliveredCount === undefined) data.currentDeliveredCount = 0;
     if (data.currentCycleTargetLength === undefined) data.currentCycleTargetLength = settings.cycleLength || 28;
     if (!data.symptomIndices) data.symptomIndices = [];
@@ -951,19 +959,32 @@ function triggerPregnancy(data) {
     const roll = Math.random() * 100;
     data.babiesCount = settings.mode === 'omegaverse' ? (roll > 92 ? 3 : roll > 70 ? 2 : 1) : (roll > 98.5 ? 3 : roll > 95 ? 2 : 1);
     data.babiesGenders = [];
+    data.babiesDiseases = [];
     
     for (let i = 0; i < data.babiesCount; i++) {
         data.babiesGenders.push(generateBabyGender(settings.mode, 'en'));
+        data.babiesDiseases.push(null);
     }
 
     data.fetalDiseaseId = null;
     if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
-        data.fetalDiseaseId = getRandomFetalDiseaseId();
+        const primaryDisease = getRandomFetalDiseaseId();
+        data.fetalDiseaseId = primaryDisease;
+        data.babiesDiseases[0] = primaryDisease;
+
+        // Для многоплодной беременности: крайне малый шанс (~5%), что второй плод тоже с патологией
+        for (let i = 1; i < data.babiesCount; i++) {
+            if (Math.random() * 100 < 5) {
+                data.babiesDiseases[i] = getRandomFetalDiseaseId();
+            }
+        }
+        // Перемешиваем, чтобы патология не всегда была у первого плода
+        data.babiesDiseases.sort(() => 0.5 - Math.random());
     }
 
     checkFetalDemise(data);
 
-    logReproEvent(`[PREGNANCY INITIATED] Babies: ${data.babiesCount} (${data.babiesGenders.join(', ')}) | Obstetric Week: ${data.pregnancyWeeks}w ${data.pregnancyDays}d | Pathology: ${data.fetalDiseaseId || 'None'} | Demise: ${data.fetalDemise?.isDead || false} | Secret Mode: ${settings.isSecretConception}`);
+    logReproEvent(`[PREGNANCY INITIATED] Babies: ${data.babiesCount} (${data.babiesGenders.join(', ')}) | Diseases: [${data.babiesDiseases.join(', ')}] | Obstetric Week: ${data.pregnancyWeeks}w ${data.pregnancyDays}d | Demise: ${data.fetalDemise?.isDead || false} | Secret Mode: ${settings.isSecretConception}`);
 
     updateSymptomsData(data);
     saveSettingsDebounced(); 
@@ -981,23 +1002,58 @@ function performPregnancyTest() {
     const isMedieval = settings.aiAwareness === 'hidden';
 
     if (data.isPregnant) {
-        data.isDiscovered = true;
-        logReproEvent(`[PREGNANCY CHECK] Positive pregnancy test/check. Confirmed: ${data.pregnancyWeeks}w ${data.pregnancyDays}d.`);
-        updateSymptomsData(data);
-        saveSettingsDebounced();
-        renderUI();
-        updatePromptInjection();
-        if (settings.isNotificationsEnabled) {
-            if (isMedieval) {
-                toastr.success(lang === 'en'
-                    ? `🌿 Pregnancy signs confirmed! Estimated: ~${data.pregnancyWeeks} weeks.`
-                    : `🌿 Признаки подтвердились: беременность обнаружена (~${data.pregnancyWeeks} нед.)!`);
-            } else {
-                toastr.success(`${getText('toastTestPositive')}${data.pregnancyWeeks} ${getText('weeksShort')} ${data.pregnancyDays} ${getText('daysShort')}`);
+        const targetCycle = data.currentCycleTargetLength || settings.cycleLength || 28;
+        const delayDays = data.cycleDay - targetCycle;
+        
+        let detectionChance = 99;
+        if (isMedieval) {
+            if (delayDays < 7) detectionChance = 25;
+            else if (delayDays < 14) detectionChance = 65;
+            else if (delayDays < 21) detectionChance = 90;
+            else detectionChance = 98;
+        } else {
+            if (delayDays <= 0) detectionChance = 15;
+            else if (delayDays <= 2) detectionChance = 50;
+            else if (delayDays <= 4) detectionChance = 75;
+            else if (delayDays <= 6) detectionChance = 90;
+            else detectionChance = 99;
+        }
+
+        const roll = Math.random() * 100;
+        const isDetected = roll <= detectionChance;
+
+        logReproEvent(`[PREGNANCY TEST ROLL] Missed period: ${delayDays} days | Detection chance: ${detectionChance}% | Roll: ${roll.toFixed(1)}% | Detected: ${isDetected}`);
+
+        if (isDetected) {
+            data.isDiscovered = true;
+            logReproEvent(`[PREGNANCY CONFIRMED] Test positive at ${data.pregnancyWeeks}w ${data.pregnancyDays}d.`);
+            updateSymptomsData(data);
+            saveSettingsDebounced();
+            renderUI();
+            updatePromptInjection();
+            if (settings.isNotificationsEnabled) {
+                if (isMedieval) {
+                    toastr.success(lang === 'en'
+                        ? `🌿 Signs and pulse confirm pregnancy (~${data.pregnancyWeeks} weeks)!`
+                        : `🌿 Признаки и самочувствие подтверждают беременность (~${data.pregnancyWeeks} нед.)!`);
+                } else {
+                    toastr.success(`${getText('toastTestPositive')}${data.pregnancyWeeks} ${getText('weeksShort')} ${data.pregnancyDays} ${getText('daysShort')}`);
+                }
+            }
+        } else {
+            // Тест не показал из-за раннего срока
+            if (settings.isNotificationsEnabled) {
+                if (isMedieval) {
+                    toastr.info(lang === 'en'
+                        ? `🍃 Herbal signs and bodily cues are faint and inconclusive. Better to check again in a few days.`
+                        : `🍃 Признаки слишком неясные и сомнительные. Травяные настои и самочувствие пока не дают точного ответа. Стоит проверить позже.`);
+                } else {
+                    toastr.warning(getText('toastTestUncertain'));
+                }
             }
         }
     } else {
-        logReproEvent(`[PREGNANCY CHECK] Negative test/check on cycle day ${data.cycleDay}.`);
+        logReproEvent(`[PREGNANCY CHECK] Negative test on cycle day ${data.cycleDay}.`);
         if (settings.isNotificationsEnabled) {
             if (isMedieval) {
                 toastr.info(lang === 'en'
@@ -1021,6 +1077,7 @@ function processAbortionTrigger() {
     data.currentDeliveredCount = 0;
     data.babiesCount = 0;
     data.babiesGenders = [];
+    data.babiesDiseases = [];
     data.activeComplication = null;
     data.fetalDiseaseId = null;
     data.fetalDemise = null;
@@ -1098,17 +1155,19 @@ function checkBirthTrigger(text, messageIndex) {
 function deliverSingleBaby(data, method = 'natural') {
     const lang = getLanguage();
     const rawGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, 'en');
+    const babyDiseaseId = (data.babiesDiseases && data.babiesDiseases.length > 0) ? data.babiesDiseases.shift() : null;
+    
     data.currentDeliveredCount = (data.currentDeliveredCount || 0) + 1;
     
     data.childrenList.push({
         id: Date.now() + Math.floor(Math.random() * 1000),
         gender: rawGender,
-        diseaseId: data.fetalDiseaseId || null
+        diseaseId: babyDiseaseId
     });
     
     data.babiesCount = data.babiesGenders.length;
     const displayGender = translateGender(rawGender, lang);
-    const disease = data.fetalDiseaseId ? getFetalDisease(data.fetalDiseaseId, lang) : null;
+    const disease = babyDiseaseId ? getFetalDisease(babyDiseaseId, lang) : null;
 
     logReproEvent(`[BIRTH] Child delivered: ${rawGender} | Method: ${method} | Condition: ${disease ? disease.name : 'None'} | Remaining in womb: ${data.babiesCount}`);
 
@@ -1121,6 +1180,7 @@ function deliverSingleBaby(data, method = 'natural') {
         data.currentDeliveredCount = 0;
         data.activeComplication = null;
         data.fetalDiseaseId = null;
+        data.babiesDiseases = [];
         data.fetalDemise = null;
         data.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
         data.postpartumDays = 1;
@@ -1165,10 +1225,12 @@ function processBirthTrigger(method = 'natural') {
 
     while (data.babiesCount > 0 || data.babiesGenders.length > 0) {
         const rawGender = data.babiesGenders.shift() || generateBabyGender(settings.mode, lang);
+        const babyDiseaseId = (data.babiesDiseases && data.babiesDiseases.length > 0) ? data.babiesDiseases.shift() : null;
+        
         data.childrenList.push({
             id: Date.now() + Math.floor(Math.random() * 1000),
             gender: rawGender,
-            diseaseId: data.fetalDiseaseId || null
+            diseaseId: babyDiseaseId
         });
         data.babiesCount = data.babiesGenders.length;
     }
@@ -1181,6 +1243,7 @@ function processBirthTrigger(method = 'natural') {
     data.currentDeliveredCount = 0;
     data.babiesCount = 0; 
     data.babiesGenders = []; 
+    data.babiesDiseases = [];
     data.activeComplication = null;
     data.fetalDiseaseId = null;
     data.fetalDemise = null;
@@ -1216,6 +1279,7 @@ function processMiscarriageTrigger() {
     data.currentDeliveredCount = 0;
     data.babiesCount = 0;
     data.babiesGenders = [];
+    data.babiesDiseases = [];
     data.activeComplication = null;
     data.fetalDiseaseId = null;
     data.fetalDemise = null;
@@ -1246,7 +1310,7 @@ function exportReproLogs() {
     textContent += `  Current State: ${data.isPregnant ? (data.isDiscovered ? 'Pregnant (Discovered)' : 'Pregnant (Secret)') : 'Not Pregnant'}\n`;
     textContent += `  Pregnancy Term: ${data.pregnancyWeeks || 0}w ${data.pregnancyDays || 0}d (Total days: ${data.pregnancyDaysTotal || 0})\n`;
     textContent += `  Babies in Womb: ${data.babiesCount || 0} (${(data.babiesGenders || []).map(g => translateGender(g, 'en')).join(', ') || 'None'})\n`;
-    textContent += `  Fetal Pathology ID: ${data.fetalDiseaseId || 'None'}\n`;
+    textContent += `  Fetal Pathology ID: ${data.fetalDiseaseId || 'None'} | Array: [${(data.babiesDiseases || []).join(', ')}]\n`;
     textContent += `  Fetal Demise / Missed Miscarriage: ${data.fetalDemise ? JSON.stringify(data.fetalDemise) : 'None'}\n`;
     textContent += `=====================================================\n\n`;
 
@@ -1266,7 +1330,6 @@ function exportReproLogs() {
         document.body.appendChild(a);
         a.click();
         
-        // Задержка отзыва ссылки для поддержки мобильных браузеров (Kiwi / Chrome)
         setTimeout(() => {
             if (document.body.contains(a)) {
                 document.body.removeChild(a);
@@ -1364,14 +1427,17 @@ function updatePromptInjection(isImmediateBirth = false) {
             }
             
             if (revealGenders) {
-                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm the genders are: ${data.babiesGenders.map(g => translateGender(g, 'en')).join(', ')}.\n`;
-                
-                if (data.fetalDiseaseId) {
-                    const diseaseEn = getFetalDisease(data.fetalDiseaseId, 'en');
-                    if (diseaseEn && diseaseEn.type === 'prenatal') {
-                        prompt += `[MEDICAL RECORD - FETAL ANOMALY DETECTED (ANATOMY SCAN)]: The anatomy scan revealed a condition in the fetus: "${diseaseEn.name}". ${diseaseEn.desc} {{char}} is aware of this diagnosis and should reference it naturally.\n`;
+                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm individual fetal statuses:\n`;
+                data.babiesGenders.forEach((genderRaw, idx) => {
+                    const gEn = translateGender(genderRaw, 'en');
+                    const diseaseId = data.babiesDiseases?.[idx];
+                    if (diseaseId) {
+                        const d = getFetalDisease(diseaseId, 'en');
+                        prompt += `• Fetus #${idx + 1} (${gEn}): DIAGNOSED with "${d.name}". ${d.desc}\n`;
+                    } else {
+                        prompt += `• Fetus #${idx + 1} (${gEn}): Healthy, anatomy normal.\n`;
                     }
-                }
+                });
             } else {
                 prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex and secondary gender are still completely OBSCURED from {{char}} (too early to visually determine them before week 20).\n`;
             }
@@ -1468,18 +1534,33 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        // Отображение патологии плода: строго после 20-й недели и только в современных режимах
-        if (data.fetalDiseaseId) {
-            const disease = getFetalDisease(data.fetalDiseaseId, lang);
-            if (disease && disease.type === 'prenatal') {
-                if (settings.aiAwareness !== 'hidden') {
-                    if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
-                        fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                            <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
-                            <b style="color: #fcd34d;">${disease.name}</b><br>
-                            <span style="opacity: 0.9; display: block; margin-top: 4px; font-style: italic;">${disease.desc}</span>
-                        </div>`;
+        // Индивидуальное отображение патологий для каждого плода
+        const hasAnyPathology = data.babiesDiseases && data.babiesDiseases.some(Boolean);
+        if (hasAnyPathology && settings.aiAwareness !== 'hidden') {
+            if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
+                let itemsHtml = '';
+                if (data.babiesCount === 1) {
+                    const disease = getFetalDisease(data.babiesDiseases[0], lang);
+                    if (disease && disease.type === 'prenatal') {
+                        itemsHtml = `<b style="color: #fcd34d;">${disease.name}</b><br><span style="opacity: 0.9; display: block; margin-top: 3px; font-style: italic;">${disease.desc}</span>`;
                     }
+                } else {
+                    itemsHtml = data.babiesDiseases.map((dId, idx) => {
+                        const genderLabel = translateGender(data.babiesGenders[idx], lang);
+                        if (dId) {
+                            const disease = getFetalDisease(dId, lang);
+                            return `<div style="margin-bottom: 6px;"><b>• Плод #${idx + 1} (${genderLabel}):</b> <span style="color: #fcd34d; font-weight: bold;">${disease.name}</span><br><span style="opacity: 0.85; font-style: italic; font-size: 0.95em; padding-left: 10px; display: block;">${disease.desc}</span></div>`;
+                        } else {
+                            return `<div style="margin-bottom: 4px; opacity: 0.85;"><b>• Плод #${idx + 1} (${genderLabel}):</b> <span style="color: #4ade80;">${getText('healthyFetusLabel')}</span></div>`;
+                        }
+                    }).join('');
+                }
+
+                if (itemsHtml) {
+                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                        <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
+                        ${itemsHtml}
+                    </div>`;
                 }
             }
         }
@@ -1642,14 +1723,11 @@ function renderUI() {
                 canAbort = true;
             }
         } else {
-            // В современном режиме: до 12 недель, либо после 20 при выявленной пренатальной патологии
+            // В современном режиме: до 12 недель, либо после 20 при выявленной пренатальной патологии хотя бы у одного плода
             if (isUnder12Weeks) {
                 canAbort = true;
-            } else if (data.pregnancyWeeks >= 20 && data.fetalDiseaseId) {
-                const disease = getFetalDisease(data.fetalDiseaseId, 'en');
-                if (disease && disease.type === 'prenatal') {
-                    canAbort = true;
-                }
+            } else if (data.pregnancyWeeks >= 20 && data.babiesDiseases?.some(Boolean)) {
+                canAbort = true;
             }
         }
     }
@@ -2032,15 +2110,20 @@ function bindGlobalEvents() {
         bodyData.fetalDemise = null;
         bodyData.activeComplication = null;
         bodyData.babiesGenders = [];
+        bodyData.babiesDiseases = [];
         bodyData.deliveryMethod = 'none';
         
         for (let i = 0; i < count; i++) {
             bodyData.babiesGenders.push(generateBabyGender(settings.mode, 'en'));
+            bodyData.babiesDiseases.push(null);
         }
 
         bodyData.fetalDiseaseId = null;
         if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
-            bodyData.fetalDiseaseId = getRandomFetalDiseaseId();
+            const diseaseId = getRandomFetalDiseaseId();
+            bodyData.fetalDiseaseId = diseaseId;
+            bodyData.babiesDiseases[0] = diseaseId;
+            bodyData.babiesDiseases.sort(() => 0.5 - Math.random());
         }
 
         checkFetalDemise(bodyData);
@@ -2064,6 +2147,7 @@ function bindGlobalEvents() {
         bodyData.currentDeliveredCount = 0;
         bodyData.babiesCount = 0; 
         bodyData.babiesGenders = []; 
+        bodyData.babiesDiseases = [];
         bodyData.rolledTrimesters = { 1: false, 2: false, 3: false }; 
         bodyData.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
         bodyData.fetalDemise = null;
