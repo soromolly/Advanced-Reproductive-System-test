@@ -54,7 +54,7 @@ function createDefaultBodyData() {
         symptomIndices: [],
         rolledTrimesters: { 1: false, 2: false, 3: false },
         fetalDemiseRolledTrimesters: { 1: false, 2: false, 3: false },
-        fetalDemise: null, // { isDead: true, daysSinceDemise: 0, hasInfection: false }
+        fetalDemise: null,
         activeComplication: null,
         postpartumDays: 0,
         deliveryMethod: 'none',
@@ -363,6 +363,10 @@ function loadSettings() {
     }
 
     const data = getChatBodyData();
+    if (!settings.isSecretConception && data.isPregnant) {
+        data.isDiscovered = true;
+    }
+
     updateSymptomsData(data);
     checkPregnancyComplications(data);
     checkFetalDemise(data);
@@ -376,8 +380,10 @@ function getBodyPhase(lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const T = TRANSLATIONS[l];
 
+    const isRevealedPregnancy = data.isPregnant && (data.isDiscovered || !settings.isSecretConception);
+
     if (data.postpartumDays > 0) return T['postpartumPhase'];
-    if (data.isPregnant && data.isDiscovered) {
+    if (isRevealedPregnancy) {
         return settings.mode === 'realism' ? T['pregnancy'] : T['pregnancyOmega'];
     }
 
@@ -410,8 +416,10 @@ function updateSymptomsData(data) {
         return;
     }
 
+    const isRevealedPregnancy = data.isPregnant && (data.isDiscovered || !settings.isSecretConception);
+
     let phaseKey = null;
-    if (data.isPregnant && data.isDiscovered) {
+    if (isRevealedPregnancy) {
         const week = data.pregnancyWeeks;
         if (week <= 12) phaseKey = 'preg_trimester_1';
         else if (week >= 13 && week <= 26) phaseKey = 'preg_trimester_2';
@@ -451,7 +459,9 @@ function updateSymptomsData(data) {
 }
 
 function checkPregnancyComplications(data) {
-    if (!data.isPregnant || !data.isDiscovered) return;
+    const isRevealedPregnancy = data.isPregnant && (data.isDiscovered || !settings.isSecretConception);
+    if (!isRevealedPregnancy) return;
+
     const currentWeek = data.pregnancyWeeks;
     let currentTrimester = 1;
     if (currentWeek >= 13 && currentWeek <= 26) currentTrimester = 2;
@@ -490,9 +500,9 @@ function checkFetalDemise(data) {
         data.fetalDemiseRolledTrimesters[currentTrimester] = true;
         
         let demiseChance = 0;
-        if (currentTrimester === 1) demiseChance = 10;      // 1-й триместр: ~10%
-        else if (currentTrimester === 2) demiseChance = 1.5; // 2-й триместр: ~1-2%
-        else if (currentTrimester === 3) demiseChance = 0.4; // 3-й триместр: <0.5%
+        if (currentTrimester === 1) demiseChance = 10;
+        else if (currentTrimester === 2) demiseChance = 1.5;
+        else if (currentTrimester === 3) demiseChance = 0.4;
 
         const roll = Math.random() * 100;
         if (roll < demiseChance) {
@@ -1027,7 +1037,6 @@ function processAbortionTrigger() {
     }
 }
 
-// Автоматический перехват тега аборта/чистки из сообщения ИИ
 function checkAbortionTagTrigger(text) {
     const data = getChatBodyData();
     if (!data.isPregnant) return;
@@ -1227,29 +1236,53 @@ function processMiscarriageTrigger() {
 
 function exportReproLogs() {
     const data = getChatBodyData();
-    if (!data.activityLogs || data.activityLogs.length === 0) {
-        return;
-    }
-
     const chatId = getCurrentChatId();
+    
     let textContent = `=====================================================\n`;
     textContent += `  REPRODUCTIVE SYSTEM EXTENSION - ACTIVITY LOGS\n`;
     textContent += `  Chat ID: ${chatId}\n`;
     textContent += `  Export Date: ${new Date().toISOString()}\n`;
     textContent += `  Current RP Date: ${data.lastRpDate || 'N/A'}\n`;
     textContent += `  Current State: ${data.isPregnant ? (data.isDiscovered ? 'Pregnant (Discovered)' : 'Pregnant (Secret)') : 'Not Pregnant'}\n`;
+    textContent += `  Pregnancy Term: ${data.pregnancyWeeks || 0}w ${data.pregnancyDays || 0}d (Total days: ${data.pregnancyDaysTotal || 0})\n`;
+    textContent += `  Babies in Womb: ${data.babiesCount || 0} (${(data.babiesGenders || []).map(g => translateGender(g, 'en')).join(', ') || 'None'})\n`;
+    textContent += `  Fetal Pathology ID: ${data.fetalDiseaseId || 'None'}\n`;
+    textContent += `  Fetal Demise / Missed Miscarriage: ${data.fetalDemise ? JSON.stringify(data.fetalDemise) : 'None'}\n`;
     textContent += `=====================================================\n\n`;
-    textContent += data.activityLogs.join('\n');
 
-    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `repro_logs_${chatId}_${Date.now()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (data.activityLogs && data.activityLogs.length > 0) {
+        textContent += data.activityLogs.join('\n');
+    } else {
+        textContent += `(No specific event logs recorded yet for this session)\n`;
+    }
+
+    try {
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `repro_logs_${chatId}_${Date.now()}.txt`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        
+        // Задержка отзыва ссылки для поддержки мобильных браузеров (Kiwi / Chrome)
+        setTimeout(() => {
+            if (document.body.contains(a)) {
+                document.body.removeChild(a);
+            }
+            URL.revokeObjectURL(url);
+        }, 1500);
+
+        if (settings.isNotificationsEnabled && typeof toastr !== 'undefined') {
+            toastr.success(settings.language === 'en' ? 'Log file downloaded!' : 'Файл логов скачивается!');
+        }
+    } catch (err) {
+        console.error('Repro export failed:', err);
+        if (typeof toastr !== 'undefined') {
+            toastr.error('Download failed: ' + err.message);
+        }
+    }
 }
 
 function updatePromptInjection(isImmediateBirth = false) {
@@ -1276,7 +1309,9 @@ function updatePromptInjection(isImmediateBirth = false) {
         return;
     }
 
-    if (data.isPregnant && data.isDiscovered) {
+    const isRevealedPregnancy = data.isPregnant && (data.isDiscovered || !settings.isSecretConception);
+
+    if (isRevealedPregnancy) {
         prompt += `Status: PREGNANT (Obstetric Term) | Duration: ${data.pregnancyWeeks} weeks ${data.pregnancyDays} days.\n`;
         const fetus = getFetusData(data.pregnancyWeeks, 'en');
         prompt += `Fetus Size: ${fetus.size} | Maternal Body: ${fetus.belly}. ${fetus.desc}\n`;
@@ -1395,7 +1430,7 @@ function renderUI() {
     const data = getChatBodyData();
     const lang = getLanguage();
     const baseCycleDisplay = settings.cycleLength || 28;
-    const isCurrentlyPregnantDiscovered = data.isPregnant && data.isDiscovered;
+    const isCurrentlyPregnantDiscovered = data.isPregnant && (data.isDiscovered || !settings.isSecretConception);
 
     updateSymptomsData(data);
     checkPregnancyComplications(data);
@@ -1423,7 +1458,7 @@ function renderUI() {
     let fetalDiseaseHtml = '';
     let wombMapHtml = '';
 
-    if (data.isPregnant && data.isDiscovered) {
+    if (isCurrentlyPregnantDiscovered) {
         const fetus = getFetusData(data.pregnancyWeeks, lang);
         fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('fetusTitle')}</strong>
@@ -1553,7 +1588,7 @@ function renderUI() {
     }
 
     let complicationHtml = '';
-    if (data.isPregnant && data.isDiscovered && data.activeComplication && data.activeComplication.isDiscovered) {
+    if (isCurrentlyPregnantDiscovered && data.activeComplication && data.activeComplication.isDiscovered) {
         const comp = getComplication(data.activeComplication.id, lang);
         if (comp) {
             complicationHtml = `<div style="margin: 8px 0 10px 0; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
@@ -1854,7 +1889,14 @@ function bindGlobalEvents() {
 
     $(document).off('change', '#repro-is-secret-conception').on('change', '#repro-is-secret-conception', function() {
         settings.isSecretConception = $(this).is(':checked');
+        const bodyData = getChatBodyData();
+        if (!settings.isSecretConception && bodyData.isPregnant) {
+            bodyData.isDiscovered = true;
+        }
         saveSettingsDebounced();
+        updateSymptomsData(bodyData);
+        renderUI();
+        updatePromptInjection();
     });
 
     $(document).off('change', '#repro-is-irregular-cycle').on('change', '#repro-is-irregular-cycle', function() {
@@ -1930,7 +1972,9 @@ function bindGlobalEvents() {
         const normalized = normalizeInputDate(manualDateVal);
         if (normalized) bodyData.lastRpDate = normalized;
 
-        if (bodyData.isPregnant && bodyData.isDiscovered) { 
+        const isRevealedPregnancy = bodyData.isPregnant && (bodyData.isDiscovered || !settings.isSecretConception);
+
+        if (isRevealedPregnancy) { 
             const weeks = parseInt(root.find('#repro-input-weeks').val() || $('#repro-input-weeks').val(), 10) || 0;
             const days = parseInt(root.find('#repro-input-days').val() || $('#repro-input-days').val(), 10) || 0;
             bodyData.pregnancyWeeks = weeks; 
