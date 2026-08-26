@@ -108,7 +108,7 @@ const TRANSLATIONS = {
         irregularCycleLabel: 'Нерегулярный цикл',
         system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс',
         physiology: 'Физиология:', female: 'Женщина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омегa',
-        aiLogic: 'Знания ИИ:', ultrasound: 'УЗИ (20 нед)', medieval: 'Средневековье', knowsAll: 'Знает всё',
+        aiLogic: 'Знания ИИ:', ultrasound: 'УЗИ (Скрининги)', medieval: 'Средневековье', knowsAll: 'Знает всё',
         phaseRealism: 'Текущая фаза:', phaseOmega: 'Текущее состояние омеги:',
         termInRp: 'Акушерский срок в RP:', weeksShort: 'нед.', daysShort: 'дн.',
         wombMap: 'Карта плода:', babiesCount: 'Детей в утробе:', babiesSex: 'Пол:',
@@ -142,8 +142,8 @@ const TRANSLATIONS = {
         delayed: 'Задержка цикла ⚠️', delayedHeat: 'Задержка течки ⚠️',
         symptomsTitle: '🎯 Симптомы организма:', fetusTitle: '👶 Развитие плода и тела:',
         fetusSizeLabel: 'Размер плода:', fetusWeightLabel: 'Вес:', fetusBellyLabel: 'Живот:',
-        fetalAnomalyTitle: '🧬 Врожденные особенности плода (УЗИ-скрининг 20 нед):',
-        medievalLocked: '🔒 Режим Средневековье: количество и пол плода скрыты до момента родов.',
+        fetalAnomalyTitle: '🧬 Врожденные особенности плода (выявлены на скрининге):',
+        medievalLocked: '🔒 Режим Средневековье: количество, пол и особенности плода скрыты до родов.',
         ultrasound12Locked: '🔒 УЗИ-скрининг (1-й триместр): количество и пол плода пока не исследованы (до 12 нед).',
         ultrasound20Locked: '🔒 Пол плода будет определен на скрининговом УЗИ (20-я неделя).',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
@@ -154,7 +154,7 @@ const TRANSLATIONS = {
         newbornTitle: '🍼 Рожденные дети в семье:',
         childLabel: 'Ребенок',
         congenitalFeatureLabel: 'Врождённая особенность:',
-        healthyFetusLabel: 'Анатомических патологий не выявлено (Здоров)',
+        healthyFetusLabel: 'Анатомических пороков не выявлено (Здоров)',
         giveBirthBtn: '🔔 ПРИНЯТЬ ВСЕ РОДЫ ВРУЧНУЮ',
         protectionLabel: 'Контрацепция:', protectionNone: 'Без защиты', protectionCondom: 'Презерватив (Барьерный)',
         protectionPills: 'Оральные контрацептивы (КОК)', protectionIud: 'Внутриматочная спираль (ВМС)',
@@ -172,7 +172,7 @@ const TRANSLATIONS = {
         irregularCycleLabel: 'Irregular Cycle',
         system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse',
         physiology: 'Physiology:', female: 'Female', female_omega: 'F-Omega', male_omega: 'M-Omega',
-        aiLogic: 'AI Awareness:', ultrasound: 'Ultrasound (20 wk)', medieval: 'Medieval (Blind)', knowsAll: 'Knows Everything',
+        aiLogic: 'AI Awareness:', ultrasound: 'Ultrasound (Screenings)', medieval: 'Medieval (Blind)', knowsAll: 'Knows Everything',
         phaseRealism: 'Current Phase:', phaseOmega: 'Current Omega Status:',
         termInRp: 'Obstetric Term in RP:', weeksShort: 'wks', daysShort: 'days',
         wombMap: 'Womb Content:', babiesCount: 'Babies in Womb:', babiesSex: 'Sex:',
@@ -206,8 +206,8 @@ const TRANSLATIONS = {
         delayed: 'Cycle Delayed ⚠️', delayedHeat: 'Heat Delayed ⚠️',
         symptomsTitle: '🎯 Body Symptoms:', fetusTitle: '👶 Fetus & Body Development:',
         fetusSizeLabel: 'Fetus Size:', fetusWeightLabel: 'Weight:', fetusBellyLabel: 'Belly:',
-        fetalAnomalyTitle: '🧬 Fetal Anatomical Findings (Week 20 Anatomy Scan):',
-        medievalLocked: '🔒 Medieval Mode: baby headcount and sex are hidden until labor.',
+        fetalAnomalyTitle: '🧬 Fetal Anatomical Findings (Screening Diagnoses):',
+        medievalLocked: '🔒 Medieval Mode: baby headcount, sex and conditions hidden until labor.',
         ultrasound12Locked: '🔒 1st Trimester Scan: baby count and sex are not yet visible (<12 wks).',
         ultrasound20Locked: '🔒 Fetal sex will be determined on week 20 anatomy ultrasound.',
         complicationTitle: '⚠️ Medical Complication:', cureBtn: '💊 Treat / Alleviate Complication',
@@ -837,12 +837,20 @@ function advanceBodyTime(days) {
             }
         }
 
-        if (data.isDiscovered && data.fetalDiseaseId && prevWeeks < 20 && data.pregnancyWeeks >= 20 && settings.isNotificationsEnabled && settings.aiAwareness !== 'hidden') {
-            const disease = getFetalDisease(data.fetalDiseaseId, lang);
-            if (disease && disease.type === 'prenatal') {
-                logReproEvent(`[ULTRASOUND 20 WEEKS] Diagnosed fetal condition: ${disease.name}`);
-                toastr.warning(`🧬 ${getText('fetalAnomalyTitle')} «${disease.name}»!`);
-            }
+        // Проверка обнаружения патологий плода по их индивидуальным срокам (discoveryWeek)
+        if (data.isDiscovered && data.babiesDiseases && settings.isNotificationsEnabled && settings.aiAwareness !== 'hidden') {
+            data.babiesDiseases.forEach((dId, idx) => {
+                if (dId) {
+                    const disease = getFetalDisease(dId, lang);
+                    if (disease && disease.type === 'prenatal' && disease.discoveryWeek) {
+                        if (prevWeeks < disease.discoveryWeek && data.pregnancyWeeks >= disease.discoveryWeek) {
+                            logReproEvent(`[SCREENING WEEK ${disease.discoveryWeek}] Diagnosed condition for Fetus #${idx + 1}: ${disease.name}`);
+                            const babyTitle = data.babiesCount > 1 ? ` (${getText('childLabel')} #${idx + 1})` : '';
+                            toastr.warning(`🧬 ${getText('fetalAnomalyTitle')}${babyTitle} «${disease.name}»!`);
+                        }
+                    }
+                }
+            });
         }
 
         updateSymptomsData(data);
@@ -978,7 +986,6 @@ function triggerPregnancy(data) {
                 data.babiesDiseases[i] = getRandomFetalDiseaseId();
             }
         }
-        // Перемешиваем, чтобы патология не всегда была у первого плода
         data.babiesDiseases.sort(() => 0.5 - Math.random());
     }
 
@@ -1041,7 +1048,6 @@ function performPregnancyTest() {
                 }
             }
         } else {
-            // Тест не показал из-за раннего срока
             if (settings.isNotificationsEnabled) {
                 if (isMedieval) {
                     toastr.info(lang === 'en'
@@ -1384,22 +1390,22 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `Current Pregnancy Symptoms: ${symptomsEn.join(', ')}.\n`;
         }
 
-        // Инъекция активного открытого осложнения беременности
+        // Инъекция активного осложнения беременности
         if (data.activeComplication && data.activeComplication.isDiscovered) {
             const compEn = getComplication(data.activeComplication.id, 'en');
             if (compEn) {
-                prompt += `[ACTIVE MEDICAL COMPLICATION]: {{user}} is experiencing "${compEn.name}". Symptoms/Condition: ${compEn.desc}. {{char}} must realistically acknowledge and react to this health complication and its impact on {{user}}.\n`;
+                prompt += `[ACTIVE MEDICAL COMPLICATION]: {{user}} is experiencing "${compEn.name}". Symptoms/Condition: ${compEn.desc}. {{char}} must realistically acknowledge and react to this health complication.\n`;
             }
         }
 
-        // Инъекция скрытого замирания беременности с директивами обнаружения
+        // Инъекция скрытого замирания беременности
         if (data.fetalDemise && data.fetalDemise.isDead) {
             const dDays = data.fetalDemise.daysSinceDemise;
             let stageDesc = '';
             if (dDays <= 14) {
-                stageDesc = `Stage 1 (Silent / Hidden phase, Day ${dDays}/14): Non-developing pregnancy. Symptoms: sudden disappearance of morning sickness/toxicosis, drop in health and energy, physiological silent arrest.`;
+                stageDesc = `Stage 1 (Silent / Hidden phase, Day ${dDays}/14): Non-developing pregnancy. Symptoms: sudden disappearance of morning sickness/toxicosis, drop in health and energy, silent demise.`;
             } else if (dDays <= 21) {
-                stageDesc = `Stage 2 (Expulsion onset / Threatened spontaneous miscarriage, Day ${dDays}/21): Inevitable rejection beginning. Symptoms: lower abdominal cramps, brownish spotting/discharge.`;
+                stageDesc = `Stage 2 (Expulsion onset / Threatened miscarriage, Day ${dDays}/21): Inevitable rejection beginning. Symptoms: lower abdominal cramps, brownish spotting/discharge.`;
             } else {
                 stageDesc = `Stage 3 (Active Expulsion / Miscarriage): Heavy uterine cramping, bleeding, spontaneous expulsion.`;
             }
@@ -1411,40 +1417,48 @@ function updatePromptInjection(isImmediateBirth = false) {
             prompt += `\n[SECRET MEDICAL EVENT — MISSED MISCARRIAGE / ARRESTED PREGNANCY]:
 - Current Secret Status: ${stageDesc}
 - ⚠️ STRICT AI DIRECTIVE:
-  1. DO NOT casually spoil or announce this diagnosis to characters in ordinary conversation. Roleplay subtle physiological symptoms only.
-  2. IF {{user}} undergoes an ultrasound scan, visits a gynecologist/doctor, or is examined by a medieval midwife/healer, {{char}} MUST diagnose the non-viable pregnancy / absent heartbeat.
-  3. IF an abortion, curettage (D&C), vacuum extraction, or herbal expulsion procedure is performed in this response, you MUST append the hidden tag at the absolute end of your response: <!--ABORTION-->\n`;
+  1. DO NOT casually spoil this diagnosis in ordinary conversation. Roleplay subtle physiological symptoms only.
+  2. IF {{user}} undergoes an ultrasound scan, visits a doctor, or is examined by a midwife/healer, {{char}} MUST diagnose the non-viable pregnancy / absent heartbeat.
+  3. IF an abortion, curettage (D&C), vacuum extraction, or herbal expulsion is performed in this response, you MUST append the hidden tag at the absolute end: <!--ABORTION-->\n`;
         }
 
+        // Логика видимости количества и пола
         let revealCount = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 12);
         let revealGenders = (settings.aiAwareness === 'full') || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20);
 
         if (revealCount) {
             if (data.babiesCount === 1) {
-                prompt += `[SINGLETON PREGNANCY - ULTRASOUND CONFIRMED]: Medical scans confirm {{user}} is carrying EXACTLY ONE SINGLE BABY (SINGLETON). STRICT DIRECTIVE: Under NO circumstances should you describe twins, triplets, or multiple fetuses. There is strictly ONLY 1 child in the womb.\n`;
+                prompt += `[SINGLETON PREGNANCY - ULTRASOUND CONFIRMED]: Medical scans confirm {{user}} is carrying EXACTLY ONE SINGLE BABY (SINGLETON). STRICT DIRECTIVE: Under NO circumstances describe twins or multiples. There is strictly ONLY 1 child in the womb.\n`;
             } else {
                 prompt += `[MULTIPLE PREGNANCY - ULTRASOUND CONFIRMED]: Medical scans confirm {{user}} is carrying EXACTLY ${data.babiesCount} babies in the womb.\n`;
             }
-            
-            if (revealGenders) {
-                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm individual fetal statuses:\n`;
-                data.babiesGenders.forEach((genderRaw, idx) => {
-                    const gEn = translateGender(genderRaw, 'en');
-                    const diseaseId = data.babiesDiseases?.[idx];
-                    if (diseaseId) {
-                        const d = getFetalDisease(diseaseId, 'en');
-                        prompt += `• Fetus #${idx + 1} (${gEn}): DIAGNOSED with "${d.name}". ${d.desc}\n`;
-                    } else {
-                        prompt += `• Fetus #${idx + 1} (${gEn}): Healthy, anatomy normal.\n`;
+        }
+
+        if (settings.aiAwareness === 'hidden') {
+            prompt += `[SECRET DATA]: Headcount, sex, and congenital features are strictly CONCEALED from {{char}} (Medieval/Blind mode) until labor.\n`;
+        } else {
+            // Информирование ИИ о патологиях плодов по мере их выявления на скринингах
+            if (data.babiesDiseases && data.babiesDiseases.length > 0) {
+                data.babiesDiseases.forEach((dId, idx) => {
+                    const gEn = revealGenders ? translateGender(data.babiesGenders[idx], 'en') : 'Unknown Sex';
+                    if (dId) {
+                        const d = getFetalDisease(dId, 'en');
+                        const isDiscovered = (settings.aiAwareness === 'full') || (data.pregnancyWeeks >= (d.discoveryWeek || 20));
+                        if (isDiscovered && d.type === 'prenatal') {
+                            const recText = d.abortionIndicated 
+                                ? "Prognosis: Severe/Incompatible with life or severe disability. Medical board recommends or offers termination of pregnancy (abortion)."
+                                : "Prognosis: Operable/Treatable postnatally or benign. Abortion is NOT medically indicated; postnatal care planned.";
+                            prompt += `[MEDICAL DIAGNOSIS - FETUS #${idx + 1} (${gEn})]: Diagnosed with "${d.name}" (detected on week ${d.discoveryWeek} screening). ${d.desc} ${recText}\n`;
+                        }
                     }
                 });
-            } else {
-                prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex and secondary gender are still completely OBSCURED from {{char}} (too early to visually determine them before week 20).\n`;
             }
-        } else if (settings.aiAwareness === 'hidden') {
-            prompt += `[SECRET DATA]: The number of babies, their genders, and fetal pathologies are strictly CONCEALED from {{char}} (Medieval/Blind mode). {{char}} must not know headcount or sex until birth.\n`;
-        } else {
-            prompt += `[SECRET DATA]: Ultrasound screening has not occurred yet. Headcount and genders are completely unknown to {{char}}.\n`;
+
+            if (revealGenders) {
+                prompt += `[MEDICAL RECORD - ANATOMY SCAN (WEEK 20)]: Scans confirm the genders are: ${data.babiesGenders.map(g => translateGender(g, 'en')).join(', ')}.\n`;
+            } else if (data.pregnancyWeeks < 20 && settings.aiAwareness === 'dynamic') {
+                prompt += `[ULTRASOUND STAGE NOTICE]: Fetal sex is still completely OBSCURED from {{char}} before week 20 anatomy ultrasound.\n`;
+            }
         }
 
         if (data.pregnancyWeeks >= 20) {
@@ -1534,34 +1548,41 @@ function renderUI() {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        // Индивидуальное отображение патологий для каждого плода
+        // Индивидуальное отображение патологий для каждого плода по сроку выявления
         const hasAnyPathology = data.babiesDiseases && data.babiesDiseases.some(Boolean);
         if (hasAnyPathology && settings.aiAwareness !== 'hidden') {
-            if (settings.aiAwareness === 'full' || (settings.aiAwareness === 'dynamic' && data.pregnancyWeeks >= 20)) {
-                let itemsHtml = '';
-                if (data.babiesCount === 1) {
-                    const disease = getFetalDisease(data.babiesDiseases[0], lang);
-                    if (disease && disease.type === 'prenatal') {
+            let itemsHtml = '';
+            
+            if (data.babiesCount === 1) {
+                const disease = getFetalDisease(data.babiesDiseases[0], lang);
+                if (disease && disease.type === 'prenatal') {
+                    const isDiscovered = (settings.aiAwareness === 'full') || (data.pregnancyWeeks >= (disease.discoveryWeek || 20));
+                    if (isDiscovered) {
                         itemsHtml = `<b style="color: #fcd34d;">${disease.name}</b><br><span style="opacity: 0.9; display: block; margin-top: 3px; font-style: italic;">${disease.desc}</span>`;
                     }
-                } else {
-                    itemsHtml = data.babiesDiseases.map((dId, idx) => {
-                        const genderLabel = translateGender(data.babiesGenders[idx], lang);
-                        if (dId) {
-                            const disease = getFetalDisease(dId, lang);
-                            return `<div style="margin-bottom: 6px;"><b>• Плод #${idx + 1} (${genderLabel}):</b> <span style="color: #fcd34d; font-weight: bold;">${disease.name}</span><br><span style="opacity: 0.85; font-style: italic; font-size: 0.95em; padding-left: 10px; display: block;">${disease.desc}</span></div>`;
-                        } else {
-                            return `<div style="margin-bottom: 4px; opacity: 0.85;"><b>• Плод #${idx + 1} (${genderLabel}):</b> <span style="color: #4ade80;">${getText('healthyFetusLabel')}</span></div>`;
+                }
+            } else {
+                const lines = [];
+                data.babiesDiseases.forEach((dId, idx) => {
+                    const genderLabel = translateGender(data.babiesGenders[idx], lang);
+                    if (dId) {
+                        const disease = getFetalDisease(dId, lang);
+                        const isDiscovered = (settings.aiAwareness === 'full') || (data.pregnancyWeeks >= (disease.discoveryWeek || 20));
+                        if (isDiscovered && disease && disease.type === 'prenatal') {
+                            lines.push(`<div style="margin-bottom: 6px;"><b>• Плод #${idx + 1} (${genderLabel}):</b> <span style="color: #fcd34d; font-weight: bold;">${disease.name}</span><br><span style="opacity: 0.85; font-style: italic; font-size: 0.95em; padding-left: 10px; display: block;">${disease.desc}</span></div>`);
                         }
-                    }).join('');
+                    }
+                });
+                if (lines.length > 0) {
+                    itemsHtml = lines.join('');
                 }
+            }
 
-                if (itemsHtml) {
-                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                        <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
-                        ${itemsHtml}
-                    </div>`;
-                }
+            if (itemsHtml) {
+                fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                    <strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle')}</strong>
+                    ${itemsHtml}
+                </div>`;
             }
         }
 
@@ -1713,21 +1734,22 @@ function renderUI() {
         `;
     }
 
-    // Условия для отображения кнопки аборта
+    // Точная логика кнопки аборта
     let canAbort = false;
     if (isCurrentlyPregnantDiscovered) {
         const isUnder12Weeks = (data.pregnancyWeeks < 12) || (data.pregnancyWeeks === 12 && (data.pregnancyDays || 0) === 0);
-        if (settings.aiAwareness === 'hidden') {
-            // В режиме Средневековья аборт возможен ТОЛЬКО строго до 12 недель
-            if (isUnder12Weeks) {
-                canAbort = true;
-            }
-        } else {
-            // В современном режиме: до 12 недель, либо после 20 при выявленной пренатальной патологии хотя бы у одного плода
-            if (isUnder12Weeks) {
-                canAbort = true;
-            } else if (data.pregnancyWeeks >= 20 && data.babiesDiseases?.some(Boolean)) {
-                canAbort = true;
+        if (isUnder12Weeks) {
+            canAbort = true;
+        } else if (settings.aiAwareness !== 'hidden') {
+            // После 12 недель в современном режиме: только если хотя бы у одного плода УЖЕ ВЫЯВЛЕНА патология с показаниями
+            if (data.babiesDiseases && data.babiesDiseases.length > 0) {
+                canAbort = data.babiesDiseases.some(dId => {
+                    if (!dId) return false;
+                    const d = getFetalDisease(dId, 'en');
+                    if (!d || d.type !== 'prenatal' || !d.abortionIndicated) return false;
+                    const isDiscovered = (settings.aiAwareness === 'full') || (data.pregnancyWeeks >= (d.discoveryWeek || 20));
+                    return isDiscovered;
+                });
             }
         }
     }
