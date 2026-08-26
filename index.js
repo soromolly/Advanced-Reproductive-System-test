@@ -108,7 +108,7 @@ const TRANSLATIONS = {
         irregularCycleLabel: 'Нерегулярный цикл',
         system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс',
         physiology: 'Физиология:', female: 'Женщина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омегa',
-        aiLogic: 'Знания ИИ:', ultrasound: 'УЗИ (Скрининги)', medieval: 'Средневековье', knowsAll: 'Знает всё',
+        aiLogic: 'Знания ИИ:', ultrasound: 'Современность', medieval: 'Средневековье', knowsAll: 'Всеведение',
         phaseRealism: 'Текущая фаза:', phaseOmega: 'Текущее состояние омеги:',
         termInRp: 'Акушерский срок в RP:', weeksShort: 'нед.', daysShort: 'дн.',
         wombMap: 'Карта плода:', babiesCount: 'Детей в утробе:', babiesSex: 'Пол:',
@@ -144,7 +144,7 @@ const TRANSLATIONS = {
         fetusSizeLabel: 'Размер плода:', fetusWeightLabel: 'Вес:', fetusBellyLabel: 'Живот:',
         fetalAnomalyTitle: '🧬 Врожденные особенности плода (выявлены на скрининге):',
         medievalLocked: '🔒 Режим Средневековье: количество, пол и особенности плода скрыты до родов.',
-        ultrasound12Locked: '🔒 УЗИ-скрининг (1-й триместр): количество и пол плода пока не исследованы (до 12 нед).',
+        ultrasound12Locked: '🔒 1-й триместр: количество и пол плода пока не исследованы (до 12 нед).',
         ultrasound20Locked: '🔒 Пол плода будет определен на скрининговом УЗИ (20-я неделя).',
         complicationTitle: '⚠️ Медицинское осложнение:', cureBtn: '💊 Провести лечение / Облегчить симптом',
         postpartumPhase: 'Восстановление после родов / прерывания 🩹', 
@@ -172,7 +172,7 @@ const TRANSLATIONS = {
         irregularCycleLabel: 'Irregular Cycle',
         system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse',
         physiology: 'Physiology:', female: 'Female', female_omega: 'F-Omega', male_omega: 'M-Omega',
-        aiLogic: 'AI Awareness:', ultrasound: 'Ultrasound (Screenings)', medieval: 'Medieval (Blind)', knowsAll: 'Knows Everything',
+        aiLogic: 'AI Awareness:', ultrasound: 'Modernity', medieval: 'Medieval (Blind)', knowsAll: 'Omniscience',
         phaseRealism: 'Current Phase:', phaseOmega: 'Current Omega Status:',
         termInRp: 'Obstetric Term in RP:', weeksShort: 'wks', daysShort: 'days',
         wombMap: 'Womb Content:', babiesCount: 'Babies in Womb:', babiesSex: 'Sex:',
@@ -975,7 +975,7 @@ function triggerPregnancy(data) {
     }
 
     data.fetalDiseaseId = null;
-    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
+    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
         const primaryDisease = getRandomFetalDiseaseId();
         data.fetalDiseaseId = primaryDisease;
         data.babiesDiseases[0] = primaryDisease;
@@ -1741,7 +1741,7 @@ function renderUI() {
         if (isUnder12Weeks) {
             canAbort = true;
         } else if (settings.aiAwareness !== 'hidden') {
-            // После 12 недель в современном режиме: только если хотя бы у одного плода УЖЕ ВЫЯВЛЕНА патология с показаниями
+            // После 12 недель в режиме Современность: только если хотя бы у одного плода УЖЕ ВЫЯВЛЕНА патология с показаниями
             if (data.babiesDiseases && data.babiesDiseases.length > 0) {
                 canAbort = data.babiesDiseases.some(dId => {
                     if (!dId) return false;
@@ -2141,7 +2141,7 @@ function bindGlobalEvents() {
         }
 
         bodyData.fetalDiseaseId = null;
-        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
+        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
             const diseaseId = getRandomFetalDiseaseId();
             bodyData.fetalDiseaseId = diseaseId;
             bodyData.babiesDiseases[0] = diseaseId;
