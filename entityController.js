@@ -9,8 +9,8 @@ import { getText, translateGender } from './translations.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
     return {
-        key: entityKey, // 'user' или 'char'
-        mode: 'realism', // 'realism' | 'omegaverse'
+        key: entityKey,
+        mode: 'realism',
         gender: entityKey === 'user' ? 'female' : 'male_omega',
         isSecretConception: true,
         isIrregularCycle: true,
@@ -20,7 +20,6 @@ export function createDefaultEntityState(entityKey = 'user') {
         maxPregnancyWeeks: 40,
         contraception: 'none',
 
-        // Физиологическое состояние
         cycleDay: 1,
         currentCycleTargetLength: 28,
         isPregnant: false,
@@ -68,8 +67,15 @@ export function generateBabyGender(mode, lang = 'ru') {
     if (mode === 'omegaverse') {
         const roll = Math.random() * 100;
         let sec = isRu ? 'Бета' : 'Beta';
-        if (roll < 25) sec = isRu ? 'Альфа' : 'Alpha'; 
-        else if (roll < 50) sec = isRu ? 'Омега' : 'Omega'; 
+        
+        // Честный сбалансированный шанс: ~33.3% Альфа, ~33.3% Омега, ~33.4% Бета
+        if (roll < 33.33) {
+            sec = isRu ? 'Альфа' : 'Alpha';
+        } else if (roll < 66.66) {
+            sec = isRu ? 'Омега' : 'Omega';
+        } else {
+            sec = isRu ? 'Бета' : 'Beta';
+        }
         
         if (isRu) return isBoy ? `${sec}-мальчик ♂` : `${sec}-девочка ♀`;
         return isBoy ? `${sec} Boy ♂` : `${sec} Girl ♀`;
