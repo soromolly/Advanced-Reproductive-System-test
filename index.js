@@ -975,7 +975,7 @@ function triggerPregnancy(data) {
     }
 
     data.fetalDiseaseId = null;
-    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
+    if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
         const primaryDisease = getRandomFetalDiseaseId();
         data.fetalDiseaseId = primaryDisease;
         data.babiesDiseases[0] = primaryDisease;
@@ -2141,7 +2141,7 @@ function bindGlobalEvents() {
         }
 
         bodyData.fetalDiseaseId = null;
-        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 3) {
+        if (settings.isFetalPathologyEnabled && Math.random() * 100 < 99) {
             const diseaseId = getRandomFetalDiseaseId();
             bodyData.fetalDiseaseId = diseaseId;
             bodyData.babiesDiseases[0] = diseaseId;
