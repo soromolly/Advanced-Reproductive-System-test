@@ -165,12 +165,24 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
     const checkBtnLabel = (settings.aiAwareness === 'hidden') ? getText('checkPregnancyBtn', lang) : getText('takeTestBtn', lang);
 
+    // Стили для яркого переключения вкладок
+    const activeTabStyle = `flex: 1; padding: 7px 0; font-size: 12px; font-weight: 700; justify-content: center; background: linear-gradient(135deg, #ec4899, #be185d) !important; color: #ffffff !important; border: 1px solid #f472b6 !important; box-shadow: 0 0 10px rgba(244, 114, 182, 0.45); border-radius: 6px; cursor: pointer; transition: all 0.15s ease;`;
+    const inactiveTabStyle = `flex: 1; padding: 7px 0; font-size: 12px; font-weight: 500; justify-content: center; background: rgba(255, 255, 255, 0.05) !important; color: #94a3b8 !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 6px; cursor: pointer; opacity: 0.75; transition: all 0.15s ease;`;
+
     const tabsHtml = targetMode === 'both' ? `
-        <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-            <button id="repro-tab-user" class="menu_button ${activeTab === 'user' ? 'type_primary' : ''}" style="flex: 1; padding: 6px 0; font-size: 12px; font-weight: 600; justify-content: center;">${getText('tabUser', lang)}</button>
-            <button id="repro-tab-char" class="menu_button ${activeTab === 'char' ? 'type_primary' : ''}" style="flex: 1; padding: 6px 0; font-size: 12px; font-weight: 600; justify-content: center;">${getText('tabChar', lang)}</button>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button id="repro-tab-user" class="menu_button" style="${activeTab === 'user' ? activeTabStyle : inactiveTabStyle}">${getText('tabUser', lang)}</button>
+            <button id="repro-tab-char" class="menu_button" style="${activeTab === 'char' ? activeTabStyle : inactiveTabStyle}">${getText('tabChar', lang)}</button>
         </div>
     ` : '';
+
+    // Бейдж текущего активного профиля
+    const activeNameLabel = activeEntityKey === 'user' ? '{{user}}' : '{{char}}';
+    const activeProfileBadge = `
+        <div style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 10px; margin-bottom: 12px; background: rgba(244, 114, 182, 0.12); border-radius: 6px; border: 1px dashed rgba(244, 114, 182, 0.4); font-size: 0.85em; color: #f472b6; font-weight: 600;">
+            <span>⚡ Редактирование: <b>${activeNameLabel}</b></span>
+        </div>
+    `;
 
     const html = `
         <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
@@ -209,6 +221,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 ${tabsHtml}
+                ${activeProfileBadge}
 
                 <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -339,7 +352,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualCount', lang)} </label>
-                            <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="1" min="1" max="3"/>
+                            <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="1" min="1" max="12"/>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                             <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0;"/>
