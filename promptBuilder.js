@@ -4,7 +4,6 @@ import { getEntityBodyPhase } from './entityController.js';
 
 function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
     let p = `\n[OOC: SYSTEM NOTE — ${macroName} Physiological & Reproductive Status]\n`;
-    const phaseEn = getEntityBodyPhase(entity, 'en');
 
     if (entity.postpartumDays > 0) {
         const pData = getPostpartumData(entity.postpartumDays, entity.deliveryMethod, 'en');
@@ -87,10 +86,34 @@ If ${macroName} gives birth in this response, append tag at the very end:
     } else {
         const baseCycle = entity.cycleLength || 28;
         const target = entity.currentCycleTargetLength || baseCycle;
-        p += `Current Cycle Day: ${entity.cycleDay}/${baseCycle} | Phase: ${phaseEn}\n`;
-        if (entity.cycleDay > target) {
-            p += `[CYCLE DELAY]: Period late by ${entity.cycleDay - target} days.\n`;
+        const periodDays = entity.periodDuration || 5;
+        const ovulPeak = Math.max(periodDays + 2, target - 14);
+        const ovulStart = Math.max(periodDays + 1, ovulPeak - 3);
+        const ovulEnd = ovulPeak + 1;
+
+        if (entity.mode === 'realism') {
+            if (entity.cycleDay <= periodDays) {
+                p += `Current Status: MENSTRUATION / PERIOD ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Total Cycle: ${baseCycle} days.
+⚠️ DIRECTIVE: ${macroName} is actively having natural menstrual bleeding right now. This is a normal new menstrual cycle, NOT a missed period or pregnancy delay.\n`;
+            } else if (entity.cycleDay > target) {
+                p += `Current Status: CYCLE DELAY / MISSED PERIOD (Late by ${entity.cycleDay - target} days). Menstruation has not arrived.\n`;
+            } else if (entity.cycleDay < ovulStart) {
+                p += `Current Status: FOLLICULAR PHASE (Cycle Day ${entity.cycleDay}/${baseCycle}).\n`;
+            } else if (entity.cycleDay >= ovulStart && entity.cycleDay <= ovulEnd) {
+                p += `Current Status: OVULATION WINDOW / CONCEPTION PEAK (Cycle Day ${entity.cycleDay}/${baseCycle}).\n`;
+            } else {
+                p += `Current Status: LUTEAL PHASE / PMS (Cycle Day ${entity.cycleDay}/${baseCycle}).\n`;
+            }
+        } else {
+            if (entity.cycleDay <= periodDays) {
+                p += `Current Status: IN HEAT (Day ${entity.cycleDay}/${periodDays}) | Peak Fertility Window.\n`;
+            } else if (entity.cycleDay > target) {
+                p += `Current Status: HEAT DELAYED (Late by ${entity.cycleDay - target} days).\n`;
+            } else {
+                p += `Current Status: QUIESCENCE / REST PHASE (Day ${entity.cycleDay}/${baseCycle}).\n`;
+            }
         }
+
         if (entity.contraception !== 'none') {
             p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
         }
