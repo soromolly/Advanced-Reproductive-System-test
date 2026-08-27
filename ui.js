@@ -375,3 +375,58 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     }
     container.html(html);
 }
+
+export function exportReproLogs({ data, chatId, language, isNotificationsEnabled }) {
+    let textContent = `=====================================================\n`;
+    textContent += `  REPRODUCTIVE SYSTEM EXTENSION - ACTIVITY LOGS\n`;
+    textContent += `  Chat ID: ${chatId}\n`;
+    textContent += `  Export Date: ${new Date().toISOString()}\n`;
+    textContent += `  Current RP Date: ${data.lastRpDate || 'N/A'}\n`;
+    textContent += `  Active Tracking Target: ${data.targetMode.toUpperCase()}\n`;
+    textContent += `=====================================================\n\n`;
+
+    const formatEntityInfo = (ent, label) => {
+        let str = `--- [${label}] ---\n`;
+        str += `Mode: ${ent.mode} | Gender: ${ent.gender} | Contraception: ${ent.contraception}\n`;
+        str += `State: ${ent.isPregnant ? (ent.isDiscovered ? 'Pregnant (Discovered)' : 'Pregnant (Secret)') : 'Not Pregnant'}\n`;
+        str += `Cycle Day: ${ent.cycleDay}/${ent.cycleLength} (Target: ${ent.currentCycleTargetLength})\n`;
+        str += `Pregnancy Term: ${ent.pregnancyWeeks}w ${ent.pregnancyDays}d\n`;
+        str += `Babies: ${ent.babiesCount} (${(ent.babiesGenders || []).join(', ') || 'None'})\n\n`;
+        return str;
+    };
+
+    if (data.user) textContent += formatEntityInfo(data.user, 'USER PROFILE');
+    if (data.char) textContent += formatEntityInfo(data.char, 'CHAR PROFILE');
+
+    textContent += `=== EVENT LOGS ===\n`;
+    if (data.activityLogs && data.activityLogs.length > 0) {
+        textContent += data.activityLogs.join('\n');
+    } else {
+        textContent += `(No event logs recorded yet for this session)\n`;
+    }
+
+    try {
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `repro_logs_${chatId}_${Date.now()}.txt`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            if (document.body.contains(a)) document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 1500);
+
+        if (isNotificationsEnabled && typeof toastr !== 'undefined') {
+            toastr.success(language === 'en' ? 'Log file downloaded!' : 'Файл логов скачивается!');
+        }
+    } catch (err) {
+        console.error('Repro export failed:', err);
+        if (typeof toastr !== 'undefined') {
+            toastr.error('Download failed: ' + err.message);
+        }
+    }
+}
