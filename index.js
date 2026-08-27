@@ -44,8 +44,9 @@ let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
 let activeTab = 'user'; // 'user' | 'char'
 let activeChatId = null;
+let pendingUserTimeskipDays = 0;
 const processedBirthMessages = new Set();
-let lastProcessedMessageIndex = null;
+let lastProcessedMessageUid = null;
 
 function getCurrentChatId() {
     return (typeof SillyTavern?.getContext === 'function') ? (SillyTavern.getContext().chatId || window.chat_id || 'default') : (window.chat_id || 'default');
@@ -55,7 +56,7 @@ function getChatData() {
     const chatId = getCurrentChatId();
     if (!settings.chatPregnancyData[chatId]) {
         settings.chatPregnancyData[chatId] = {
-            targetMode: 'user', // 'user' | 'char' | 'both'
+            targetMode: 'user',
             lastRpDate: null,
             activityLogs: [],
             user: createDefaultEntityState('user'),
@@ -206,6 +207,92 @@ function processMessageInteractions(text, isUserMessage, messageIndex) {
         checkBirthFor(data.char, 'CHAR');
         processedBirthMessages.add(msgKey);
     }
+}
+
+function processIncomingMessage(messageIndex, isUser = false) {
+    if (!settings.isEnabled) return; 
+    const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
+    const chat = context ? context.chat : window.chat;
+    if (!chat || !Array.isArray(chat) || chat.length === 0) return;
+
+    let text = null;
+    let idx = null;
+    if (typeof messageIndex === 'number' && chat[messageIndex]) {
+        text = chat[messageIndex].mes;
+        idx = messageIndex;
+    } else if (typeof messageIndex === 'object' && messageIndex?.mes) {
+        text = messageIndex.mes;
+        idx = messageIndex?.id ?? (chat.length - 1);
+    } else {
+        idx = chat.length - 1;
+        text = chat[idx]?.mes;
+    }
+
+    if (!text) return;
+
+    const currentMsgUid = `${idx}_${isUser ? 'user' : 'ai'}_${text.length}`;
+    if (lastProcessedMessageUid === currentMsgUid) return;
+    lastProcessedMessageUid = currentMsgUid;
+
+    const data = getChatData();
+
+    if (isUser) {
+        const relativeDays = parseRelativeDaysFromText(text);
+        if (relativeDays > 0) {
+            pendingUserTimeskipDays = relativeDays;
+            advanceTimeAll(relativeDays);
+            if (data.lastRpDate) {
+                const parts = data.lastRpDate.split('-').map(Number);
+                const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+                data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
+            }
+            logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via relative user text.`);
+        } else {
+            const parsedDate = parseRpDateFromText(text);
+            if (parsedDate) {
+                const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
+                const newDateStr = daysToDateString(newTotalDays);
+                if (data.lastRpDate && data.lastRpDate !== newDateStr) {
+                    const parts = data.lastRpDate.split('-').map(Number);
+                    const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+                    const diff = newTotalDays - prevTotalDays;
+                    if (diff > 0) advanceTimeAll(diff);
+                }
+                data.lastRpDate = newDateStr;
+            }
+        }
+    } else {
+        // Из постов ИИ берется строго дата из хедера
+        const parsedDate = parseRpDateFromText(text);
+        if (parsedDate) {
+            const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
+            const newDateStr = daysToDateString(newTotalDays);
+
+            if (pendingUserTimeskipDays > 0) {
+                // Таймскип уже был начислен в посте юзера: синхронизируем дату без повторного начисления
+                pendingUserTimeskipDays = 0;
+                data.lastRpDate = newDateStr;
+                logReproEvent(`[AI DATE SYNC] Date aligned to ${newDateStr} after user timeskip.`);
+            } else if (data.lastRpDate && data.lastRpDate !== newDateStr) {
+                const parts = data.lastRpDate.split('-').map(Number);
+                const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+                const diff = newTotalDays - prevTotalDays;
+                if (diff > 0) {
+                    advanceTimeAll(diff);
+                    logReproEvent(`[AI DATE SYNC] Synced from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
+                    notify(`${getText('toastTimePassed', settings.language || 'ru')}${diff}.`, 'info');
+                }
+                data.lastRpDate = newDateStr;
+            } else {
+                data.lastRpDate = newDateStr;
+            }
+        }
+    }
+
+    processMessageInteractions(text, isUser, idx);
+    saveSettingsDebounced();
+    refreshUI();
+    updatePrompt();
 }
 
 function bindGlobalEvents() {
@@ -414,62 +501,6 @@ function bindGlobalEvents() {
     });
 }
 
-function processIncomingMessage(messageIndex, isUser = false) {
-    if (!settings.isEnabled) return; 
-    const context = typeof SillyTavern?.getContext === 'function' ? SillyTavern.getContext() : null;
-    const chat = context ? context.chat : window.chat;
-    if (!chat) return;
-
-    let text = null;
-    let idx = null;
-    if (typeof messageIndex === 'number' && chat[messageIndex]) {
-        text = chat[messageIndex].mes;
-        idx = messageIndex;
-    } else if (typeof messageIndex === 'object' && messageIndex?.mes) {
-        text = messageIndex.mes;
-        idx = messageIndex?.id ?? null;
-    } else if (chat.length > 0) {
-        idx = chat.length - 1;
-        text = chat[idx]?.mes;
-    }
-
-    if (!text) return;
-
-    // Предотвращение двойного инкремента времени при одинаковом индексе
-    if (idx !== null && idx === lastProcessedMessageIndex && !isUser) return;
-    lastProcessedMessageIndex = idx;
-
-    const data = getChatData();
-    const relativeDays = parseRelativeDaysFromText(text);
-
-    if (relativeDays > 0) {
-        advanceTimeAll(relativeDays);
-        if (data.lastRpDate) {
-            const parts = data.lastRpDate.split('-').map(Number);
-            const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
-            data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
-        }
-    } else {
-        const parsedDate = parseRpDateFromText(text);
-        if (parsedDate) {
-            const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
-            const newDateStr = daysToDateString(newTotalDays);
-            if (data.lastRpDate && data.lastRpDate !== newDateStr) {
-                const parts = data.lastRpDate.split('-').map(Number);
-                const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
-                const diff = newTotalDays - prevTotalDays;
-                if (diff > 0) advanceTimeAll(diff);
-            }
-            data.lastRpDate = newDateStr;
-        }
-    }
-
-    processMessageInteractions(text, isUser, idx);
-    saveSettingsDebounced();
-    refreshUI();
-    updatePrompt();
-}
-
 function loadSettings() {
     if (!extension_settings[EXTENSION_NAME]) {
         extension_settings[EXTENSION_NAME] = Object.assign({}, DEFAULT_SETTINGS);
@@ -491,8 +522,9 @@ jQuery(async () => {
         if (event_types.MESSAGE_SWIPED) eventSource.on(event_types.MESSAGE_SWIPED, async (i) => processIncomingMessage(i, false));
         if (event_types.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
+                pendingUserTimeskipDays = 0;
                 processedBirthMessages.clear();
-                lastProcessedMessageIndex = null;
+                lastProcessedMessageUid = null;
                 loadSettings(); 
             });
         }
