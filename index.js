@@ -15,7 +15,6 @@ import {
     triggerEntityPregnancy, 
     deliverEntitySingleBaby, 
     processEntityAbortion, 
-    processEntityMiscarriage,
     getEntityBodyPhase,
     generateBabyGender
 } from './entityController.js';
@@ -28,7 +27,7 @@ import {
     parseRelativeDaysFromText 
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
-import { renderUI } from './ui.js';
+import { renderUI, exportReproLogs } from './ui.js';
 
 const EXTENSION_NAME = 'st-advanced-reproductive-system';
 
@@ -46,6 +45,7 @@ let isMenuCollapsed = true;
 let activeTab = 'user'; // 'user' | 'char'
 let activeChatId = null;
 const processedBirthMessages = new Set();
+let lastProcessedMessageIndex = null;
 
 function getCurrentChatId() {
     return (typeof SillyTavern?.getContext === 'function') ? (SillyTavern.getContext().chatId || window.chat_id || 'default') : (window.chat_id || 'default');
@@ -65,7 +65,6 @@ function getChatData() {
     activeChatId = chatId;
     const data = settings.chatPregnancyData[chatId];
     
-    // Миграция со старого формата (если объект был плоским)
     if (data.cycleDay !== undefined && !data.user) {
         data.user = Object.assign(createDefaultEntityState('user'), data);
         data.char = createDefaultEntityState('char');
@@ -76,6 +75,12 @@ function getChatData() {
     if (!data.targetMode) data.targetMode = 'user';
     if (!data.activityLogs) data.activityLogs = [];
     return data;
+}
+
+export function getActiveEntityKey() {
+    const data = getChatData();
+    if (data.targetMode === 'both') return activeTab;
+    return data.targetMode || 'user';
 }
 
 function logReproEvent(message) {
@@ -162,11 +167,9 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
 
 function processMessageInteractions(text, isUserMessage, messageIndex) {
     const data = getChatData();
-    const lower = text.toLowerCase();
     const chatId = getCurrentChatId();
     const msgKey = `${chatId}_${messageIndex}_birth`;
 
-    // 1. Теги эякуляции
     const cumVagUser = /<!--\s*CUM_VAGINAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_VAGINAL\s*-->/i.test(text));
     const cumAnalUser = /<!--\s*CUM_ANAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_ANAL\s*-->/i.test(text));
     const cumVagChar = /<!--\s*CUM_VAGINAL_CHAR\s*-->/i.test(text);
@@ -181,7 +184,6 @@ function processMessageInteractions(text, isUserMessage, messageIndex) {
         checkConceptionForEntity(data.char, text, isTargetClimax);
     }
 
-    // 2. Теги прерывания
     if (/<!--\s*ABORTION_USER\s*-->/i.test(text) || /<!--\s*ABORTION\s*-->/i.test(text)) {
         if (data.user.isPregnant) processEntityAbortion(data.user, settings.language, logReproEvent, notify);
     }
@@ -189,7 +191,6 @@ function processMessageInteractions(text, isUserMessage, messageIndex) {
         if (data.char.isPregnant) processEntityAbortion(data.char, settings.language, logReproEvent, notify);
     }
 
-    // 3. Теги родов
     if (!processedBirthMessages.has(msgKey)) {
         const checkBirthFor = (entity, tagKey) => {
             if (!entity.isPregnant || entity.babiesGenders.length === 0) return;
@@ -260,7 +261,7 @@ function bindGlobalEvents() {
     });
 
     $(document).off('change', '#repro-is-secret-conception').on('change', '#repro-is-secret-conception', function() {
-        const entity = getChatData()[activeTab];
+        const entity = getChatData()[getActiveEntityKey()];
         entity.isSecretConception = $(this).is(':checked');
         if (!entity.isSecretConception && entity.isPregnant) entity.isDiscovered = true;
         saveSettingsDebounced();
@@ -269,12 +270,12 @@ function bindGlobalEvents() {
     });
 
     $(document).off('change', '#repro-is-irregular-cycle').on('change', '#repro-is-irregular-cycle', function() {
-        getChatData()[activeTab].isIrregularCycle = $(this).is(':checked');
+        getChatData()[getActiveEntityKey()].isIrregularCycle = $(this).is(':checked');
         saveSettingsDebounced();
     });
 
     $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
-        const entity = getChatData()[activeTab];
+        const entity = getChatData()[getActiveEntityKey()];
         entity.mode = $(this).val(); 
         if (entity.mode === 'realism') entity.gender = 'female';
         else if (entity.mode === 'omegaverse' && entity.gender === 'female') entity.gender = 'female_omega';
@@ -284,7 +285,7 @@ function bindGlobalEvents() {
     });
 
     $(document).off('change', '#repro-gender').on('change', '#repro-gender', function() { 
-        getChatData()[activeTab].gender = $(this).val(); 
+        getChatData()[getActiveEntityKey()].gender = $(this).val(); 
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
@@ -298,24 +299,38 @@ function bindGlobalEvents() {
     });
 
     $(document).off('change', '#repro-contraception').on('change', '#repro-contraception', function() {
-        getChatData()[activeTab].contraception = $(this).val();
+        getChatData()[getActiveEntityKey()].contraception = $(this).val();
         saveSettingsDebounced();
         updatePrompt();
     });
 
+    $(document).off('change', '#repro-fetal-pathology-enabled').on('change', '#repro-fetal-pathology-enabled', function() {
+        getChatData()[getActiveEntityKey()].isFetalPathologyEnabled = $(this).is(':checked');
+        saveSettingsDebounced();
+    });
+
     $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
         if (confirm("Подтвердить прерывание беременности? / Confirm abortion?")) {
-            processEntityAbortion(getChatData()[activeTab], settings.language, logReproEvent, notify);
+            processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
             saveSettingsDebounced();
             refreshUI();
             updatePrompt();
         }
     });
 
+    $(document).off('click', '#repro-export-logs').on('click', '#repro-export-logs', function() {
+        exportReproLogs({
+            data: getChatData(),
+            chatId: getCurrentChatId(),
+            language: settings.language || 'ru',
+            isNotificationsEnabled: settings.isNotificationsEnabled
+        });
+    });
+
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const data = getChatData();
-        const entity = data[activeTab];
+        const entity = data[getActiveEntityKey()];
         
         entity.cycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || 28;
         entity.periodDuration = parseInt(root.find('#repro-input-period').val(), 10) || 5;
@@ -343,7 +358,7 @@ function bindGlobalEvents() {
 
     $(document).off('click', '#repro-btn-manual-preg').on('click', '#repro-btn-manual-preg', function() {
         const root = $(this).closest('#repro-content-wrapper');
-        const entity = getChatData()[activeTab];
+        const entity = getChatData()[getActiveEntityKey()];
         const weeks = parseInt(root.find('#repro-manual-weeks').val(), 10) || 0;
         const days = parseInt(root.find('#repro-manual-days').val(), 10) || 0;
         const count = parseInt(root.find('#repro-manual-count').val(), 10) || 1;
@@ -366,7 +381,7 @@ function bindGlobalEvents() {
     });
 
     $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
-        const entity = getChatData()[activeTab];
+        const entity = getChatData()[getActiveEntityKey()];
         entity.isPregnant = false; 
         entity.isDiscovered = false;
         entity.pregnancyDaysTotal = 0;
@@ -420,6 +435,10 @@ function processIncomingMessage(messageIndex, isUser = false) {
 
     if (!text) return;
 
+    // Предотвращение двойного инкремента времени при одинаковом индексе
+    if (idx !== null && idx === lastProcessedMessageIndex && !isUser) return;
+    lastProcessedMessageIndex = idx;
+
     const data = getChatData();
     const relativeDays = parseRelativeDaysFromText(text);
 
@@ -468,12 +487,12 @@ jQuery(async () => {
         eventSource.on('i18n_language_changed', () => { refreshUI(); }); 
         eventSource.on(event_types.MESSAGE_SENT, async (i) => processIncomingMessage(i, true));
         eventSource.on(event_types.MESSAGE_RECEIVED, async (i) => processIncomingMessage(i, false));
-        if (event_types.CHARACTER_MESSAGE_RENDERED) eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (i) => processIncomingMessage(i, false));
         if (event_types.MESSAGE_EDITED) eventSource.on(event_types.MESSAGE_EDITED, async (i) => processIncomingMessage(i, false));
         if (event_types.MESSAGE_SWIPED) eventSource.on(event_types.MESSAGE_SWIPED, async (i) => processIncomingMessage(i, false));
         if (event_types.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
                 processedBirthMessages.clear();
+                lastProcessedMessageIndex = null;
                 loadSettings(); 
             });
         }
