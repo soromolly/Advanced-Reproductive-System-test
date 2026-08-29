@@ -17,6 +17,7 @@ import {
     layEntityClutch,
     hatchEntityClutch,
     processEntityAbortion, 
+    processEntityPregnancyTest,
     getEntityBodyPhase,
     generateBabyGender,
     rollNewCycleTarget
@@ -386,7 +387,6 @@ function bindGlobalEvents() {
         refreshUI();
     });
 
-    // Переключение режима: теперь мгновенно пересчитывает целевую длину цикла!
     $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
         const entity = getChatData()[getActiveEntityKey()];
         entity.mode = $(this).val(); 
@@ -434,6 +434,15 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
+    // ОБРАБОТЧИК КЛИКА: Тест / Проверка на беременность
+    $(document).off('click', '#repro-btn-take-test').on('click', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        processEntityPregnancyTest(entity, settings.aiAwareness, settings.language || 'ru', logReproEvent, notify);
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
     $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
         if (confirm("Прервать вынашивание? / Terminate gestation?")) {
             processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
@@ -472,7 +481,6 @@ function bindGlobalEvents() {
         });
     });
 
-    // Кнопка "Применить параметры": синхронизирует и пересчитывает целевую длину цикла
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const data = getChatData();
