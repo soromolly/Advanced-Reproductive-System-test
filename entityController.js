@@ -68,7 +68,6 @@ export function generateBabyGender(mode, lang = 'ru') {
         const roll = Math.random() * 100;
         let sec = isRu ? 'Бета' : 'Beta';
         
-        // Честный сбалансированный шанс: ~33.3% Альфа, ~33.3% Омега, ~33.4% Бета
         if (roll < 33.33) {
             sec = isRu ? 'Альфа' : 'Alpha';
         } else if (roll < 66.66) {
@@ -85,6 +84,18 @@ export function generateBabyGender(mode, lang = 'ru') {
     }
 }
 
+function formatDelayDays(days, lang = 'ru') {
+    if (lang === 'en') {
+        return `${days} ${days === 1 ? 'day' : 'days'}`;
+    }
+    const abs = Math.abs(days) % 100;
+    const last = abs % 10;
+    if (abs >= 11 && abs <= 19) return `${days} дней`;
+    if (last === 1) return `${days} день`;
+    if (last >= 2 && last <= 4) return `${days} дня`;
+    return `${days} дней`;
+}
+
 export function getEntityBodyPhase(entity, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const isRevealedPregnancy = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
@@ -95,11 +106,16 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     }
 
     const day = entity.cycleDay;
-    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || 28;
+    const baseLength = entity.cycleLength || 28;
+    const targetLength = entity.currentCycleTargetLength || baseLength;
     const periodDays = entity.periodDuration || 5;
 
     if (entity.mode === 'realism') {
-        if (day > targetLength) return getText('delayed', l);
+        // Проверяем задержку от дефолтного cycleLength
+        if (day > baseLength) {
+            const delay = day - baseLength;
+            return `${getText('delayed', l)} (${formatDelayDays(delay, l)})`;
+        }
         if (day <= periodDays) return getText('menstruation', l);
         
         const ovulPeak = Math.max(periodDays + 2, targetLength - 14);
@@ -110,7 +126,10 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
         if (day >= ovulStart && day <= ovulEnd) return getText('ovulation', l);
         return getText('luteal', l);
     } else {
-        if (day > targetLength) return getText('delayedHeat', l);
+        if (day > baseLength) {
+            const delay = day - baseLength;
+            return `${getText('delayedHeat', l)} (${formatDelayDays(delay, l)})`;
+        }
         if (day <= periodDays) return getText('heat', l);
         return getText('quiescence', l);
     }
