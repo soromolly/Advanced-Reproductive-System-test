@@ -6,7 +6,6 @@ import {
     getFetalDisease 
 } from './symptoms.js';
 import { getText, translateGender } from './translations.js';
-import { getIncubationStageData } from './oviposition.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
     return {
@@ -41,41 +40,23 @@ export function createDefaultEntityState(entityKey = 'user') {
         postpartumDays: 0,
         deliveryMethod: 'none',
         childrenList: [],
-        fetalDiseaseId: null,
-
-        isIncubating: false,
-        incubationDays: 0,
-        laidClutchCount: 0,
-        laidClutchGenders: [],
-        laidClutchDiseases: []
+        fetalDiseaseId: null
     };
 }
 
 export function rollNewCycleTarget(entity) {
-    const base = entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
+    const base = entity.cycleLength || 28;
     if (!entity.isIrregularCycle) return base;
     
     const roll = Math.random() * 100;
     let variance = 0;
-
-    if (entity.mode === 'oviposition') {
-        if (roll < 60) {
-            variance = Math.floor(Math.random() * 7) - 3;
-        } else if (roll < 85) {
-            variance = Math.random() > 0.4 ? (Math.floor(Math.random() * 8) + 4) : -5;
-        } else {
-            variance = Math.floor(Math.random() * 10) + 9;
-        }
+    if (roll < 65) {
+        variance = Math.floor(Math.random() * 3) - 1;
+    } else if (roll < 90) {
+        variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2;
     } else {
-        if (roll < 65) {
-            variance = Math.floor(Math.random() * 3) - 1;
-        } else if (roll < 90) {
-            variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2;
-        } else {
-            variance = Math.floor(Math.random() * 7) + 6;
-        }
+        variance = Math.floor(Math.random() * 7) + 6;
     }
-    
     return Math.max((entity.periodDuration || 5) + 6, base + variance);
 }
 
@@ -86,8 +67,15 @@ export function generateBabyGender(mode, lang = 'ru') {
     if (mode === 'omegaverse') {
         const roll = Math.random() * 100;
         let sec = isRu ? 'Бета' : 'Beta';
-        if (roll < 33.33) sec = isRu ? 'Альфа' : 'Alpha';
-        else if (roll < 66.66) sec = isRu ? 'Омега' : 'Omega';
+        
+        // Честный сбалансированный шанс: ~33.3% Альфа, ~33.3% Омега, ~33.4% Бета
+        if (roll < 33.33) {
+            sec = isRu ? 'Альфа' : 'Alpha';
+        } else if (roll < 66.66) {
+            sec = isRu ? 'Омега' : 'Omega';
+        } else {
+            sec = isRu ? 'Бета' : 'Beta';
+        }
         
         if (isRu) return isBoy ? `${sec}-мальчик ♂` : `${sec}-девочка ♀`;
         return isBoy ? `${sec} Boy ♂` : `${sec} Girl ♀`;
@@ -101,26 +89,19 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const isRevealedPregnancy = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
 
-    if (entity.isIncubating) return getText('incubationPhase', l);
     if (entity.postpartumDays > 0) return getText('postpartumPhase', l);
     if (isRevealedPregnancy) {
-        if (entity.mode === 'oviposition') return getText('pregnancyOviposition', l);
         return entity.mode === 'realism' ? getText('pregnancy', l) : getText('pregnancyOmega', l);
     }
 
     const day = entity.cycleDay;
-    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
+    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || 28;
     const periodDays = entity.periodDuration || 5;
 
-    if (day > targetLength) {
-        const delayDays = day - targetLength;
-        const delayText = `(+${delayDays} ${getText('daysShort', l)})`;
-        if (entity.mode === 'omegaverse') return `${getText('delayedHeat', l)} ${delayText}`;
-        return `${getText('delayed', l)} ${delayText}`;
-    }
-
     if (entity.mode === 'realism') {
+        if (day > targetLength) return getText('delayed', l);
         if (day <= periodDays) return getText('menstruation', l);
+        
         const ovulPeak = Math.max(periodDays + 2, targetLength - 14);
         const ovulStart = Math.max(periodDays + 1, ovulPeak - 3);
         const ovulEnd = ovulPeak + 1;
@@ -128,23 +109,14 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
         if (day < ovulStart) return getText('follicular', l);
         if (day >= ovulStart && day <= ovulEnd) return getText('ovulation', l);
         return getText('luteal', l);
-    } else if (entity.mode === 'omegaverse') {
-        if (day <= periodDays) return getText('heat', l);
-        return getText('quiescence', l);
     } else {
-        // Oviposition
+        if (day > targetLength) return getText('delayedHeat', l);
         if (day <= periodDays) return getText('heat', l);
         return getText('quiescence', l);
     }
 }
 
 export function updateEntitySymptoms(entity) {
-    if (entity.isIncubating) {
-        entity.symptomPhaseKey = 'incubation_care';
-        entity.symptomIndices = getRandomSymptomIndices('incubation_care', 2);
-        return;
-    }
-
     if (entity.postpartumDays > 0) {
         entity.symptomPhaseKey = null;
         entity.symptomIndices = [];
@@ -155,20 +127,13 @@ export function updateEntitySymptoms(entity) {
     let phaseKey = null;
 
     if (isRevealedPregnancy) {
-        if (entity.mode === 'oviposition') {
-            const week = entity.pregnancyWeeks;
-            if (week <= 2) phaseKey = 'oviduct_calcification';
-            else if (week <= 4) phaseKey = 'egg_maturation';
-            else phaseKey = 'pre_laying';
-        } else {
-            const week = entity.pregnancyWeeks;
-            if (week <= 12) phaseKey = 'preg_trimester_1';
-            else if (week >= 13 && week <= 26) phaseKey = 'preg_trimester_2';
-            else phaseKey = 'preg_trimester_3';
-        }
+        const week = entity.pregnancyWeeks;
+        if (week <= 12) phaseKey = 'preg_trimester_1';
+        else if (week >= 13 && week <= 26) phaseKey = 'preg_trimester_2';
+        else phaseKey = 'preg_trimester_3';
     } else {
         const day = entity.cycleDay;
-        const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
+        const targetLength = entity.currentCycleTargetLength || entity.cycleLength || 28;
         const periodDays = entity.periodDuration || 5;
 
         if (entity.mode === 'realism') {
@@ -182,13 +147,9 @@ export function updateEntitySymptoms(entity) {
                 else if (day >= ovulStart && day <= ovulEnd) phaseKey = 'ovulation';
                 else phaseKey = 'luteal';
             }
-        } else if (entity.mode === 'omegaverse') {
-            if (day <= periodDays) {
-                phaseKey = (entity.gender === 'male_omega') ? 'heat_male' : 'heat_female';
-            }
         } else {
             if (day <= periodDays) {
-                phaseKey = 'oviposition_cycle_heat';
+                phaseKey = (entity.gender === 'male_omega') ? 'heat_male' : 'heat_female';
             }
         }
     }
@@ -204,43 +165,7 @@ export function updateEntitySymptoms(entity) {
     }
 }
 
-// Проверка беременности для Реализма и Омегаверса
-export function processEntityPregnancyTest(entity, aiAwareness = 'dynamic', lang = 'ru', logFn, notifyFn) {
-    const macroName = entity.key === 'user' ? '{{user}}' : '{{char}}';
-    const baseCycle = entity.cycleLength || 28;
-    const targetLength = entity.currentCycleTargetLength || baseCycle;
-    const delayDays = Math.max(1, entity.cycleDay - targetLength);
-
-    if (entity.isPregnant) {
-        if (aiAwareness === 'hidden') {
-            // Средневековье: определение по внешним физиологическим признакам
-            if (entity.pregnancyWeeks >= 6 || delayDays >= 14) {
-                entity.isDiscovered = true;
-                logFn?.(`[CHECK POSITIVE] [${entity.key.toUpperCase()}] Medieval signs confirmed (~${entity.pregnancyWeeks} wks).`);
-                notifyFn?.(`[${macroName}] ${getText('toastTestPositiveMedieval', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)})!`, 'success');
-            } else {
-                logFn?.(`[CHECK UNCERTAIN] [${entity.key.toUpperCase()}] Signs not clear yet (<6 wks, delay +${delayDays}d).`);
-                notifyFn?.(`[${macroName}] ${getText('toastTestEarlyMedieval', lang)}`, 'info');
-            }
-        } else {
-            // Современность: аптечный тест на ХГЧ (на 1-2 день задержки есть шанс призрака)
-            if (delayDays <= 2 && entity.pregnancyWeeks < 4 && Math.random() < 0.4) {
-                logFn?.(`[TEST UNCERTAIN] [${entity.key.toUpperCase()}] Faint phantom line (delay +${delayDays}d).`);
-                notifyFn?.(`[${macroName}] ${getText('toastTestUncertain', lang)}`, 'warning');
-            } else {
-                entity.isDiscovered = true;
-                logFn?.(`[TEST POSITIVE] [${entity.key.toUpperCase()}] Positive hCG test (${entity.pregnancyWeeks}w ${entity.pregnancyDays}d).`);
-                notifyFn?.(`[${macroName}] ${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}!`, 'success');
-            }
-        }
-    } else {
-        logFn?.(`[TEST NEGATIVE] [${entity.key.toUpperCase()}] Negative test result. Delay: +${delayDays}d.`);
-        notifyFn?.(`[${macroName}] ${getText('toastTestNegative', lang)} (+${delayDays} ${getText('daysShort', lang)})`, 'info');
-    }
-}
-
 export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
-    if (entity.mode === 'oviposition') return;
     const isRevealed = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
     if (!isRevealed) return;
 
@@ -270,7 +195,6 @@ export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
 
 export function checkEntityFetalDemise(entity, logFn) {
     if (!entity.isPregnant || !entity.isFetalPathologyEnabled || (entity.fetalDemise && entity.fetalDemise.isDead)) return;
-    if (entity.mode === 'oviposition') return;
     
     const week = entity.pregnancyWeeks;
     let currentTrimester = 1;
@@ -284,32 +208,24 @@ export function checkEntityFetalDemise(entity, logFn) {
         const roll = Math.random() * 100;
         if (roll < demiseChance) {
             entity.fetalDemise = { isDead: true, daysSinceDemise: 0, hasInfection: false };
-            logFn?.(`[FETAL DEMISE ROLLED] [${entity.key.toUpperCase()}] Missed demise at week ${week} (Roll: ${roll.toFixed(2)}% < ${demiseChance}%).`);
+            logFn?.(`[FETAL DEMISE ROLLED] [${entity.key.toUpperCase()}] Missed miscarriage at week ${week} (Roll: ${roll.toFixed(2)}% < ${demiseChance}%).`);
         }
     }
 }
 
 export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notifyFn) {
-    if (entity.isIncubating) {
-        entity.incubationDays += days;
-        if (entity.incubationDays >= 70) {
-            notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'The clutch is hatching! Eggs are cracking.' : 'Инкубация завершена! Яйца в гнезде начинают трескаться и вылупляться.'}`, 'warning');
-        }
-        return;
-    }
-
     if (entity.postpartumDays > 0) {
         entity.postpartumDays += days;
-        const maxRecoveryDays = entity.mode === 'oviposition' ? 7 : ((entity.deliveryMethod === 'miscarriage') ? 14 : 40);
+        const maxRecoveryDays = (entity.deliveryMethod === 'miscarriage') ? 14 : 40;
         if (entity.postpartumDays > maxRecoveryDays) {
             entity.postpartumDays = 0;
             entity.deliveryMethod = 'none';
             entity.cycleDay = 1; 
             entity.currentCycleTargetLength = rollNewCycleTarget(entity);
-            logFn?.(`[RECOVERY] [${entity.key.toUpperCase()}] Recovery completed. New cycle started.`);
+            logFn?.(`[POSTPARTUM] [${entity.key.toUpperCase()}] Recovery completed. New cycle started.`);
             notifyFn?.(lang === 'en' 
-                ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Recovery complete. Cycle restarted.`
-                : `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Восстановление завершено. Новый цикл запущен.`, 'success');
+                ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Postpartum recovery complete. Cycle restarted.`
+                : `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Восстановление завершено. Цикл запущен.`, 'success');
         }
         return;
     }
@@ -319,9 +235,22 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
 
         if (entity.fetalDemise && entity.fetalDemise.isDead) {
             entity.fetalDemise.daysSinceDemise += days;
+            if (entity.fetalDemise.daysSinceDemise >= 16 && !entity.fetalDemise.hasInfection) {
+                entity.fetalDemise.hasInfection = true;
+                logFn?.(`[FETAL DEMISE COMPLICATION] [${entity.key.toUpperCase()}] Secondary infection occurred.`);
+            }
             if (entity.fetalDemise.daysSinceDemise >= 21) {
                 processEntityMiscarriage(entity, lang, logFn, notifyFn);
                 return;
+            }
+        }
+
+        if (entity.activeComplication?.id === 'miscarriage_threat_early' && entity.activeComplication.isDiscovered) {
+            for (let i = 0; i < days; i++) {
+                if (Math.random() * 100 < 10) { 
+                    processEntityMiscarriage(entity, lang, logFn, notifyFn);
+                    return; 
+                }
             }
         }
 
@@ -331,14 +260,13 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
         entity.cycleDay += days;
 
-        // В яйцекладке яйца отвердевают и становятся очевидны на 2-й неделе
-        const autoDiscoveryWeek = (entity.mode === 'oviposition') ? 2 : ((aiAwareness === 'hidden') ? 9 : 6);
+        const autoDiscoveryWeek = (aiAwareness === 'hidden') ? 9 : 6;
         if (!entity.isDiscovered && entity.pregnancyWeeks >= autoDiscoveryWeek) {
             entity.isDiscovered = true;
             logFn?.(`[PREGNANCY DISCOVERED] [${entity.key.toUpperCase()}] Confirmed at ${entity.pregnancyWeeks} weeks.`);
-            notifyFn?.(entity.mode === 'oviposition'
-                ? `🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastAutoDiscovered', lang)}`
-                : (lang === 'en' ? `🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Pregnancy confirmed (~${entity.pregnancyWeeks} wks)!` : `🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Беременность подтверждена (~${entity.pregnancyWeeks} нед.)!`), 'success');
+            notifyFn?.(lang === 'en' 
+                ? `🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Pregnancy confirmed (~${entity.pregnancyWeeks} wks)!` 
+                : `🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Беременность подтверждена (~${entity.pregnancyWeeks} нед.)!`, 'success');
         }
 
         if (entity.isDiscovered && entity.babiesDiseases && aiAwareness !== 'hidden') {
@@ -347,8 +275,8 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
                     const disease = getFetalDisease(dId, lang);
                     if (disease && disease.type === 'prenatal' && disease.discoveryWeek) {
                         if (prevWeeks < disease.discoveryWeek && entity.pregnancyWeeks >= disease.discoveryWeek) {
-                            logFn?.(`[SCREENING WEEK ${disease.discoveryWeek}] [${entity.key.toUpperCase()}] Fetus/Egg #${idx + 1}: ${disease.name}`);
-                            const babyTitle = entity.babiesCount > 1 ? ` (#${idx + 1})` : '';
+                            logFn?.(`[SCREENING WEEK ${disease.discoveryWeek}] [${entity.key.toUpperCase()}] Fetus #${idx + 1}: ${disease.name}`);
+                            const babyTitle = entity.babiesCount > 1 ? ` (${getText('childLabel', lang)} #${idx + 1})` : '';
                             notifyFn?.(`🧬 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('fetalAnomalyTitle', lang)}${babyTitle} «${disease.name}»!`, 'warning');
                         }
                     }
@@ -357,12 +285,12 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         }
 
         updateEntitySymptoms(entity);
-        const maxWeeks = entity.maxPregnancyWeeks || (entity.mode === 'oviposition' ? 6 : (entity.mode === 'omegaverse' ? 36 : 40));
+        const maxWeeks = entity.maxPregnancyWeeks || (entity.mode === 'omegaverse' ? 36 : 40);
         if (entity.isDiscovered && entity.pregnancyWeeks >= maxWeeks) {
             notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastPregEnd', lang)}`, 'warning');
         }
     } else {
-        const target = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
+        const target = entity.currentCycleTargetLength || entity.cycleLength || 28;
         entity.cycleDay += days;
 
         if (entity.cycleDay > target) {
@@ -370,7 +298,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
             entity.currentCycleTargetLength = rollNewCycleTarget(entity);
             entity.symptomPhaseKey = null;
             logFn?.(`[CYCLE RESET] [${entity.key.toUpperCase()}] New cycle started after ${target} days.`);
-            notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${entity.mode === 'omegaverse' || entity.mode === 'oviposition' ? getText('toastNewHeat', lang) : getText('toastNewCycle', lang)}`, 'info');
+            notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${entity.mode === 'omegaverse' ? getText('toastNewHeat', lang) : getText('toastNewCycle', lang)}`, 'info');
         }
         updateEntitySymptoms(entity);
     }
@@ -378,7 +306,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
 
 export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.isPregnant = true;
-    entity.pregnancyDaysTotal = Math.max(7, entity.cycleDay || 7);
+    entity.pregnancyDaysTotal = Math.max(14, entity.cycleDay || 14);
     entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
     entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
     entity.isDiscovered = !entity.isSecretConception;
@@ -388,17 +316,9 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.activeComplication = null;
     entity.deliveryMethod = 'none';
     entity.currentDeliveredCount = 0;
-    entity.isIncubating = false;
 
-    if (entity.mode === 'oviposition') {
-        entity.babiesCount = Math.floor(Math.random() * 6) + 2;
-        entity.maxPregnancyWeeks = 6;
-    } else {
-        const roll = Math.random() * 100;
-        entity.babiesCount = entity.mode === 'omegaverse' ? (roll > 92 ? 3 : roll > 70 ? 2 : 1) : (roll > 98.5 ? 3 : roll > 95 ? 2 : 1);
-        entity.maxPregnancyWeeks = entity.mode === 'omegaverse' ? 36 : 40;
-    }
-
+    const roll = Math.random() * 100;
+    entity.babiesCount = entity.mode === 'omegaverse' ? (roll > 92 ? 3 : roll > 70 ? 2 : 1) : (roll > 98.5 ? 3 : roll > 95 ? 2 : 1);
     entity.babiesGenders = [];
     entity.babiesDiseases = [];
     
@@ -408,13 +328,19 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     }
 
     entity.fetalDiseaseId = null;
-    if (entity.isFetalPathologyEnabled && Math.random() * 100 < 5) {
+    if (entity.isFetalPathologyEnabled && Math.random() * 100 < 3) {
         const primaryDisease = getRandomFetalDiseaseId();
         entity.fetalDiseaseId = primaryDisease;
         entity.babiesDiseases[0] = primaryDisease;
+
+        for (let i = 1; i < entity.babiesCount; i++) {
+            if (Math.random() * 100 < 5) entity.babiesDiseases[i] = getRandomFetalDiseaseId();
+        }
+        entity.babiesDiseases.sort(() => 0.5 - Math.random());
     }
 
-    logFn?.(`[GESTATION INITIATED] [${entity.key.toUpperCase()}] Mode: ${entity.mode} | Count: ${entity.babiesCount} | Secret: ${entity.isSecretConception}`);
+    checkEntityFetalDemise(entity, logFn);
+    logFn?.(`[PREGNANCY INITIATED] [${entity.key.toUpperCase()}] Babies: ${entity.babiesCount} | Diseases: [${entity.babiesDiseases.join(', ')}] | Secret: ${entity.isSecretConception}`);
 
     updateEntitySymptoms(entity);
     if (entity.isDiscovered) {
@@ -422,61 +348,7 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     }
 }
 
-export function layEntityClutch(entity, lang = 'ru', logFn, notifyFn) {
-    if (!entity.isPregnant) return;
-    
-    entity.laidClutchCount = entity.babiesCount;
-    entity.laidClutchGenders = [...entity.babiesGenders];
-    entity.laidClutchDiseases = [...entity.babiesDiseases];
-
-    entity.isPregnant = false;
-    entity.isDiscovered = false;
-    entity.pregnancyDaysTotal = 0;
-    entity.pregnancyWeeks = 0;
-    entity.pregnancyDays = 0;
-    entity.babiesCount = 0;
-    entity.babiesGenders = [];
-    entity.babiesDiseases = [];
-    
-    entity.isIncubating = true;
-    entity.incubationDays = 1;
-    entity.postpartumDays = 1;
-    entity.deliveryMethod = 'oviposition_recovery';
-
-    logFn?.(`[OVIPOSITION] [${entity.key.toUpperCase()}] Laid clutch of ${entity.laidClutchCount} eggs. Incubation started.`);
-    notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `Clutch of ${entity.laidClutchCount} eggs laid into the nest! Incubation begun.` : `Кладка из ${entity.laidClutchCount} яиц успешно отложена! Началась инкубация.`}`, 'success');
-}
-
-export function hatchEntityClutch(entity, lang = 'ru', logFn, notifyFn) {
-    if (!entity.isIncubating || entity.laidClutchCount === 0) return;
-
-    for (let i = 0; i < entity.laidClutchCount; i++) {
-        const g = entity.laidClutchGenders[i] || generateBabyGender(entity.mode, 'en');
-        const d = entity.laidClutchDiseases[i] || null;
-        entity.childrenList.push({
-            id: Date.now() + Math.floor(Math.random() * 1000) + i,
-            gender: g,
-            diseaseId: d
-        });
-    }
-
-    const count = entity.laidClutchCount;
-    entity.isIncubating = false;
-    entity.incubationDays = 0;
-    entity.laidClutchCount = 0;
-    entity.laidClutchGenders = [];
-    entity.laidClutchDiseases = [];
-
-    logFn?.(`[HATCHING COMPLETE] [${entity.key.toUpperCase()}] Hatched ${count} offspring.`);
-    notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `All ${count} hatchlings have emerged from their shells!` : `Все ${count} детенышей успешно вылупились!`}`, 'success');
-}
-
 export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn) {
-    if (entity.mode === 'oviposition') {
-        layEntityClutch(entity, lang, logFn, notifyFn);
-        return;
-    }
-
     const rawGender = entity.babiesGenders.shift() || generateBabyGender(entity.mode, 'en');
     const babyDiseaseId = entity.babiesDiseases?.length > 0 ? entity.babiesDiseases.shift() : null;
     
@@ -518,7 +390,7 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
 }
 
 export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
-    logFn?.(`[TERMINATION] [${entity.key.toUpperCase()}] Non-viable loss.`);
+    logFn?.(`[MISCARRIAGE] [${entity.key.toUpperCase()}] Spontaneous miscarriage.`);
     entity.isPregnant = false;
     entity.isDiscovered = false;
     entity.pregnancyDaysTotal = 0;
@@ -532,15 +404,14 @@ export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
     entity.fetalDiseaseId = null;
     entity.fetalDemise = null;
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
-    entity.isIncubating = false;
     entity.postpartumDays = 1;
     entity.deliveryMethod = 'miscarriage'; 
 
-    notifyFn?.(`🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Gestation terminated due to non-viability.' : 'Вынашивание прервано вследствие нежизнеспособности.'}`, 'error');
+    notifyFn?.(`🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Miscarriage occurred. Pregnancy terminated.' : 'Произошел самопроизвольный выкидыш. Беременность прервана.'}`, 'error');
 }
 
 export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {
-    logFn?.(`[ABORTION] [${entity.key.toUpperCase()}] Terminated manually.`);
+    logFn?.(`[ABORTION] [${entity.key.toUpperCase()}] Terminated at ${entity.pregnancyWeeks} weeks.`);
     entity.isPregnant = false;
     entity.isDiscovered = false;
     entity.pregnancyDaysTotal = 0;
@@ -554,7 +425,6 @@ export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {
     entity.fetalDiseaseId = null;
     entity.fetalDemise = null;
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
-    entity.isIncubating = false;
     entity.postpartumDays = 1;
     entity.deliveryMethod = 'miscarriage'; 
 
