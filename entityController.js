@@ -60,20 +60,18 @@ export function rollNewCycleTarget(entity) {
     let variance = 0;
 
     if (entity.mode === 'oviposition') {
-        // Колебания для длительного цикла яйцекладки (базово 90 дней)
         if (roll < 60) {
             variance = Math.floor(Math.random() * 7) - 3; // -3...+3 дня
         } else if (roll < 85) {
-            variance = Math.random() > 0.4 ? (Math.floor(Math.random() * 8) + 4) : -5; // +4...+11 или -5 дней
+            variance = Math.random() > 0.4 ? (Math.floor(Math.random() * 8) + 4) : -5;
         } else {
             variance = Math.floor(Math.random() * 10) + 9; // +9...+18 дней
         }
     } else {
-        // Колебания для человека / омегаверса (базово 28 дней)
         if (roll < 65) {
             variance = Math.floor(Math.random() * 3) - 1; // -1...+1 день
         } else if (roll < 90) {
-            variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2; // +2...+5 или -2 дня
+            variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2;
         } else {
             variance = Math.floor(Math.random() * 7) + 6; // +6...+12 дней
         }
@@ -115,10 +113,16 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
     const periodDays = entity.periodDuration || 5;
 
+    // Расчет дней задержки:
+    if (day > targetLength) {
+        const delayDays = day - targetLength;
+        const delayText = `(+${delayDays} ${getText('daysShort', l)})`;
+        if (entity.mode === 'omegaverse') return `${getText('delayedHeat', l)} ${delayText}`;
+        return `${getText('delayed', l)} ${delayText}`;
+    }
+
     if (entity.mode === 'realism') {
-        if (day > targetLength) return getText('delayed', l);
         if (day <= periodDays) return getText('menstruation', l);
-        
         const ovulPeak = Math.max(periodDays + 2, targetLength - 14);
         const ovulStart = Math.max(periodDays + 1, ovulPeak - 3);
         const ovulEnd = ovulPeak + 1;
@@ -127,12 +131,10 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
         if (day >= ovulStart && day <= ovulEnd) return getText('ovulation', l);
         return getText('luteal', l);
     } else if (entity.mode === 'omegaverse') {
-        if (day > targetLength) return getText('delayedHeat', l);
         if (day <= periodDays) return getText('heat', l);
         return getText('quiescence', l);
     } else {
         // Oviposition
-        if (day > targetLength) return getText('delayedHeat', l);
         if (day <= periodDays) return getText('heat', l);
         return getText('quiescence', l);
     }
@@ -201,6 +203,48 @@ export function updateEntitySymptoms(entity) {
     } else {
         entity.symptomPhaseKey = null;
         entity.symptomIndices = [];
+    }
+}
+
+// Выполнение проверки беременности (Тест на ХГЧ в современности / Осмотр повитухой в средневековье)
+export function processEntityPregnancyTest(entity, aiAwareness = 'dynamic', lang = 'ru', logFn, notifyFn) {
+    const macroName = entity.key === 'user' ? '{{user}}' : '{{char}}';
+    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
+    const delayDays = Math.max(1, entity.cycleDay - targetLength);
+
+    if (entity.isPregnant) {
+        if (aiAwareness === 'hidden') {
+            // Средневековый осмотр
+            const isEggMode = entity.mode === 'oviposition';
+            const minWeeksForPalpation = isEggMode ? 2 : 6;
+            
+            if (entity.pregnancyWeeks >= minWeeksForPalpation || delayDays >= 14) {
+                entity.isDiscovered = true;
+                const note = isEggMode 
+                    ? `${getText('toastTestPositiveEgg', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)})!`
+                    : `${getText('toastTestPositiveMedieval', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)})!`;
+                logFn?.(`[CHECK CONFIRMED] [${entity.key.toUpperCase()}] Palpation confirmed at week ${entity.pregnancyWeeks}.`);
+                notifyFn?.(`[${macroName}] ${note}`, 'success');
+            } else {
+                logFn?.(`[CHECK UNCERTAIN] [${entity.key.toUpperCase()}] Medieval check too early (${entity.pregnancyWeeks} wks).`);
+                notifyFn?.(`[${macroName}] ${getText('toastTestEarlyMedieval', lang)}`, 'info');
+            }
+        } else {
+            // Современный тест (ХГЧ) или Всеведение
+            if (delayDays <= 2 && entity.pregnancyWeeks < 4 && Math.random() < 0.3) {
+                // Сомнительный / слабый призрак
+                logFn?.(`[TEST UNCERTAIN] [${entity.key.toUpperCase()}] Early faint line (delay: +${delayDays}d).`);
+                notifyFn?.(`[${macroName}] ${getText('toastTestUncertain', lang)}`, 'warning');
+            } else {
+                entity.isDiscovered = true;
+                logFn?.(`[TEST POSITIVE] [${entity.key.toUpperCase()}] Pregnancy test positive at week ${entity.pregnancyWeeks}.`);
+                notifyFn?.(`[${macroName}] ${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}!`, 'success');
+            }
+        }
+    } else {
+        // Беременности нет — просто задержка
+        logFn?.(`[TEST NEGATIVE] [${entity.key.toUpperCase()}] Negative check. Cycle delay: +${delayDays}d.`);
+        notifyFn?.(`[${macroName}] ${getText('toastTestNegative', lang)} (+${delayDays} ${getText('daysShort', lang)})`, 'info');
     }
 }
 
