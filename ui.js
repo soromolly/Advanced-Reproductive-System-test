@@ -11,7 +11,9 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const activeEntityKey = (targetMode === 'both') ? activeTab : targetMode;
     const currentEntity = chatData[activeEntityKey];
 
-    const targetLength = currentEntity.currentCycleTargetLength || currentEntity.cycleLength || (currentEntity.mode === 'oviposition' ? 90 : 28);
+    // Базовая длина цикла для отображения
+    const baseCycleDisplay = currentEntity.cycleLength || (currentEntity.mode === 'oviposition' ? 90 : 28);
+    const targetLength = currentEntity.currentCycleTargetLength || baseCycleDisplay;
     const isCurrentlyPregnantDiscovered = currentEntity.isPregnant && (currentEntity.isDiscovered || !currentEntity.isSecretConception);
     const isDelayed = !isCurrentlyPregnantDiscovered && currentEntity.cycleDay > targetLength && currentEntity.postpartumDays === 0 && !currentEntity.isIncubating;
     const delayDaysCount = isDelayed ? (currentEntity.cycleDay - targetLength) : 0;
@@ -174,6 +176,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         `;
     }
 
+    // Текст кнопки проверки: в Современности — "Сделать тест на беременность", в Средневековье — "Проверить признаки беременности"
     const checkBtnLabel = (settings.aiAwareness === 'hidden') ? getText('checkPregnancyBtn', lang) : getText('takeTestBtn', lang);
 
     const activeTabStyle = `flex: 1; padding: 7px 0; font-size: 12px; font-weight: 700; justify-content: center; background: linear-gradient(135deg, #ec4899, #be185d) !important; color: #ffffff !important; border: 1px solid #f472b6 !important; box-shadow: 0 0 10px rgba(244, 114, 182, 0.45); border-radius: 6px; cursor: pointer; transition: all 0.15s ease;`;
@@ -291,14 +294,14 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         ${wombMapHtml}
                     ` : `
                         ${currentEntity.postpartumDays === 0 && !currentEntity.isIncubating ? `
-                            <div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${targetLength}</div>
+                            <div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>
                             ${isDelayed ? `<div style="margin-bottom: 4px; color: #fbbf24;"><strong>${getText('delayLabel', lang)}</strong> <span style="font-weight: 700;">+${delayDaysCount} ${getText('daysShort', lang)}</span></div>` : ''}
                         ` : ''}
                     `}
                     <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync', lang)} ${displayDate}</div>
                 </div>
 
-                ${isDelayed ? `
+                ${(!isCurrentlyPregnantDiscovered && isDelayed && currentEntity.mode !== 'oviposition') ? `
                     <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
                 ` : ''}
 
@@ -321,7 +324,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('cycleLengthLabel', lang)} ${getTooltipHtml('cycleLength', lang, currentMode)}</label>
-                    <input type="number" id="repro-input-cycle" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleLength || (currentEntity.mode === 'oviposition' ? 90 : 28)}"/>
+                    <input type="number" id="repro-input-cycle" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${baseCycleDisplay}"/>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
