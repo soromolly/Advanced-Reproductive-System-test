@@ -18,7 +18,8 @@ import {
     hatchEntityClutch,
     processEntityAbortion, 
     getEntityBodyPhase,
-    generateBabyGender
+    generateBabyGender,
+    rollNewCycleTarget
 } from './entityController.js';
 import { getText } from './translations.js';
 import { 
@@ -378,10 +379,14 @@ function bindGlobalEvents() {
     });
 
     $(document).off('change', '#repro-is-irregular-cycle').on('change', '#repro-is-irregular-cycle', function() {
-        getChatData()[getActiveEntityKey()].isIrregularCycle = $(this).is(':checked');
+        const entity = getChatData()[getActiveEntityKey()];
+        entity.isIrregularCycle = $(this).is(':checked');
+        entity.currentCycleTargetLength = rollNewCycleTarget(entity);
         saveSettingsDebounced();
+        refreshUI();
     });
 
+    // Переключение режима: теперь мгновенно пересчитывает целевую длину цикла!
     $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
         const entity = getChatData()[getActiveEntityKey()];
         entity.mode = $(this).val(); 
@@ -398,6 +403,7 @@ function bindGlobalEvents() {
             entity.cycleLength = 90;
             entity.maxPregnancyWeeks = 6;
         }
+        entity.currentCycleTargetLength = rollNewCycleTarget(entity);
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
@@ -466,6 +472,7 @@ function bindGlobalEvents() {
         });
     });
 
+    // Кнопка "Применить параметры": синхронизирует и пересчитывает целевую длину цикла
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const data = getChatData();
@@ -486,7 +493,8 @@ function bindGlobalEvents() {
             entity.pregnancyDays = Math.max(0, Math.min(6, days)); 
             entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
         } else if (entity.postpartumDays === 0 && !entity.isIncubating) { 
-            entity.cycleDay = parseInt(root.find('#repro-input-day').val(), 10) || 1; 
+            entity.cycleDay = parseInt(root.find('#repro-input-day').val(), 10) || 1;
+            entity.currentCycleTargetLength = rollNewCycleTarget(entity);
         }
 
         saveSettingsDebounced(); 
@@ -535,6 +543,7 @@ function bindGlobalEvents() {
         entity.laidClutchCount = 0;
         entity.laidClutchGenders = [];
         entity.laidClutchDiseases = [];
+        entity.currentCycleTargetLength = rollNewCycleTarget(entity);
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
