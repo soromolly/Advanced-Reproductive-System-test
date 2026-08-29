@@ -1,4 +1,4 @@
-import { EGG_SYMPTOMS, EGG_STAGES, getEggStageData, getEggPathology } from './oviposition.js';
+import { EGG_SYMPTOMS, getEggStageData, getEggPathology } from './oviposition.js';
 
 export const SYMPTOMS = {
     ru: {
@@ -254,7 +254,7 @@ export const POSTPARTUM_STAGES = {
             40: { name: "Завершение периода реабилитации", desc: "Ткани полностью восстановились. Организм готов к новому циклу." }
         },
         oviposition_recovery: {
-            3: { name: "Пост-кладковое облегчение", desc: "Мышцы клоаки и яйцевода сокращаются после выталкивания кладки. Ощущается глубокая легкость и усталость." },
+            3: { name: "Пост-кладковое облегчение", desc: "Мышцы яйцевода сокращаются после выталкивания кладки. Ощущается глубокая легкость и усталость." },
             7: { name: "Полное восстановление яйцевода", desc: "Стенки репродуктивного тракта вернулись в состояние покоя. Слизистая обновлена." }
         },
         c_section: {
@@ -275,7 +275,7 @@ export const POSTPARTUM_STAGES = {
             40: { name: "Recovery Completion", desc: "Full tissue recovery. Ready for gentle activity." }
         },
         oviposition_recovery: {
-            3: { name: "Post-Laying Relief", desc: "Cloacal and oviduct muscular walls contract after expelling the clutch. Deep lightness and fatigue." },
+            3: { name: "Post-Laying Relief", desc: "Oviduct muscular walls contract after expelling the clutch. Deep lightness and fatigue." },
             7: { name: "Oviduct Restoration", desc: "Reproductive channel fully rested and restored to basal state." }
         },
         c_section: {
@@ -296,14 +296,14 @@ export const COMPLICATIONS_POOL = {
         { id: "toxicosis_severe", trimester: 1, name: "Тяжелый токсикоз", curable: true, desc: "Непрекращающаяся тошнота, рвота, сильная слабость." },
         { id: "miscarriage_threat_early", trimester: 1, name: "Угроза выкидыша (ранний срок)", curable: true, desc: "Тянущие боли внизу живота, мажущие выделения." },
         { id: "anemia_early", trimester: 1, name: "Железодефицитная анемия", curable: true, desc: "Сильная бледность, постоянное головокружение." },
-        { id: "hypertonus", trimester: 2, name: "Гипертонус матки / спазм яйцевода", curable: true, desc: "Живот становится каменным, сопровождается болью в пояснице." },
+        { id: "hypertonus", trimester: 2, name: "Гипертонус / спазм", curable: true, desc: "Живот становится каменным, сопровождается болью в пояснице." },
         { id: "preeclampsia", trimester: 3, name: "Преэклампсия (гестоз)", curable: true, desc: "Сильные отеки, головная боль, мушки перед глазами." }
     ],
     en: [
         { id: "toxicosis_severe", trimester: 1, name: "Severe Morning Sickness", curable: true, desc: "Persistent nausea and exhaustion." },
         { id: "miscarriage_threat_early", trimester: 1, name: "Threatened Miscarriage (Early)", curable: true, desc: "Lower abdominal cramping, spotting." },
         { id: "anemia_early", trimester: 1, name: "Iron Deficiency Anemia", curable: true, desc: "Pale skin, dizziness, fatigue." },
-        { id: "hypertonus", trimester: 2, name: "Hypertonus / Oviduct Spasm", curable: true, desc: "Abdomen hardens into a tight knot, lower back strain." },
+        { id: "hypertonus", trimester: 2, name: "Hypertonus / Muscle Spasm", curable: true, desc: "Abdomen hardens into a tight knot, lower back strain." },
         { id: "preeclampsia", trimester: 3, name: "Preeclampsia", curable: true, desc: "Severe swelling, blurred vision, high blood pressure." }
     ]
 };
@@ -315,7 +315,7 @@ export const FETAL_DISEASES = {
         { id: "spina_bifida", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Спина бифида (расщепление позвоночника)", desc: "Дефект позвоночного канала." },
         { id: "polydactyly", type: "prenatal", discoveryWeek: 14, abortionIndicated: false, name: "Полидактилия (дополнительные пальчики)", desc: "Легко оперируется." },
         { id: "heterochromia", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Врождённая гетерохромия", desc: "Разный цвет радужки глаз. Безвредная изюминка." },
-        { id: "albinism", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Альбинизм", desc: "Белоснежная кожа/чешуя и светлые глаза." }
+        { id: "albinism", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Альбинизм", desc: "Белоснежная кожа и светлые глаза." }
     ],
     en: [
         { id: "down_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Down Syndrome (Trisomy 21)", desc: "Genetic condition." },
