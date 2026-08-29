@@ -387,6 +387,7 @@ function bindGlobalEvents() {
         refreshUI();
     });
 
+    // Переключение системы: сразу ставит правильную длину цикла (90 для яйцекладки, 28 для остальных)
     $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
         const entity = getChatData()[getActiveEntityKey()];
         entity.mode = $(this).val(); 
@@ -434,8 +435,9 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
-    // ОБРАБОТЧИК КЛИКА: Тест / Проверка на беременность
-    $(document).off('click', '#repro-btn-take-test').on('click', function() {
+    // ИСПРАВЛЕННЫЙ КЛИК НА ТЕСТ: срабатывает СТРОГО по кнопке #repro-btn-take-test
+    $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function(e) {
+        e.stopPropagation();
         const entity = getChatData()[getActiveEntityKey()];
         processEntityPregnancyTest(entity, settings.aiAwareness, settings.language || 'ru', logReproEvent, notify);
         saveSettingsDebounced();
@@ -443,7 +445,8 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
+    $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function(e) {
+        e.stopPropagation();
         if (confirm("Прервать вынашивание? / Terminate gestation?")) {
             processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
             saveSettingsDebounced();
@@ -452,7 +455,8 @@ function bindGlobalEvents() {
         }
     });
 
-    $(document).off('click', '#repro-btn-birth-trigger').on('click', '#repro-btn-birth-trigger', function() {
+    $(document).off('click', '#repro-btn-birth-trigger').on('click', '#repro-btn-birth-trigger', function(e) {
+        e.stopPropagation();
         const entity = getChatData()[getActiveEntityKey()];
         if (entity.mode === 'oviposition') {
             layEntityClutch(entity, settings.language, logReproEvent, notify);
@@ -464,7 +468,8 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    $(document).off('click', '#repro-btn-hatch-trigger').on('click', '#repro-btn-hatch-trigger', function() {
+    $(document).off('click', '#repro-btn-hatch-trigger').on('click', '#repro-btn-hatch-trigger', function(e) {
+        e.stopPropagation();
         const entity = getChatData()[getActiveEntityKey()];
         hatchEntityClutch(entity, settings.language, logReproEvent, notify);
         saveSettingsDebounced();
@@ -472,7 +477,8 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    $(document).off('click', '#repro-export-logs').on('click', '#repro-export-logs', function() {
+    $(document).off('click', '#repro-export-logs').on('click', '#repro-export-logs', function(e) {
+        e.stopPropagation();
         exportReproLogs({
             data: getChatData(),
             chatId: getCurrentChatId(),
@@ -481,7 +487,8 @@ function bindGlobalEvents() {
         });
     });
 
-    $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
+    $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function(e) {
+        e.stopPropagation();
         const root = $(this).closest('#repro-content-wrapper');
         const data = getChatData();
         const entity = data[getActiveEntityKey()];
@@ -511,7 +518,8 @@ function bindGlobalEvents() {
         notify(getText('toastSaved', settings.language), 'success');
     });
 
-    $(document).off('click', '#repro-btn-manual-preg').on('click', '#repro-btn-manual-preg', function() {
+    $(document).off('click', '#repro-btn-manual-preg').on('click', '#repro-btn-manual-preg', function(e) {
+        e.stopPropagation();
         const root = $(this).closest('#repro-content-wrapper');
         const entity = getChatData()[getActiveEntityKey()];
         const weeks = parseInt(root.find('#repro-manual-weeks').val(), 10) || 0;
@@ -536,7 +544,8 @@ function bindGlobalEvents() {
         notify(`${getText('toastManualPreg', settings.language)}${weeks}w ${days}d`, 'success');
     });
 
-    $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
+    $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function(e) {
+        e.stopPropagation();
         const entity = getChatData()[getActiveEntityKey()];
         entity.isPregnant = false; 
         entity.isDiscovered = false;
@@ -557,7 +566,8 @@ function bindGlobalEvents() {
         updatePrompt(); 
     });
 
-    $(document).off('click', '#repro-reset').on('click', '#repro-reset', function() {
+    $(document).off('click', '#repro-reset').on('click', '#repro-reset', function(e) {
+        e.stopPropagation();
         if (confirm("Полностью сбросить репродуктивные данные этого чата? / Reset all chat data?")) {
             const chatId = getCurrentChatId();
             settings.chatPregnancyData[chatId] = {
