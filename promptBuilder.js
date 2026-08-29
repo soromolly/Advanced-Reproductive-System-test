@@ -7,9 +7,9 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
 
     if (entity.isIncubating) {
         const incData = getIncubationStageData(entity.incubationDays, 'en');
-        p += `Status: EXTERNAL CLUTCH INCUBATION (Day ${entity.incubationDays}/70) | Brooding Nest Phase.\n`;
-        p += `Clutch Overview: Carrying/brooding a nest of ${entity.laidClutchCount} calcified eggs. Status: ${incData.stage} (${incData.desc}).\n`;
-        p += `Brooding Instincts: ${macroName} possesses an intense biological urge to warm and defend the clutch from cold and threats.\n`;
+        p += `Status: EXTERNAL CLUTCH INCUBATION (Day ${entity.incubationDays}/70) | Brooding Phase.\n`;
+        p += `Clutch Overview: Brooding a nest clutch of ${entity.laidClutchCount} eggs. Stage: ${incData.stage} (${incData.desc}).\n`;
+        p += `Brooding Instincts: ${macroName} experiences an intense biological drive to keep the clutch warmed and safely defended.\n`;
         
         if (entity.incubationDays >= 70) {
             const tagSuffix = entity.key.toUpperCase();
@@ -22,7 +22,7 @@ If the eggs in the nest hatch in this response, append tag at the very end:
 
     if (entity.postpartumDays > 0) {
         const pData = getPostpartumData(entity.postpartumDays, entity.deliveryMethod, 'en');
-        p += `Status: POST-DELIVERY / RECOVERY PHASE (Day ${entity.postpartumDays}) | Event: ${entity.deliveryMethod.toUpperCase()}\n`;
+        p += `Status: RECOVERY PHASE (Day ${entity.postpartumDays}) | Event Outcome: ${entity.deliveryMethod.toUpperCase()}\n`;
         p += `Physical Condition: ${pData.desc}\n`;
         return p;
     }
@@ -31,17 +31,17 @@ If the eggs in the nest hatch in this response, append tag at the very end:
 
     if (isRevealedPregnancy) {
         if (entity.mode === 'oviposition') {
-            p += `Status: INTERNAL CLUTCH GESTATION (Oviduct) | Term: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
+            p += `Status: INTERNAL CLUTCH GESTATION | Term: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
             const eggData = getFetusData(entity.pregnancyWeeks, 'en', 'oviposition');
-            p += `Oviduct Content: ${entity.babiesCount} forming eggs. Egg Status: ${eggData.size} (${eggData.weight}). Belly: ${eggData.belly}. ${eggData.desc}\n`;
+            p += `Oviduct Content: ${entity.babiesCount} developing eggs. Egg Status: ${eggData.size} (${eggData.weight}). Belly: ${eggData.belly}. ${eggData.desc}\n`;
             
             const symptomsEn = getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
             if (symptomsEn.length > 0) p += `Current Oviduct Symptoms: ${symptomsEn.join(', ')}.\n`;
 
             if (aiAwareness === 'hidden') {
-                p += `[MEDIEVAL LOGIC]: Exact egg count will be revealed upon laying (oviposition). Sex and inner features are completely hidden until hatching.\n`;
+                p += `[MEDIEVAL LOGIC]: Exact egg count is revealed upon oviposition (laying). Sex and inner traits are completely hidden until hatching.\n`;
             } else if (aiAwareness === 'dynamic') {
-                p += `[CLINICAL ULTRASOUND]: Scan detects EXACTLY ${entity.babiesCount} EGGS inside oviduct. Internal embryo sex remains shielded by calcified eggshells until late incubation.\n`;
+                p += `[CLINICAL ULTRASOUND]: Scan confirms EXACTLY ${entity.babiesCount} EGGS inside the oviduct. Internal embryo sex is shielded by calcified eggshells until late incubation.\n`;
             } else {
                 p += `[OMNISCIENCE]: Carrying ${entity.babiesCount} eggs. Sexes: ${entity.babiesGenders.map(g => translateGender(g, 'en')).join(', ')}.\n`;
             }
@@ -137,7 +137,7 @@ If ${macroName} gives birth in this response, append tag at the very end:
         } else {
             // Oviposition
             if (entity.cycleDay <= periodDays) {
-                p += `Current Status: CLOACAL HEAT / FERTILE OVIDUCT SWELLING (Day ${entity.cycleDay}/${periodDays}) | Peak Fertility Window.\n`;
+                p += `Current Status: FERTILE OVIDUCT SWELLING / HEAT (Day ${entity.cycleDay}/${periodDays}) | Peak Fertility Window.\n`;
             } else {
                 p += `Current Status: REST PHASE (Day ${entity.cycleDay}/${baseCycle}). Oviduct empty and calm.\n`;
             }
@@ -165,8 +165,8 @@ export function buildMultiEntityPrompt({ targetMode, userEntity, charEntity, aiA
 
     fullPrompt += `\n🚨 EJACULATION / CLIMAX LOGGING DIRECTIVE FOR {{char}}:
 At the absolute end of the response, append exactly one tag IF climax occurred inside someone:
-- Inside {{user}} vagina/cloaca: <!--CUM_VAGINAL_USER--> | anus: <!--CUM_ANAL_USER-->
-- Inside {{char}} vagina/cloaca: <!--CUM_VAGINAL_CHAR--> | anus: <!--CUM_ANAL_CHAR-->\n`;
+- Inside {{user}} vagina/tract: <!--CUM_VAGINAL_USER--> | anus: <!--CUM_ANAL_USER-->
+- Inside {{char}} vagina/tract: <!--CUM_VAGINAL_CHAR--> | anus: <!--CUM_ANAL_CHAR-->\n`;
 
     return fullPrompt;
 }
