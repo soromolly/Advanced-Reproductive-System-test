@@ -173,7 +173,6 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
     const chatId = getCurrentChatId();
     const msgKey = `${chatId}_${messageIndex}_birth`;
 
-    // Вырезаем блоки мыслей бота перед чтением тегов
     const text = (rawText || '')
         .replace(/<think[\s\S]*?<\/think>/gi, ' ')
         .replace(/<thought[\s\S]*?<\/thought>/gi, ' ');
@@ -205,7 +204,7 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
             const regex = new RegExp(`<!--\\s*BIRTH_(NATURAL|C_SECTION)_${tagKey}(?:_(\\d+))?\\s*-->`, 'gi');
             let match;
             while ((match = regex.exec(text)) !== null) {
-                if (!entity.isPregnant) break; // Прерываем цикл, когда все дети родились
+                if (!entity.isPregnant) break;
                 const method = match[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural';
                 deliverEntitySingleBaby(entity, method, settings.language, logReproEvent, notify);
             }
@@ -403,6 +402,30 @@ function bindGlobalEvents() {
     $(document).off('change', '#repro-fetal-pathology-enabled').on('change', '#repro-fetal-pathology-enabled', function() {
         getChatData()[getActiveEntityKey()].isFetalPathologyEnabled = $(this).is(':checked');
         saveSettingsDebounced();
+    });
+
+    // Редактирование имени ребенка
+    $(document).off('click', '.repro-edit-child-name-btn').on('click', '.repro-edit-child-name-btn', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const childId = $(this).attr('data-child-id');
+        const entity = getChatData()[getActiveEntityKey()];
+        const child = entity.childrenList?.find(c => String(c.id) === String(childId));
+        if (!child) return;
+
+        const lang = settings.language || 'ru';
+        const currentName = child.name || '';
+        const promptMsg = getText('editChildNamePrompt', lang);
+        const newName = window.prompt(promptMsg, currentName);
+
+        if (newName !== null) {
+            child.name = newName.trim();
+            logReproEvent(`[CHILD RENAMED] [${entity.key.toUpperCase()}] Child ID ${child.id} named: "${child.name || 'unnamed'}"`);
+            saveSettingsDebounced();
+            refreshUI();
+            updatePrompt();
+            notify(lang === 'en' ? 'Child name updated!' : 'Имя ребенка обновлено!', 'success');
+        }
     });
 
     $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
