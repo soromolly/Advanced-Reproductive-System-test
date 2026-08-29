@@ -58,13 +58,27 @@ export function rollNewCycleTarget(entity) {
     
     const roll = Math.random() * 100;
     let variance = 0;
-    if (roll < 65) {
-        variance = Math.floor(Math.random() * 3) - 1;
-    } else if (roll < 90) {
-        variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2;
+
+    if (entity.mode === 'oviposition') {
+        // Колебания для длительного цикла яйцекладки (базово 90 дней)
+        if (roll < 60) {
+            variance = Math.floor(Math.random() * 7) - 3; // -3...+3 дня
+        } else if (roll < 85) {
+            variance = Math.random() > 0.4 ? (Math.floor(Math.random() * 8) + 4) : -5; // +4...+11 или -5 дней
+        } else {
+            variance = Math.floor(Math.random() * 10) + 9; // +9...+18 дней
+        }
     } else {
-        variance = Math.floor(Math.random() * 8) + 5;
+        // Колебания для человека / омегаверса (базово 28 дней)
+        if (roll < 65) {
+            variance = Math.floor(Math.random() * 3) - 1; // -1...+1 день
+        } else if (roll < 90) {
+            variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2; // +2...+5 или -2 дня
+        } else {
+            variance = Math.floor(Math.random() * 7) + 6; // +6...+12 дней
+        }
     }
+    
     return Math.max((entity.periodDuration || 5) + 6, base + variance);
 }
 
@@ -98,7 +112,7 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     }
 
     const day = entity.cycleDay;
-    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || 28;
+    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
     const periodDays = entity.periodDuration || 5;
 
     if (entity.mode === 'realism') {
@@ -154,7 +168,7 @@ export function updateEntitySymptoms(entity) {
         }
     } else {
         const day = entity.cycleDay;
-        const targetLength = entity.currentCycleTargetLength || entity.cycleLength || 28;
+        const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
         const periodDays = entity.periodDuration || 5;
 
         if (entity.mode === 'realism') {
@@ -341,7 +355,6 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.isIncubating = false;
 
     if (entity.mode === 'oviposition') {
-        // Случайное число яиц от 2 до 7
         entity.babiesCount = Math.floor(Math.random() * 6) + 2;
         entity.maxPregnancyWeeks = 6;
     } else {
