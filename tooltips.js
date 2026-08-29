@@ -1,29 +1,29 @@
 export const TOOLTIPS = {
     ru: {
-        secretConception: "При включении зачатие происходит тайно: кубик бросается скрыто без спойлерных уведомлений. В первые недели цикл отображается как обычно, симптомы и плод/яйца скрыты в UI и промпте. Беременность раскрывается при проверке или автоматически со временем (для яиц — на 3-й неделе из-за их плотности).",
-        irregularCycle: "Включает естественные колебания цикла (от -1 до +12 дней). Создает реалистичные задержки без беременности, имитируя гормональные колебания.",
-        mode: "«Реализм» — стандартный человеческий женский цикл (40 акушерских недель). «ОмегаВерс» — течка с 1-го дня цикла, срок 36 недель и мужская беременность. «Яйцекладка» — бисексуальное драконье вынашивание 2–7 яиц в яйцеводе (6 недель), завершающееся кладкой и высиживанием.",
-        physiology: "Биологическое строение персонажа. В Реализме — Женщина. В Омегаверсе — Женщина-Омега и Мужчина-Омега. В Яйцекладке — Женщина и Мужчина (оба имеют клоаку и яйцевод для вынашивания).",
-        aiAwareness: "«Современность» — поэтапное раскрытие (УЗИ/пальпация). «Средневековье» — число детей/яиц и особенности скрыты до родов/кладки. «Всеведение» — боту сразу открыты все параметры с момента зачатия.",
-        contraception: "Метод защиты. «Презерватив» снижает шанс до ~2%, «КОК» до 0.1%, «ВМС» до 0.2%. Без защиты в фертильное окно шанс максимален.",
-        fetalPathology: "Включает шанс возникновения патологий развития, дефектов скорлупы или замирания.",
-        rpDate: "Текущая дата в сюжете ролевой игры (форматы ДД.ММ.ГГГГ, ISO или текст).",
-        cycleLength: "Базовая длительность цикла в днях (по умолчанию 28).",
-        periodDuration: "Количество дней кровотечения при менструации, течки у омег или гона у драконидов.",
-        maxWeeks: "Максимальный срок вынашивания плода/кладки (40 нед. для Реализма, 36 для Омегаверса, 6 для Яйцекладки)."
+        secretConception: "При включении зачатие происходит тайно: кубик бросается скрыто без спойлерных уведомлений. В первые недели цикл отображается как обычно, симптомы и плод/яйца скрыты в UI и промпте. Беременность раскрывается при проверке/тесте или автоматически со временем.",
+        irregularCycle: "Включает естественные колебания цикла. Создает реалистичные задержки без зачатия, имитируя гормональные сбои и внешние факторы.",
+        mode: "«Реализм» — стандартный женский цикл (40 недель). «ОмегаВерс» — течка, 36 недель и омеги. «Яйцекладка» — 6 недель внутреннего вынашивания яиц (2-7 шт.) в яйцеводе с последующей откладкой в гнездо и инкубацией.",
+        physiology: "Анатомия персонажа. В Реализме — Женщина. В Омегаверсе — Женщина-Омега и Мужчина-Омега. В Яйцекладке — Женщина и Мужчина (оба имеют яйцевод и клоаку для вынашивания и откладки яиц).",
+        aiAwareness: "«Современность» — поэтапное раскрытие на УЗИ (в яйцеводе видно количество яиц 2-7 шт., а пол и патологии раскрываются в гнезде/при вылуплении). «Средневековье» — число яиц видно только при откладке, пол и патологии — при вылуплении. «Всеведение» — все известно сразу.",
+        contraception: "Метод защиты от зачатия. Презерватив (~2%), оральные блокаторы/КОК (~0.1%), внутриматочные спирали (~0.2%).",
+        fetalPathology: "Шанс возникновения пороков плода, хрупкости скорлупы или замирания зародыша. Данные скрыты от игрока до момента диагностики на скрининге или вылупления.",
+        rpDate: "Текущая дата в сюжете ролевой игры (ДД.ММ.ГГГГ, ISO или текст).",
+        cycleLength: "Базовая длительность цикла в днях (28 для людей, 90-120 для яйцекладущих).",
+        periodDuration: "Количество дней менструации, течки или активного окна яйцекладки.",
+        maxWeeks: "Максимальный срок внутреннего вынашивания плода/яиц (40 нед для Реализма, 36 для Омегаверса, 6 для Яйцекладки)."
     },
     en: {
-        secretConception: "When enabled, conception occurs secretly without spoiler notifications. Early weeks show regular cycle, hiding symptoms and fetus/eggs from UI and AI. Discovered via check or automatically over time (week 3 for eggs due to tactile firmness).",
-        irregularCycle: "Enables natural cycle fluctuations (-1 to +12 days), simulating realistic cycle delays.",
-        mode: "«Realism» — human female cycle (40 weeks). «OmegaVerse» — heat on day 1, 36-week term, male pregnancy. «Oviposition» — draconis egg gestation (6 weeks in oviduct, 2-7 eggs clutch), followed by laying and nest brooding.",
-        physiology: "Biological anatomy. In Realism — Female. In Omegaverse — F-Omega/M-Omega. In Oviposition — Female/Male (both possess oviduct and cloaca for laying).",
-        aiAwareness: "«Modernity» — phased discovery via scans/palpation. «Medieval (Blind)» — headcount and features hidden until birth/laying. «Omniscience» — AI knows all parameters immediately.",
-        contraception: "Birth control method: Condom (~2%), Pills (0.1%), IUD (0.2%), None (highest chance).",
-        fetalPathology: "Enables congenital anomalies, shell calcification defects, or embryonic arrest.",
-        rpDate: "In-character roleplay date (supports DD.MM.YYYY, ISO, and natural text).",
-        cycleLength: "Base cycle duration in days (default 28).",
-        periodDuration: "Duration of menstrual bleeding, Omega heat, or Draconis rut window.",
-        maxWeeks: "Full gestation term (40 wks for Realism, 36 for Omegaverse, 6 for Oviposition)."
+        secretConception: "When enabled, conception occurs secretly: dice rolls are hidden without spoiler notifications. Discovered via test/check or automatically over time.",
+        irregularCycle: "Enables natural cycle fluctuations, simulating realistic delays, hormonal variance, and stress.",
+        mode: "«Realism» — human female cycle (40 wks). «OmegaVerse» — Heat cycle, 36 wks, male pregnancy. «Oviposition» — 6-week internal oviduct egg gestation (2-7 eggs) followed by nest incubation.",
+        physiology: "Reproductive anatomy. Realism: Female. Omegaverse: F-Omega / M-Omega. Oviposition: Female / Male (both have oviducts & cloaca for egg-bearing).",
+        aiAwareness: "«Modernity» — phased discovery (ultrasound counts eggs in oviduct; sex and anomalies revealed during brooding/hatching). «Medieval» — headcount known at laying, sex/conditions at hatching. «Omniscience» — all known from conception.",
+        contraception: "Birth control method. Condoms (~2%), Pills (~0.1%), IUD/Blockers (~0.2%).",
+        fetalPathology: "Enables congenital anomalies, eggshell defects, and embryonic demise risks.",
+        rpDate: "In-character roleplay date (DD.MM.YYYY, ISO, textual).",
+        cycleLength: "Base reproductive cycle duration in days (28 for human, 90-120 for oviposition).",
+        periodDuration: "Duration of menstrual bleeding, heat, or dragon fertile window.",
+        maxWeeks: "Internal gestational duration before delivery or oviposition (40 wks Realism, 36 wks Omegaverse, 6 wks Oviposition)."
     }
 };
 
