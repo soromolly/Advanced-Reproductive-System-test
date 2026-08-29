@@ -56,7 +56,7 @@ function getChatData() {
     const chatId = getCurrentChatId();
     if (!settings.chatPregnancyData[chatId]) {
         settings.chatPregnancyData[chatId] = {
-            targetMode: 'user', // 'user' | 'char' | 'both'
+            targetMode: 'user',
             lastRpDate: null,
             activityLogs: [],
             user: createDefaultEntityState('user'),
@@ -65,12 +65,6 @@ function getChatData() {
     }
     activeChatId = chatId;
     const data = settings.chatPregnancyData[chatId];
-    
-    if (data.cycleDay !== undefined && !data.user) {
-        data.user = Object.assign(createDefaultEntityState('user'), data);
-        data.char = createDefaultEntityState('char');
-        data.targetMode = 'user';
-    }
     if (!data.user) data.user = createDefaultEntityState('user');
     if (!data.char) data.char = createDefaultEntityState('char');
     if (!data.targetMode) data.targetMode = 'user';
@@ -142,11 +136,13 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
 
     settings.globalRollsCount = (settings.globalRollsCount || 0) + 1;
     const phase = getEntityBodyPhase(entity, 'en');
-    const isFertile = phase.includes('Ovulation') || phase.includes('Heat');
+    const isFertile = phase.includes('Ovulation') || phase.includes('Heat') || phase.includes('Rut');
 
     let finalChance = 0;
     if (entity.contraception === 'none') {
-        finalChance = isFertile ? (entity.mode === 'omegaverse' ? 85 : 25) : (entity.mode === 'omegaverse' ? 5 : 0.5);
+        if (entity.mode === 'oviposition') finalChance = isFertile ? 85 : 8;
+        else if (entity.mode === 'omegaverse') finalChance = isFertile ? 85 : 5;
+        else finalChance = isFertile ? 25 : 0.5;
     } else if (entity.contraception === 'condom') finalChance = 2;
     else if (entity.contraception === 'pills') finalChance = 0.1;
     else if (entity.contraception === 'iud') finalChance = 0.2;
@@ -155,15 +151,15 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
     const isSuccess = roll <= finalChance;
     const lang = settings.language || 'ru';
 
-    logReproEvent(`[CONCEPTION ROLL] [${entity.key.toUpperCase()}] Roll: ${roll.toFixed(2)}% <= ${finalChance}% | Outcome: ${isSuccess ? 'SUCCESS' : 'MISSED'}`);
+    logReproEvent(`[CONCEPTION/FERTILIZATION ROLL] [${entity.key.toUpperCase()}] Roll: ${roll.toFixed(2)}% <= ${finalChance}% | Outcome: ${isSuccess ? 'SUCCESS' : 'MISSED'}`);
 
     if (isSuccess) {
         if (!entity.isSecretConception) {
-            notify(`🎲 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Conception Roll SUCCESS!' : 'Кубик на зачатие: УСПЕХ!'} (${roll.toFixed(1)}% <= ${finalChance}%)`, 'success');
+            notify(`🎲 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Fertilization SUCCESS!' : 'Кубик на зачатие/оплодотворение: УСПЕХ!'} (${roll.toFixed(1)}% <= ${finalChance}%)`, 'success');
         }
         triggerEntityPregnancy(entity, lang, logReproEvent, notify);
     } else if (!entity.isSecretConception) {
-        notify(`🎲 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Conception Roll Missed.' : 'Кубик на зачатие: Мимо.'} (${roll.toFixed(1)}% > ${finalChance}%)`, 'info');
+        notify(`🎲 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Roll Missed.' : 'Кубик на зачатие: Мимо.'} (${roll.toFixed(1)}% > ${finalChance}%)`, 'info');
     }
 }
 
@@ -172,17 +168,17 @@ function processMessageInteractions(text, isUserMessage, messageIndex) {
     const chatId = getCurrentChatId();
     const msgKey = `${chatId}_${messageIndex}_birth`;
 
-    const cumVagUser = /<!--\s*CUM_VAGINAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_VAGINAL\s*-->/i.test(text));
+    const cumVagUser = /<!--\s*CUM_(?:VAGINAL|CLOACAL)_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_(?:VAGINAL|CLOACAL)\s*-->/i.test(text));
     const cumAnalUser = /<!--\s*CUM_ANAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_ANAL\s*-->/i.test(text));
-    const cumVagChar = /<!--\s*CUM_VAGINAL_CHAR\s*-->/i.test(text);
+    const cumVagChar = /<!--\s*CUM_(?:VAGINAL|CLOACAL)_CHAR\s*-->/i.test(text);
     const cumAnalChar = /<!--\s*CUM_ANAL_CHAR\s*-->/i.test(text);
 
     if (data.targetMode === 'user' || data.targetMode === 'both') {
-        const isTargetClimax = (data.user.gender === 'male_omega') ? cumAnalUser : cumVagUser;
+        const isTargetClimax = (data.user.gender === 'male_omega') ? cumAnalUser : (cumVagUser || cumAnalUser);
         checkConceptionForEntity(data.user, text, isTargetClimax);
     }
     if (data.targetMode === 'char' || data.targetMode === 'both') {
-        const isTargetClimax = (data.char.gender === 'male_omega') ? cumAnalChar : cumVagChar;
+        const isTargetClimax = (data.char.gender === 'male_omega') ? cumAnalChar : (cumVagChar || cumAnalChar);
         checkConceptionForEntity(data.char, text, isTargetClimax);
     }
 
@@ -196,10 +192,10 @@ function processMessageInteractions(text, isUserMessage, messageIndex) {
     if (!processedBirthMessages.has(msgKey)) {
         const checkBirthFor = (entity, tagKey) => {
             if (!entity.isPregnant || entity.babiesGenders.length === 0) return;
-            const regex = new RegExp(`<!--\\s*BIRTH_(NATURAL|C_SECTION)_${tagKey}(?:_(\\d+))?\\s*-->`, 'gi');
+            const regex = new RegExp(`<!--\\s*(?:BIRTH_(NATURAL|C_SECTION)|EGG_LAYING)_${tagKey}(?:_(\\d+))?\\s*-->`, 'gi');
             let match;
             while ((match = regex.exec(text)) !== null) {
-                const method = match[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural';
+                const method = match[1]?.toLowerCase() === 'c_section' ? 'c_section' : 'natural';
                 deliverEntitySingleBaby(entity, method, settings.language, logReproEvent, notify);
             }
         };
@@ -238,7 +234,6 @@ function processIncomingMessage(messageIndex, isUser = false) {
     const data = getChatData();
 
     if (isUser) {
-        // ТОЛЬКО ДЛЯ СООБЩЕНИЙ ПОЛЬЗОВАТЕЛЯ: относительные таймскипы ("прошло 3 недели")
         const relativeDays = parseRelativeDaysFromText(text);
         if (relativeDays > 0) {
             pendingUserTimeskipDays = relativeDays;
@@ -248,7 +243,7 @@ function processIncomingMessage(messageIndex, isUser = false) {
                 const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
                 data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
             }
-            logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via user message.`);
+            logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days.`);
         } else {
             const parsedDate = parseRpDateFromText(text);
             if (parsedDate) {
@@ -260,32 +255,28 @@ function processIncomingMessage(messageIndex, isUser = false) {
                     const diff = newTotalDays - prevTotalDays;
                     if (diff > 0) {
                         advanceTimeAll(diff);
-                        logReproEvent(`[USER DATE SYNC] Date changed from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
+                        logReproEvent(`[USER DATE SYNC] Synced to ${newDateStr} (+${diff} days).`);
                     }
                 }
                 data.lastRpDate = newDateStr;
             }
         }
     } else {
-        // ДЛЯ СООБЩЕНИЙ ИИ: считываем СТРОГО дату из хедера/плашки.
-        // Никакие слова "три недели" из мыслей или диалогов бота не перематывают время!
         const parsedDate = parseRpDateFromText(text);
         if (parsedDate) {
             const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
             const newDateStr = daysToDateString(newTotalDays);
 
             if (pendingUserTimeskipDays > 0) {
-                // Таймскип уже был применен в сообщении юзера, просто выравниваем дату
                 pendingUserTimeskipDays = 0;
                 data.lastRpDate = newDateStr;
-                logReproEvent(`[AI DATE ALIGN] Aligned date to ${newDateStr} after user timeskip.`);
             } else if (data.lastRpDate && data.lastRpDate !== newDateStr) {
                 const parts = data.lastRpDate.split('-').map(Number);
                 const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
                 const diff = newTotalDays - prevTotalDays;
                 if (diff > 0) {
                     advanceTimeAll(diff);
-                    logReproEvent(`[AI DATE SYNC] Synced from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
+                    logReproEvent(`[AI DATE SYNC] Synced to ${newDateStr} (+${diff} days).`);
                     notify(`${getText('toastTimePassed', settings.language || 'ru')}${diff}.`, 'info');
                 }
                 data.lastRpDate = newDateStr;
@@ -370,8 +361,16 @@ function bindGlobalEvents() {
     $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
         const entity = getChatData()[getActiveEntityKey()];
         entity.mode = $(this).val(); 
-        if (entity.mode === 'realism') entity.gender = 'female';
-        else if (entity.mode === 'omegaverse' && entity.gender === 'female') entity.gender = 'female_omega';
+        if (entity.mode === 'oviposition') {
+            entity.gender = 'female_oviposition';
+            entity.maxPregnancyWeeks = 6;
+        } else if (entity.mode === 'omegaverse') {
+            entity.gender = 'female_omega';
+            entity.maxPregnancyWeeks = 36;
+        } else {
+            entity.gender = 'female';
+            entity.maxPregnancyWeeks = 40;
+        }
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
@@ -384,31 +383,35 @@ function bindGlobalEvents() {
         updatePrompt(); 
     });
 
-    $(document).off('change', '#repro-awareness').on('change', '#repro-awareness', function() { 
-        settings.aiAwareness = $(this).val(); 
-        saveSettingsDebounced(); 
-        refreshUI(); 
-        updatePrompt(); 
-    });
-
     $(document).off('change', '#repro-contraception').on('change', '#repro-contraception', function() {
         getChatData()[getActiveEntityKey()].contraception = $(this).val();
         saveSettingsDebounced();
         updatePrompt();
     });
 
-    $(document).off('change', '#repro-fetal-pathology-enabled').on('change', '#repro-fetal-pathology-enabled', function() {
-        getChatData()[getActiveEntityKey()].isFetalPathologyEnabled = $(this).is(':checked');
+    $(document).off('click', '#repro-btn-birth-trigger').on('click', '#repro-btn-birth-trigger', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        while (entity.babiesGenders.length > 0) {
+            deliverEntitySingleBaby(entity, 'natural', settings.language, logReproEvent, notify);
+        }
         saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
     });
 
-    $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
-        if (confirm("Подтвердить прерывание беременности? / Confirm abortion?")) {
-            processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
-            saveSettingsDebounced();
-            refreshUI();
-            updatePrompt();
+    $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        const lang = settings.language || 'ru';
+        if (entity.isPregnant) {
+            entity.isDiscovered = true;
+            const msg = entity.mode === 'oviposition' ? `${getText('toastEggsFound', lang)}${entity.babiesCount}` : `${getText('toastTestPositive', lang)}${entity.pregnancyWeeks}w`;
+            notify(msg, 'success');
+        } else {
+            notify(getText('toastTestNegative', lang), 'info');
         }
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
     });
 
     $(document).off('click', '#repro-export-logs').on('click', '#repro-export-logs', function() {
@@ -427,7 +430,7 @@ function bindGlobalEvents() {
         
         entity.cycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || 28;
         entity.periodDuration = parseInt(root.find('#repro-input-period').val(), 10) || 5;
-        entity.maxPregnancyWeeks = parseInt(root.find('#repro-input-maxweeks').val(), 10) || 40;
+        entity.maxPregnancyWeeks = parseInt(root.find('#repro-input-maxweeks').val(), 10) || (entity.mode === 'oviposition' ? 6 : 40);
         
         const manualDateVal = root.find('#repro-input-rpdate').val();
         const normalized = normalizeInputDate(manualDateVal);
@@ -454,7 +457,7 @@ function bindGlobalEvents() {
         const entity = getChatData()[getActiveEntityKey()];
         const weeks = parseInt(root.find('#repro-manual-weeks').val(), 10) || 0;
         const days = parseInt(root.find('#repro-manual-days').val(), 10) || 0;
-        const count = parseInt(root.find('#repro-manual-count').val(), 10) || 1;
+        const count = parseInt(root.find('#repro-manual-count').val(), 10) || (entity.mode === 'oviposition' ? 3 : 1);
 
         entity.isPregnant = true; 
         entity.isDiscovered = true;
@@ -470,7 +473,8 @@ function bindGlobalEvents() {
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
-        notify(`${getText('toastManualPreg', settings.language)}${weeks}w ${days}d`, 'success');
+        const toastKey = entity.mode === 'oviposition' ? 'toastManualEggs' : 'toastManualPreg';
+        notify(`${getText(toastKey, settings.language)}${weeks}w ${days}d (${count})`, 'success');
     });
 
     $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
