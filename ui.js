@@ -118,7 +118,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         const maxRecovery = currentEntity.mode === 'oviposition' ? 7 : (currentEntity.deliveryMethod === 'miscarriage' ? 14 : 40);
         
         let outcomeText = lang === 'en' ? 'Natural Delivery' : 'Естественные роды';
-        if (currentEntity.deliveryMethod === 'oviposition_recovery') outcomeText = lang === 'en' ? 'Oviposition (Egg Clutch)' : 'Откладка яиц (Овипозиция)';
+        if (currentEntity.deliveryMethod === 'oviposition_recovery') outcomeText = lang === 'en' ? 'Oviposition' : 'Откладка яиц';
         if (currentEntity.deliveryMethod === 'c_section') outcomeText = lang === 'en' ? 'Cesarean Section' : 'Кесарево сечение';
         if (currentEntity.deliveryMethod === 'miscarriage') outcomeText = lang === 'en' ? 'Loss Recovery' : 'Восстановление / Прерывание';
 
@@ -184,6 +184,8 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         </div>
     ` : '';
 
+    const currentMode = currentEntity.mode || 'realism';
+
     const html = `
         <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
             <span style="color: #f472b6 !important; font-weight: 600;">${getText('title', lang)}</span>
@@ -226,17 +228,17 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-secret-conception" ${currentEntity.isSecretConception ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
                         <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer;">${getText('secretConceptionLabel', lang)}</label>
-                        ${getTooltipHtml('secretConception', lang)}
+                        ${getTooltipHtml('secretConception', lang, currentMode)}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-irregular-cycle" ${currentEntity.isIrregularCycle ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
                         <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer;">${getText('irregularCycleLabel', lang)}</label>
-                        ${getTooltipHtml('irregularCycle', lang)}
+                        ${getTooltipHtml('irregularCycle', lang, currentMode)}
                     </div>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('system', lang)} ${getTooltipHtml('mode', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('system', lang)} ${getTooltipHtml('mode', lang, currentMode)}</label>
                     <select id="repro-mode" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         <option value="realism" ${currentEntity.mode === 'realism' ? 'selected' : ''}>${getText('realism', lang)}</option>
                         <option value="omegaverse" ${currentEntity.mode === 'omegaverse' ? 'selected' : ''}>${getText('omegaverse', lang)}</option>
@@ -245,14 +247,14 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('physiology', lang)} ${getTooltipHtml('physiology', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('physiology', lang)} ${getTooltipHtml('physiology', lang, currentMode)}</label>
                     <select id="repro-gender" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         ${genderOptionsHtml}
                     </select>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('aiLogic', lang)} ${getTooltipHtml('aiAwareness', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('aiLogic', lang)} ${getTooltipHtml('aiAwareness', lang, currentMode)}</label>
                     <select id="repro-awareness" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         <option value="dynamic" ${settings.aiAwareness === 'dynamic' ? 'selected' : ''}>${getText('ultrasound', lang)}</option>
                         <option value="hidden" ${settings.aiAwareness === 'hidden' ? 'selected' : ''}>${getText('medieval', lang)}</option>
@@ -261,7 +263,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('protectionLabel', lang)} ${getTooltipHtml('contraception', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('protectionLabel', lang)} ${getTooltipHtml('contraception', lang, currentMode)}</label>
                     <select id="repro-contraception" ${isCurrentlyPregnantDiscovered || currentEntity.postpartumDays > 0 || currentEntity.isIncubating ? 'disabled' : ''} style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         <option value="none" ${currentEntity.contraception === 'none' ? 'selected' : ''}>${getText('protectionNone', lang)}</option>
                         <option value="condom" ${currentEntity.contraception === 'condom' ? 'selected' : ''}>${getText('protectionCondom', lang)}</option>
@@ -296,7 +298,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 ` : ''}
 
                 ${isCurrentlyPregnantDiscovered ? `
-                    <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${currentEntity.mode === 'oviposition' ? getText('giveBirthBtn', lang) : getText('giveBirthBtn', lang)}</button>
+                    <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('giveBirthBtn', lang)}</button>
                 ` : ''}
 
                 ${currentEntity.isIncubating ? `
@@ -308,22 +310,22 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 ` : ''}
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('rpDateLabel', lang)} ${getTooltipHtml('rpDate', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('rpDateLabel', lang)} ${getTooltipHtml('rpDate', lang, currentMode)}</label>
                     <input type="text" id="repro-input-rpdate" placeholder="ДД.ММ.ГГГГ" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${inputDateValue}"/>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('cycleLengthLabel', lang)} ${getTooltipHtml('cycleLength', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('cycleLengthLabel', lang)} ${getTooltipHtml('cycleLength', lang, currentMode)}</label>
                     <input type="number" id="repro-input-cycle" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleLength || (currentEntity.mode === 'oviposition' ? 90 : 28)}"/>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('periodDurationLabel', lang)} ${getTooltipHtml('periodDuration', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('periodDurationLabel', lang)} ${getTooltipHtml('periodDuration', lang, currentMode)}</label>
                     <input type="number" id="repro-input-period" min="2" max="15" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.periodDuration || 5}"/>
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('maxWeeksLabel', lang)} ${getTooltipHtml('maxWeeks', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('maxWeeksLabel', lang)} ${getTooltipHtml('maxWeeks', lang, currentMode)}</label>
                     <input type="number" id="repro-input-maxweeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.maxPregnancyWeeks || (currentEntity.mode === 'oviposition' ? 6 : (currentEntity.mode === 'omegaverse' ? 36 : 40))}" min="1" max="50"/>
                 </div>
                 
@@ -362,7 +364,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                             <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0;"/>
                             <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel', lang)}</label>
-                            ${getTooltipHtml('fetalPathology', lang)}
+                            ${getTooltipHtml('fetalPathology', lang, currentMode)}
                         </div>
                         <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${getText('startPregnancyBtn', lang)}</button>
                     </div>
