@@ -11,8 +11,10 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const activeEntityKey = (targetMode === 'both') ? activeTab : targetMode;
     const currentEntity = chatData[activeEntityKey];
 
-    const baseCycleDisplay = currentEntity.cycleLength || (currentEntity.mode === 'oviposition' ? 90 : 28);
+    const targetLength = currentEntity.currentCycleTargetLength || currentEntity.cycleLength || (currentEntity.mode === 'oviposition' ? 90 : 28);
     const isCurrentlyPregnantDiscovered = currentEntity.isPregnant && (currentEntity.isDiscovered || !currentEntity.isSecretConception);
+    const isDelayed = !isCurrentlyPregnantDiscovered && currentEntity.cycleDay > targetLength && currentEntity.postpartumDays === 0 && !currentEntity.isIncubating;
+    const delayDaysCount = isDelayed ? (currentEntity.cycleDay - targetLength) : 0;
 
     let displayDate = getText('waitingDate', lang);
     let inputDateValue = '';
@@ -288,12 +290,15 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         ${eddHtml}
                         ${wombMapHtml}
                     ` : `
-                        ${currentEntity.postpartumDays === 0 && !currentEntity.isIncubating ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
+                        ${currentEntity.postpartumDays === 0 && !currentEntity.isIncubating ? `
+                            <div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${targetLength}</div>
+                            ${isDelayed ? `<div style="margin-bottom: 4px; color: #fbbf24;"><strong>${getText('delayLabel', lang)}</strong> <span style="font-weight: 700;">+${delayDaysCount} ${getText('daysShort', lang)}</span></div>` : ''}
+                        ` : ''}
                     `}
                     <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync', lang)} ${displayDate}</div>
                 </div>
 
-                ${(!isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0 && !currentEntity.isIncubating) ? `
+                ${isDelayed ? `
                     <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
                 ` : ''}
 
