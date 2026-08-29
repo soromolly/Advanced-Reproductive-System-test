@@ -324,7 +324,15 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
 
 export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.isPregnant = true;
-    entity.pregnancyDaysTotal = Math.max(14, entity.cycleDay || 14);
+
+    // В Омегаверсе течка начинается с 1-го дня цикла, поэтому срок считается напрямую от 1-го дня течки (от текущего дня цикла)
+    // В Реализме овуляция наступает на ~14 день, поэтому акушерский срок начинается с первого дня последних месячных (+14 дней)
+    if (entity.mode === 'omegaverse') {
+        entity.pregnancyDaysTotal = Math.max(1, entity.cycleDay || 1);
+    } else {
+        entity.pregnancyDaysTotal = Math.max(14, entity.cycleDay || 14);
+    }
+
     entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
     entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
     entity.isDiscovered = !entity.isSecretConception;
@@ -358,7 +366,7 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     }
 
     checkEntityFetalDemise(entity, logFn);
-    logFn?.(`[PREGNANCY INITIATED] [${entity.key.toUpperCase()}] Babies: ${entity.babiesCount} | Diseases: [${entity.babiesDiseases.join(', ')}] | Secret: ${entity.isSecretConception}`);
+    logFn?.(`[PREGNANCY INITIATED] [${entity.key.toUpperCase()}] Mode: ${entity.mode} | Initial Days: ${entity.pregnancyDaysTotal} | Babies: ${entity.babiesCount} | Secret: ${entity.isSecretConception}`);
 
     updateEntitySymptoms(entity);
     if (entity.isDiscovered) {
@@ -382,6 +390,7 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
     entity.childrenList.push({
         id: Date.now() + Math.floor(Math.random() * 1000),
         gender: rawGender,
+        name: '',
         diseaseId: babyDiseaseId
     });
     
