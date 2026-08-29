@@ -23,6 +23,10 @@ export function daysToDateString(days) {
 export function cleanHtmlFromText(text) {
     if (!text) return '';
     return text
+        // Вырезаем блок размышлений ИИ целиком с содержимым
+        .replace(/<think[\s\S]*?<\/think>/gi, ' ')
+        .replace(/<thought[\s\S]*?<\/thought>/gi, ' ')
+        .replace(/```[\s\S]*?```/gi, ' ')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
         .replace(/<[^>]+>/g, ' ')
@@ -57,45 +61,38 @@ export function parseRpDateFromText(rawText) {
     if (!rawText) return null;
     const text = cleanHtmlFromText(rawText);
 
-    const dmyTextRegex = /(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/i;
-    const dmyTextMatch = text.match(dmyTextRegex);
-    if (dmyTextMatch) {
-        const day = parseInt(dmyTextMatch[1], 10);
-        const monthStr = dmyTextMatch[2].toLowerCase();
-        const year = normalizeYear(dmyTextMatch[3]);
-        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
-            return { year, month: MONTHS[monthStr], day };
-        }
-    }
-
-    const mdyTextRegex = /([a-zA-Zа-яёА-ЯЁ]+)\s+(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?[,\s]+(\d{2,4})/i;
-    const mdyTextMatch = text.match(mdyTextRegex);
-    if (mdyTextMatch) {
-        const monthStr = mdyTextMatch[1].toLowerCase();
-        const day = parseInt(mdyTextMatch[2], 10);
-        const year = normalizeYear(mdyTextMatch[3]);
-        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
-            return { year, month: MONTHS[monthStr], day };
-        }
-    }
-
-    const ymdNumRegex = /(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/;
-    const ymdNumMatch = text.match(ymdNumRegex);
-    if (ymdNumMatch) {
-        const year = parseInt(ymdNumMatch[1], 10);
-        const month = parseInt(ymdNumMatch[2], 10) - 1;
-        const day = parseInt(ymdNumMatch[3], 10);
+    // 1. Поиск численного формата даты ДД.ММ.ГГГГ (07.11.2024, 07/11/2024, 07-11-2024)
+    const numMatches = [...text.matchAll(/(?:\b|\D|^)(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})(?:\b|\D|$)/g)];
+    if (numMatches.length > 0) {
+        // Берем последнюю дату из сообщения (актуальную для поста)
+        const match = numMatches[numMatches.length - 1];
+        const day = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const year = normalizeYear(match[3]);
         if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
             return { year, month, day };
         }
     }
 
-    const dmyNumRegex = /(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})/;
-    const dmyNumMatch = text.match(dmyNumRegex);
-    if (dmyNumMatch) {
-        const day = parseInt(dmyNumMatch[1], 10);
-        const month = parseInt(dmyNumMatch[2], 10) - 1;
-        const year = normalizeYear(dmyNumMatch[3]);
+    // 2. Поиск текстовой даты (7 ноября 2024 / 7th November 2024)
+    const textMatches = [...text.matchAll(/(\d{1,2})(?:-?е|-?го|-?th|-?st|-?nd|-?rd)?\s+(?:of\s+)?([a-zA-Zа-яёА-ЯЁ]+)[,\s]+(\d{2,4})/gi)];
+    if (textMatches.length > 0) {
+        const match = textMatches[textMatches.length - 1];
+        const day = parseInt(match[1], 10);
+        const monthStr = match[2].toLowerCase();
+        const year = normalizeYear(match[3]);
+        if (MONTHS[monthStr] !== undefined && day >= 1 && day <= 31) {
+            return { year, month: MONTHS[monthStr], day };
+        }
+    }
+
+    // 3. Поиск формата ISO ГГГГ.ММ.ДД (2024-11-07)
+    const isoMatches = [...text.matchAll(/(\d{3,4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/g)];
+    if (isoMatches.length > 0) {
+        const match = isoMatches[isoMatches.length - 1];
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
         if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
             return { year, month, day };
         }
