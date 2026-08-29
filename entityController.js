@@ -43,7 +43,6 @@ export function createDefaultEntityState(entityKey = 'user') {
         childrenList: [],
         fetalDiseaseId: null,
 
-        // Для инкубации кладки яиц:
         isIncubating: false,
         incubationDays: 0,
         laidClutchCount: 0,
@@ -61,19 +60,19 @@ export function rollNewCycleTarget(entity) {
 
     if (entity.mode === 'oviposition') {
         if (roll < 60) {
-            variance = Math.floor(Math.random() * 7) - 3; // -3...+3 дня
+            variance = Math.floor(Math.random() * 7) - 3;
         } else if (roll < 85) {
             variance = Math.random() > 0.4 ? (Math.floor(Math.random() * 8) + 4) : -5;
         } else {
-            variance = Math.floor(Math.random() * 10) + 9; // +9...+18 дней
+            variance = Math.floor(Math.random() * 10) + 9;
         }
     } else {
         if (roll < 65) {
-            variance = Math.floor(Math.random() * 3) - 1; // -1...+1 день
+            variance = Math.floor(Math.random() * 3) - 1;
         } else if (roll < 90) {
             variance = Math.random() > 0.3 ? (Math.floor(Math.random() * 4) + 2) : -2;
         } else {
-            variance = Math.floor(Math.random() * 7) + 6; // +6...+12 дней
+            variance = Math.floor(Math.random() * 7) + 6;
         }
     }
     
@@ -113,7 +112,6 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
     const periodDays = entity.periodDuration || 5;
 
-    // Расчет дней задержки:
     if (day > targetLength) {
         const delayDays = day - targetLength;
         const delayText = `(+${delayDays} ${getText('daysShort', l)})`;
@@ -206,44 +204,37 @@ export function updateEntitySymptoms(entity) {
     }
 }
 
-// Выполнение проверки беременности (Тест на ХГЧ в современности / Осмотр повитухой в средневековье)
+// Проверка беременности для Реализма и Омегаверса
 export function processEntityPregnancyTest(entity, aiAwareness = 'dynamic', lang = 'ru', logFn, notifyFn) {
     const macroName = entity.key === 'user' ? '{{user}}' : '{{char}}';
-    const targetLength = entity.currentCycleTargetLength || entity.cycleLength || (entity.mode === 'oviposition' ? 90 : 28);
+    const baseCycle = entity.cycleLength || 28;
+    const targetLength = entity.currentCycleTargetLength || baseCycle;
     const delayDays = Math.max(1, entity.cycleDay - targetLength);
 
     if (entity.isPregnant) {
         if (aiAwareness === 'hidden') {
-            // Средневековый осмотр
-            const isEggMode = entity.mode === 'oviposition';
-            const minWeeksForPalpation = isEggMode ? 2 : 6;
-            
-            if (entity.pregnancyWeeks >= minWeeksForPalpation || delayDays >= 14) {
+            // Средневековье: определение по внешним физиологическим признакам
+            if (entity.pregnancyWeeks >= 6 || delayDays >= 14) {
                 entity.isDiscovered = true;
-                const note = isEggMode 
-                    ? `${getText('toastTestPositiveEgg', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)})!`
-                    : `${getText('toastTestPositiveMedieval', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)})!`;
-                logFn?.(`[CHECK CONFIRMED] [${entity.key.toUpperCase()}] Palpation confirmed at week ${entity.pregnancyWeeks}.`);
-                notifyFn?.(`[${macroName}] ${note}`, 'success');
+                logFn?.(`[CHECK POSITIVE] [${entity.key.toUpperCase()}] Medieval signs confirmed (~${entity.pregnancyWeeks} wks).`);
+                notifyFn?.(`[${macroName}] ${getText('toastTestPositiveMedieval', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)})!`, 'success');
             } else {
-                logFn?.(`[CHECK UNCERTAIN] [${entity.key.toUpperCase()}] Medieval check too early (${entity.pregnancyWeeks} wks).`);
+                logFn?.(`[CHECK UNCERTAIN] [${entity.key.toUpperCase()}] Signs not clear yet (<6 wks, delay +${delayDays}d).`);
                 notifyFn?.(`[${macroName}] ${getText('toastTestEarlyMedieval', lang)}`, 'info');
             }
         } else {
-            // Современный тест (ХГЧ) или Всеведение
-            if (delayDays <= 2 && entity.pregnancyWeeks < 4 && Math.random() < 0.3) {
-                // Сомнительный / слабый призрак
-                logFn?.(`[TEST UNCERTAIN] [${entity.key.toUpperCase()}] Early faint line (delay: +${delayDays}d).`);
+            // Современность: аптечный тест на ХГЧ (на 1-2 день задержки есть шанс призрака)
+            if (delayDays <= 2 && entity.pregnancyWeeks < 4 && Math.random() < 0.4) {
+                logFn?.(`[TEST UNCERTAIN] [${entity.key.toUpperCase()}] Faint phantom line (delay +${delayDays}d).`);
                 notifyFn?.(`[${macroName}] ${getText('toastTestUncertain', lang)}`, 'warning');
             } else {
                 entity.isDiscovered = true;
-                logFn?.(`[TEST POSITIVE] [${entity.key.toUpperCase()}] Pregnancy test positive at week ${entity.pregnancyWeeks}.`);
+                logFn?.(`[TEST POSITIVE] [${entity.key.toUpperCase()}] Positive hCG test (${entity.pregnancyWeeks}w ${entity.pregnancyDays}d).`);
                 notifyFn?.(`[${macroName}] ${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}!`, 'success');
             }
         }
     } else {
-        // Беременности нет — просто задержка
-        logFn?.(`[TEST NEGATIVE] [${entity.key.toUpperCase()}] Negative check. Cycle delay: +${delayDays}d.`);
+        logFn?.(`[TEST NEGATIVE] [${entity.key.toUpperCase()}] Negative test result. Delay: +${delayDays}d.`);
         notifyFn?.(`[${macroName}] ${getText('toastTestNegative', lang)} (+${delayDays} ${getText('daysShort', lang)})`, 'info');
     }
 }
@@ -340,6 +331,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
         entity.cycleDay += days;
 
+        // В яйцекладке яйца отвердевают и становятся очевидны на 2-й неделе
         const autoDiscoveryWeek = (entity.mode === 'oviposition') ? 2 : ((aiAwareness === 'hidden') ? 9 : 6);
         if (!entity.isDiscovered && entity.pregnancyWeeks >= autoDiscoveryWeek) {
             entity.isDiscovered = true;
