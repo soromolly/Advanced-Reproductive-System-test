@@ -11,7 +11,7 @@ import { getIncubationStageData } from './oviposition.js';
 export function createDefaultEntityState(entityKey = 'user') {
     return {
         key: entityKey,
-        mode: 'realism', // 'realism' | 'omegaverse' | 'oviposition'
+        mode: 'realism',
         gender: entityKey === 'user' ? 'female' : 'male_omega',
         isSecretConception: true,
         isIrregularCycle: true,
@@ -191,7 +191,7 @@ export function updateEntitySymptoms(entity) {
 }
 
 export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
-    if (entity.mode === 'oviposition') return; // Oviposition handles specific egg pathologies
+    if (entity.mode === 'oviposition') return;
     const isRevealed = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
     if (!isRevealed) return;
 
@@ -241,7 +241,6 @@ export function checkEntityFetalDemise(entity, logFn) {
 }
 
 export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notifyFn) {
-    // Внешняя инкубация кладки (высиживание в гнезде)
     if (entity.isIncubating) {
         entity.incubationDays += days;
         if (entity.incubationDays >= 70) {
@@ -260,7 +259,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
             entity.currentCycleTargetLength = rollNewCycleTarget(entity);
             logFn?.(`[RECOVERY] [${entity.key.toUpperCase()}] Recovery completed. New cycle started.`);
             notifyFn?.(lang === 'en' 
-                ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Postpartum/post-laying recovery complete. Cycle restarted.`
+                ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Recovery complete. Cycle restarted.`
                 : `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Восстановление завершено. Новый цикл запущен.`, 'success');
         }
         return;
@@ -342,7 +341,7 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.isIncubating = false;
 
     if (entity.mode === 'oviposition') {
-        // Случайное число яиц от 2 до 7!
+        // Случайное число яиц от 2 до 7
         entity.babiesCount = Math.floor(Math.random() * 6) + 2;
         entity.maxPregnancyWeeks = 6;
     } else {
@@ -374,7 +373,6 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     }
 }
 
-// Откладка кладки (Oviposition)
 export function layEntityClutch(entity, lang = 'ru', logFn, notifyFn) {
     if (!entity.isPregnant) return;
     
@@ -397,10 +395,9 @@ export function layEntityClutch(entity, lang = 'ru', logFn, notifyFn) {
     entity.deliveryMethod = 'oviposition_recovery';
 
     logFn?.(`[OVIPOSITION] [${entity.key.toUpperCase()}] Laid clutch of ${entity.laidClutchCount} eggs. Incubation started.`);
-    notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `Clutch of ${entity.laidClutchCount} eggs laid into the nest! Incubation begun.` : `Кладка из ${entity.laidClutchCount} яиц успешно отложена в гнездо! Началась инкубация.`}`, 'success');
+    notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `Clutch of ${entity.laidClutchCount} eggs laid into the nest! Incubation begun.` : `Кладка из ${entity.laidClutchCount} яиц успешно отложена! Началась инкубация.`}`, 'success');
 }
 
-// Вылупление кладки
 export function hatchEntityClutch(entity, lang = 'ru', logFn, notifyFn) {
     if (!entity.isIncubating || entity.laidClutchCount === 0) return;
 
@@ -421,8 +418,8 @@ export function hatchEntityClutch(entity, lang = 'ru', logFn, notifyFn) {
     entity.laidClutchGenders = [];
     entity.laidClutchDiseases = [];
 
-    logFn?.(`[HATCHING COMPLETE] [${entity.key.toUpperCase()}] Hatched ${count} hatchlings.`);
-    notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `All ${count} hatchlings have emerged from their shells!` : `Все ${count} детенышей успешно вылупились из скорлупы!`}`, 'success');
+    logFn?.(`[HATCHING COMPLETE] [${entity.key.toUpperCase()}] Hatched ${count} offspring.`);
+    notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `All ${count} hatchlings have emerged from their shells!` : `Все ${count} детенышей успешно вылупились!`}`, 'success');
 }
 
 export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn) {
