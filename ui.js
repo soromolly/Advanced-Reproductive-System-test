@@ -132,14 +132,26 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     let familyHtml = '';
     if (currentEntity.childrenList?.length > 0) {
         familyHtml = `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; text-align: left; font-size: 0.85em;">
-            <strong style="color: #f472b6; display: block; margin-bottom: 6px;">${getText('newbornTitle', lang)}</strong>
+            <strong style="color: #f472b6; display: block; margin-bottom: 8px;">${getText('newbornTitle', lang)}</strong>
             ${currentEntity.childrenList.map((c, i) => {
                 let featureHtml = '';
                 if (c.diseaseId) {
                     const feat = getFetalDisease(c.diseaseId, lang);
                     if (feat) featureHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fcd34d;">• ${getText('congenitalFeatureLabel', lang)} <b>${feat.name}</b></div>`;
                 }
-                return `<div style="margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.08);">👶 ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b>${featureHtml}</div>`;
+                const nameDisplay = (c.name && c.name.trim()) 
+                    ? `<span style="color: #38bdf8; font-weight: 700;">«${c.name.trim()}»</span>` 
+                    : `<span style="opacity: 0.55; font-style: italic;">(${getText('noName', lang)})</span>`;
+
+                return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px dashed rgba(255,255,255,0.08);">
+                    <div style="flex: 1; padding-right: 8px;">
+                        👶 ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}
+                        ${featureHtml}
+                    </div>
+                    <button class="repro-edit-child-name-btn menu_button" data-child-id="${c.id}" title="${lang === 'en' ? 'Edit name' : 'Изменить имя'}" style="padding: 2px 7px; font-size: 11px; height: 24px; min-width: 26px; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: var(--text-color);">
+                        <i class="fa-solid fa-pen" style="pointer-events: none;"></i>
+                    </button>
+                </div>`;
             }).join('')}
         </div>`;
     }
