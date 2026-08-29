@@ -144,7 +144,7 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
 
     settings.globalRollsCount = (settings.globalRollsCount || 0) + 1;
     const phase = getEntityBodyPhase(entity, 'en');
-    const isFertile = phase.includes('Ovulation') || phase.includes('Heat') || phase.includes('CLOACAL');
+    const isFertile = phase.includes('Ovulation') || phase.includes('Heat') || phase.includes('FERTILE');
 
     let finalChance = 0;
     if (entity.contraception === 'none') {
@@ -195,7 +195,6 @@ function processMessageInteractions(text, isUserMessage, messageIndex) {
         if (data.char.isPregnant) processEntityAbortion(data.char, settings.language, logReproEvent, notify);
     }
 
-    // Обработка откладки яиц и родов через теги
     if (!processedBirthMessages.has(msgKey)) {
         const checkBirthFor = (entity, tagKey) => {
             if (/<!--\s*LAY_EGGS_USER\s*-->/i.test(text) && tagKey === 'USER') {
@@ -472,9 +471,9 @@ function bindGlobalEvents() {
         const data = getChatData();
         const entity = data[getActiveEntityKey()];
         
-        entity.cycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || 28;
+        entity.cycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || (entity.mode === 'oviposition' ? 90 : 28);
         entity.periodDuration = parseInt(root.find('#repro-input-period').val(), 10) || 5;
-        entity.maxPregnancyWeeks = parseInt(root.find('#repro-input-maxweeks').val(), 10) || 40;
+        entity.maxPregnancyWeeks = parseInt(root.find('#repro-input-maxweeks').val(), 10) || (entity.mode === 'oviposition' ? 6 : 40);
         
         const manualDateVal = root.find('#repro-input-rpdate').val();
         const normalized = normalizeInputDate(manualDateVal);
