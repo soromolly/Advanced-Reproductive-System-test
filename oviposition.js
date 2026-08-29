@@ -1,49 +1,149 @@
-// База данных стадий вынашивания в яйцеводе, внешней инкубации и патологий яиц (RU / EN)
-export const OVIPOSITION_STAGES = {
+// База данных яйцекладки, симптомов, стадий развития яиц и инкубации
+export const EGG_SYMPTOMS = {
     ru: {
-        1: { size: "Формирование скорлупы (2-4 см)", weight: "Около 30 г (каждое)", belly: "Живот плоский / мягкий", desc: "1-я неделя гравидности. Оплодотворенные клетки покрываются первичными слоями белка и кристаллического кальция в верхнем отделе яйцевода." },
-        2: { size: "Мягкое кожистое яйцо (~8 см)", weight: "Около 80 г", belly: "Легкая внутренняя плотность", desc: "2-я неделя. Оболочка яйца уплотняется. Яйцевод начинает вырабатывать естественный смазывающий секрет." },
-        3: { size: "Оформленное яйцо (~15 см)", weight: "Около 200 г", belly: "Небольшой аккуратный бугорок", desc: "3-я неделя. Эмбрион внутри яйца начинает активное деление. Живот слегка округляется, появляется выраженная тяга к теплу." },
-        4: { size: "Твердеющее яйцо (~22 см)", weight: "Около 400 г", belly: "Заметный округлый живот", desc: "4-я неделя. Скорлупа насыщается кальцием и начинает испускать слабое внутреннее свечение. Движения становятся более плавными." },
-        5: { size: "Крупное яйцо (~30 см)", weight: "Около 700 г", belly: "Тяжелый, плотный живот", desc: "5-я неделя. Скорлупа полностью минерализована. Кладка отчетливо прощупывается через брюшную стенку. Походка замедляется." },
-        6: { size: "Зрелое яйцо (35-40 см)", weight: "Около 1.1-1.4 кг", belly: "Максимально натянутый, опущенный живот", desc: "6-я неделя (финал вынашивания). Кладка готова к откладке. Мускулатура яйцевода готовится к выталкиванию яиц через клоаку в гнездо." }
+        oviduct_calcification: [
+            "Тянущее распирание глубоко внизу живота (формирование скорлупы)",
+            "Повышенная потребность в минералах и кальции (специфический аппетит)",
+            "Обильное выделение защитной смазки из клоаки",
+            "Повышение локальной температуры в области таза",
+            "Легкая скованность при широких шагах"
+        ],
+        egg_maturation: [
+            "Отчетливое ощущение перекатывания твердых яиц внутри яйцевода",
+            "Выраженное вздутие и визуальное округление нижней части живота",
+            "Тяжесть в брюшной полости, мешающая наклоняться",
+            "Периодическое мышечное напряжение стенок яйцевода",
+            "Быстрая утомляемость при ходьбе из-за веса кладки"
+        ],
+        pre_laying: [
+            "Ритмичные тренировочные спазмы яйцевода и клоаки",
+            "Сильный инстинкт гнездования (поиск укромного теплого места)",
+            "Повышенная температура тела и жар в области живота",
+            "Размягчение и частое приоткрытие мышечной щели клоаки",
+            "Отказ от активности, потребность в покое и тепле"
+        ],
+        incubation_care: [
+            "Острая материнская привязанность к отложенной кладке",
+            "Тревожность и защитная агрессия при приближении к гнезду",
+            "Физическая потребность непрерывно согревать яйца теплом тела",
+            "Чувствительность к любым перепадам температуры в помещении"
+        ],
+        oviposition_cycle_heat: [
+            "Пульсирующее тепло и зуд в области клоаки",
+            "Обильная секреция естественной клоакальной смазки",
+            "Повышенная тактильная чувствительность рогов, хвоста и бедер",
+            "Непреодолимая тяга к телесной близости и наполнению яйцевода"
+        ]
     },
     en: {
-        1: { size: "Shell Mineralization (2-4 cm)", weight: "About 30g (each)", belly: "Flat / soft abdomen", desc: "1st week of gravidity. Fertilized zygotes are coated in protein layers and calcium crystals in the upper oviduct." },
-        2: { size: "Leathery Shell (~8 cm)", weight: "About 80g", belly: "Mild lower firmness", desc: "2nd week. Shell membrane thickens. Oviduct glands secrete protective natural lubricants." },
-        3: { size: "Formed Egg (~15 cm)", weight: "About 200g", belly: "Small firm lower bump", desc: "3rd week. Embryonic blastodisc rapidly develops. Lower abdomen rounds outward; nesting warmth cravings begin." },
-        4: { size: "Hardening Shell (~22 cm)", weight: "About 400g", belly: "Distinct rounded abdomen", desc: "4th week. Calcium matrix hardens; faint inner luminescent pulse appears under the shell." },
-        5: { size: "Large Egg (~30 cm)", weight: "About 700g", belly: "Heavy, taut abdomen", desc: "5th week. Shell is fully mineralized. Eggs are clearly palpable through the abdominal wall. Movement slows." },
-        6: { size: "Full-term Clutch (35-40 cm)", weight: "About 1.1-1.4 kg", belly: "Heavy, dropped abdomen", desc: "6th week (Full term). Clutch is primed for oviposition. Oviduct prepares to lay eggs through the cloaca into the nest." }
+        oviduct_calcification: [
+            "Deep pelvic tightness and pressure (early shell crystallization)",
+            "Strong cravings for calcium-rich and mineral food",
+            "Profuse protective lubricating secretions from the cloaca",
+            "Localized warmth and increased blood flow in lower abdomen",
+            "Mild stiffness in gait and hip movements"
+        ],
+        egg_maturation: [
+            "Distinct feeling of solid, calcified eggs shifting in oviduct",
+            "Noticeable abdominal distension and taut pelvic bulge",
+            "Heavy pelvic fullness restricting agile bending",
+            "Periodic muscular contractions along the oviduct walls",
+            "Fatigue from the physical ballast of the internal clutch"
+        ],
+        pre_laying: [
+            "Rhythmic pre-oviposition contractions in the oviduct",
+            "Overwhelming nesting urge (seeking warm secluded sanctuary)",
+            "Elevated core body temperature and brooding warmth",
+            "Softening and dilation of the cloacal muscular slit",
+            "Lethargy and instinctive longing for nest rest"
+        ],
+        incubation_care: [
+            "Intense parental attachment to the laid clutch",
+            "Hyper-vigilance and protective territoriality over the nest",
+            "Deep physiological drive to brood and warm the eggs with body heat",
+            "Acute sensitivity to ambient draft or temperature drops"
+        ],
+        oviposition_cycle_heat: [
+            "Pulsing warmth and swelling sensation around the cloaca",
+            "Profuse cloacal self-lubrication",
+            "Heightened tactile sensitivity across base of tail and hips",
+            "Intense mating instinct and craving for oviduct filling"
+        ]
+    }
+};
+
+export const EGG_STAGES = {
+    ru: {
+        1: { size: "Мягкие ооциты (~2 см)", weight: "~20 г каждое", belly: "Живот плоский", desc: "1-я неделя. Оплодотворенные клетки опускаются в верхнюю треть яйцевода. Начинается послойное осаждение минералов." },
+        2: { size: "Формирующаяся скорлупа (~5 см)", weight: "~60 г каждое", belly: "Едва заметная плотность", desc: "2-я неделя. Вокруг эмбрионов нарастает полутвердая кожистая оболочка. На УЗИ четко различимо число формирующихся яиц." },
+        3: { size: "Плотные овалы (~10 см)", weight: "~150 г каждое", belly: "Легкое вздутие низа живота", desc: "3-я неделя. Скорлупа активно насыщается кальцием и отвердевает. Яйца начинают отчетливо прощупываться пальцами." },
+        4: { size: "Кальцинированные яйца (~18 см)", weight: "~300 г каждое", belly: "Заметно округленный плотный живот", desc: "4-я неделя. Яйца приобрели финальную твердость. Живот натянут, очертания яиц слегка выпирают при наклонах." },
+        5: { size: "Крупные яйца (~25 см)", weight: "~500 г каждое", belly: "Тяжелый, сильно натянутый живот", desc: "5-я неделя. Кладка занимает весь объем яйцевода. Появляется сильный инстинкт подготовки гнезда." },
+        6: { size: "Зрелая кладка (25–35 см)", weight: "~700–900 г каждое", belly: "Огромный раздутый живот, готовый к кладке", desc: "6-я неделя. Финал вынашивания. Клоака размягчена, яйца сместились к выходу. Организм готов к откладке (овипозиции)." }
+    },
+    en: {
+        1: { size: "Soft Oocytes (~2 cm)", weight: "~20g each", belly: "Flat abdomen", desc: "Week 1. Fertilized cells enter upper oviduct. Initial mineral deposition begins." },
+        2: { size: "Leathery Shells (~5 cm)", weight: "~60g each", belly: "Subtle pelvic firmness", desc: "Week 2. Semi-rigid leathery matrix forms. Ultrasound clearly detects exact egg headcount." },
+        3: { size: "Firm Ovoids (~10 cm)", weight: "~150g each", belly: "Mild lower abdominal bulge", desc: "Week 3. Shell calcification hardens. Distinct individual egg contours can be felt manually." },
+        4: { size: "Calcified Eggs (~18 cm)", weight: "~300g each", belly: "Firm, rounded, visible bulge", desc: "Week 4. Shells reach full structural rigidity. Abdominal wall is noticeably taut and rounded." },
+        5: { size: "Large Eggs (~25 cm)", weight: "~500g each", belly: "Heavy, visibly distended belly", desc: "Week 5. Full clutch fills pelvic cavity. Powerful brooding instincts take over." },
+        6: { size: "Mature Clutch (25–35 cm)", weight: "~700–900g each", belly: "Maximum distension, ready to lay", desc: "Week 6. Internal term complete. Cloacal slit dilated; body primed for oviposition." }
     }
 };
 
 export const INCUBATION_STAGES = {
     ru: {
-        early: { name: "Ранняя инкубация (1-4 нед)", desc: "Яйца согреваются в гнезде родителем. Внутри скорлупы формируется сосудистая сеть желточного мешка. Свечение скорлупы равномерное и тихое." },
-        mid: { name: "Активный эмбриогенез (5-8 нед)", desc: "Закладываются скелет, хвост и чешуйчатый покров зародышей. Яйца чувствительны к перепадам температур (требуется 30–34°C)." },
-        late: { name: "Предвылупное созревание (9-12 нед)", desc: "Детеныши полностью сформированы. Сквозь скорлупу слышны тихие шорохи и постукивания клюва/яйцевого зуба. Скорлупа истончается изнутри." }
+        20: { stage: "Ранняя инкубация", desc: "Эмбрионы формируют кровеносную сеть внутри желтка. Скорлупа требует стабильного обогрева (30–34°C)." },
+        45: { stage: "Активный органогенез", desc: "Сквозь скорлупу на просвет (овоскопия) видны контуры тела, движение хвоста и биение сердца." },
+        70: { stage: "Финальная зрелость (Готовность к вылуплению)", desc: "Детеныши полностью развиты, поглотили желток и начинают пробивать скорлупу изнутри." }
     },
     en: {
-        early: { name: "Early Incubation (wks 1-4)", desc: "Eggs incubated in the nest by parental warmth (30–34°C). Vascular network spreads across the yolk sac under the pulsing shell." },
-        mid: { name: "Active Embryogenesis (wks 5-8)", desc: "Skeletal structure, tail, and primordial scales develop. Constant thermal stability is vital to prevent embryonic arrest." },
-        late: { name: "Pre-hatching Maturity (wks 9-12)", desc: "Hatchlings fully formed. Subtle scratching and internal tapping resonate through the thinning crystalline shell." }
+        20: { stage: "Early Brooding", desc: "Embryos establish vascular networks across yolk sacs. Requires steady thermal brooding (30–34°C)." },
+        45: { stage: "Mid Incubation & Organogenesis", desc: "Candling reveals developing skeletal silhouette, tail movements, and cardiac rhythm." },
+        70: { stage: "Full Maturity (Hatching Primed)", desc: "Hatchlings fully formed, yolk fully absorbed. First internal pips against shell surface." }
     }
 };
 
-export const EGG_SPECIFIC_DISEASES = {
+export const EGG_PATHOLOGIES = {
     ru: [
-        { id: "egg_shell_brittle", type: "egg_incubation", discoveryWeek: 1, abortionIndicated: false, name: "Хрупкость кристаллической скорлупы", desc: "Недостаточная минерализация кальция. Требует предельно осторожного высиживания и минеральных ванн." },
-        { id: "egg_mana_dimming", type: "egg_incubation", discoveryWeek: 3, abortionIndicated: true, name: "Угасание свечения зародыша", desc: "Критическое падение жизнеспособности эмбриона в яйце. Требуется интенсивный обогрев и контакт с родителем." },
-        { id: "egg_yolk_adhesion", type: "egg_incubation", discoveryWeek: 4, abortionIndicated: false, name: "Спайка зародышевой оболочки", desc: "Эмбрион прилегает слишком близко к стенке скорлупы. Требует регулярного переворачивания кладки в гнезде." },
-        { id: "draconic_heterochromia", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Драконья гетерохромия", desc: "Глаза разного оттенка с вертикальным радужным зрачком. Безвредная родовая метка." },
-        { id: "luminescent_scales", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Фосфоресцирующая чешуя", desc: "Участки чешуи на хвосте и плечах мягко мерцают в темноте." }
+        // Пренатальные (в утробе/яйцеводе)
+        { id: "thin_shell", type: "prenatal", discoveryWeek: 2, name: "Гипокальциноз (Тонкая скорлупа)", desc: "Дефицит минерализации: скорлупа хрупкая, высокий риск раздавливания при вынашивании." },
+        { id: "egg_binding", type: "prenatal", discoveryWeek: 5, name: "Дистоция (Застревание яйца)", desc: "Крупное яйцо спазмировало проход яйцевода. Требуется помощь или ручное извлечение." },
+        // Инкубационные (выявляются при овоскопии/осмотре яиц)
+        { id: "candling_dead_embryo", type: "incubation", discoveryWeek: 0, name: "Замерший эмбрион (Остановка развития)", desc: "Замирание зародыша в яйце из-за температурного сбоя. Свечение скорлупы угасло." },
+        { id: "shell_microfracture", type: "incubation", discoveryWeek: 0, name: "Микротрещина скорлупы", desc: "Нарушение герметичности скорлупы, грозящее пересыханием желтка." },
+        // При вылуплении
+        { id: "weak_hatchling", type: "postnatal", discoveryWeek: 0, name: "Слабый эмбриональный тонус", desc: "Детеныш не может самостоятельно пробить скорлупу, требуется ручная помощь при вылуплении." }
     ],
     en: [
-        { id: "egg_shell_brittle", type: "egg_incubation", discoveryWeek: 1, abortionIndicated: false, name: "Crystalline Shell Fragility", desc: "Deficient calcium mineral layer. Requires gentle nest handling and thermal mineral wraps." },
-        { id: "egg_mana_dimming", type: "egg_incubation", discoveryWeek: 3, abortionIndicated: true, name: "Luminescent Pulse Dimming", desc: "Embryonic vitality decline. Demands intensive body-heat brooding and thermal nest stabilization." },
-        { id: "egg_yolk_adhesion", type: "egg_incubation", discoveryWeek: 4, abortionIndicated: false, name: "Embryonic Membrane Adhesion", desc: "Embryo adhering to the inner shell wall. Regular clutch turning in nest is required." },
-        { id: "draconic_heterochromia", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Draconic Heterochromia", desc: "Differently colored reptilian slit-pupil eyes. Harmless hereditary beauty mark." },
-        { id: "luminescent_scales", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Phosphorescent Scale Patches", desc: "Patches of scales along the spine and tail glow softly in ambient darkness." }
+        { id: "thin_shell", type: "prenatal", discoveryWeek: 2, name: "Hypocalcification (Fragile Shell)", desc: "Mineral deficiency resulting in brittle, vulnerable eggshell walls." },
+        { id: "egg_binding", type: "prenatal", discoveryWeek: 5, name: "Egg Binding (Oviduct Dystocia)", desc: "An oversized egg causes spasm in oviduct channel. Requires gentle extraction." },
+        { id: "candling_dead_embryo", type: "incubation", discoveryWeek: 0, name: "Non-viable / Arrested Embryo", desc: "Embryonic developmental arrest from thermal deficit. Luminescence ceases." },
+        { id: "shell_microfracture", type: "incubation", discoveryWeek: 0, name: "Shell Microfracture", desc: "Compromised shell integrity risking dehydration of inner amniotic membrane." },
+        { id: "weak_hatchling", type: "postnatal", discoveryWeek: 0, name: "Hatching Weakness", desc: "Hatchling lacks muscular strength to pip through calcified shell unaided." }
     ]
 };
+
+export function getEggStageData(weeks, lang = 'ru') {
+    const l = (lang === 'en') ? 'en' : 'ru';
+    const pool = EGG_STAGES[l] || EGG_STAGES['ru'];
+    const clampedWeek = Math.max(1, Math.min(6, weeks || 1));
+    return pool[clampedWeek] || pool[1];
+}
+
+export function getIncubationStageData(days, lang = 'ru') {
+    const l = (lang === 'en') ? 'en' : 'ru';
+    const pool = INCUBATION_STAGES[l] || INCUBATION_STAGES['ru'];
+    const milestones = Object.keys(pool).map(Number).sort((a, b) => a - b);
+    for (const d of milestones) {
+        if (days <= d) return pool[d];
+    }
+    return pool[70];
+}
+
+export function getEggPathology(id, lang = 'ru') {
+    if (!id) return null;
+    const l = (lang === 'en') ? 'en' : 'ru';
+    const pool = EGG_PATHOLOGIES[l] || EGG_PATHOLOGIES['ru'];
+    return pool.find(p => p.id === id) || null;
+}
