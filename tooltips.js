@@ -9,7 +9,7 @@ export const TOOLTIPS = {
         realism: {
             secretConception: "При включении зачатие происходит тайно: кубик бросается скрыто без спойлерных уведомлений. В первые недели цикл отображается как обычно, симптомы и плод скрыты в UI и промпте. Беременность раскрывается при проведении теста/проверки на задержке или автоматически со временем.",
             irregularCycle: "Включает естественные колебания цикла (от -1 до +12 дней). Создает реалистичные задержки без беременности, имитируя гормональные сбои и стресс.",
-            mode: "«Реализм» — стандартный женский цикл (40 акушерских недель, овуляция за 14 дней до месячных). «ОмегаВерс» — течка с 1-го дня цикла, пик фертильности, срок 36 недель и мужская беременность. «Яйцекладка» — созревание яиц в теле (6 нед.) и высиживание в гнезде (70 дней).",
+            mode: "«Реализм» — стандартный женский цикл (40 акушерских недель, овуляция за 14 дней до месячных).",
             physiology: "Биологическое строение персонажа. В Реализме доступна только Женщина (вагинальное зачатие).",
             aiAwareness: "«Современность» — поэтапное раскрытие по клиническим скринингам: двойня/тройня на 12 нед., пол на 20 нед., а патологии — по индивидуальным срокам их выявления (11–21 нед.). «Средневековье» — пол, число детей и пороки скрыты до родов, определение беременности позже, а аборт невозможен после 12 нед. «Всеведение» — боту сразу открыты все параметры плода с момента зачатия.",
             contraception: "Метод защиты от беременности. «Презерватив» снижает шанс до ~2%, «КОК (таблетки)» — до 0.1%, «ВМС (спираль)» — до 0.2%. Без защиты в фертильное окно шанс максимален.",
@@ -44,7 +44,7 @@ export const TOOLTIPS = {
         realism: {
             secretConception: "When enabled, conception occurs secretly: dice rolls are hidden without spoiler notifications. Early weeks show regular cycle, hiding symptoms and fetus from UI and AI prompt. Discovered via test/check or automatically over time.",
             irregularCycle: "Enables natural cycle fluctuations (-1 to +12 days). Simulates realistic pregnancy scares, hormonal delays, and stress.",
-            mode: "«Realism» — human female cycle (40 obstetric weeks, ovulation 14 days before menses). «OmegaVerse» — Heat begins on Day 1, 36-week gestation, and male pregnancy. «Oviposition» — internal clutch (6 wks) and nest incubation (70 days).",
+            mode: "«Realism» — human female cycle (40 obstetric weeks, ovulation 14 days before menses).",
             physiology: "Biological reproductive anatomy. In Realism, only Female is available (vaginal conception).",
             aiAwareness: "«Modernity» — phased clinical discovery: multiples at 12 wks, fetal sex at 20 wks, and anomalies at their clinical detection milestones (11–21 wks). «Medieval (Blind)» — sex, headcount, and pathologies hidden until delivery. «Omniscience» — AI is aware of all fetal parameters from conception.",
             contraception: "Birth control method. «Condom» reduces chance to ~2%, «Oral Pills» to 0.1%, «IUD» to 0.2%. Unprotected intercourse during fertility peak carries the highest conception chance.",
