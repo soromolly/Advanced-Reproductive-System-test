@@ -1,6 +1,7 @@
 import { getTooltipHtml } from './tooltips.js';
 import { getText, translateGender } from './translations.js';
 import { getFetusData, getPostpartumData, getSymptomList, getComplication, getFetalDisease } from './symptoms.js';
+import { getEggData, getPostLayingData, getEggPathology } from './oviposition.js';
 import { dateToDays, daysToDateString } from './dateUtils.js';
 import { getEntityBodyPhase } from './entityController.js';
 
@@ -12,6 +13,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
     const baseCycleDisplay = currentEntity.cycleLength || 28;
     const isCurrentlyPregnantDiscovered = currentEntity.isPregnant && (currentEntity.isDiscovered || !currentEntity.isSecretConception);
+    const isOviposition = currentEntity.mode === 'oviposition';
 
     let displayDate = getText('waitingDate', lang);
     let inputDateValue = '';
@@ -36,95 +38,73 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     let wombMapHtml = '';
 
     if (isCurrentlyPregnantDiscovered) {
-        const fetus = getFetusData(currentEntity.pregnancyWeeks, lang);
-        fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-            <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('fetusTitle', lang)}</strong>
-            • ${getText('fetusSizeLabel', lang)} <span style="color: #38bdf8; font-weight: bold;">${fetus.size}</span><br>
-            • ${getText('fetusWeightLabel', lang)} <span>${fetus.weight}</span><br>
-            • ${getText('fetusBellyLabel', lang)} <span>${fetus.belly}</span><br>
-            <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
-        </div>`;
+        if (isOviposition) {
+            const egg = getEggData(currentEntity.pregnancyWeeks, currentEntity.babiesCount, lang);
+            fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('eggClutchTitle', lang)}</strong>
+                • ${getText('eggsCountLabel', lang)} <span style="color: #38bdf8; font-weight: bold;">${currentEntity.babiesCount}</span><br>
+                • ${getText('eggSizeLabel', lang)} <span>${egg.size}</span><br>
+                • ${getText('eggWeightLabel', lang)} <span>${egg.weight}</span><br>
+                • ${getText('eggBellyLabel', lang)} <span>${egg.belly}</span><br>
+                <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${egg.desc}</span>
+            </div>`;
 
-        const hasAnyPathology = currentEntity.babiesDiseases?.some(Boolean);
-        if (hasAnyPathology && settings.aiAwareness !== 'hidden') {
-            let itemsHtml = '';
-            if (currentEntity.babiesCount === 1) {
-                const disease = getFetalDisease(currentEntity.babiesDiseases[0], lang);
-                if (disease && disease.type === 'prenatal') {
-                    const isDiscovered = (settings.aiAwareness === 'full') || (currentEntity.pregnancyWeeks >= (disease.discoveryWeek || 20));
-                    if (isDiscovered) itemsHtml = `<b style="color: #fcd34d;">${disease.name}</b><br><span style="opacity: 0.9; display: block; margin-top: 3px; font-style: italic;">${disease.desc}</span>`;
+            if (currentEntity.activeComplication?.isDiscovered) {
+                const disease = getEggPathology(currentEntity.activeComplication.id, lang);
+                if (disease) {
+                    fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;"><strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('eggAnomalyTitle', lang)}</strong><b>${disease.name}</b><br><span style="opacity: 0.85; display: block; margin-top: 3px; font-style: italic;">${disease.desc}</span></div>`;
                 }
-            } else {
-                const lines = [];
-                currentEntity.babiesDiseases.forEach((dId, idx) => {
-                    const genderLabel = translateGender(currentEntity.babiesGenders[idx], lang);
-                    if (dId) {
-                        const disease = getFetalDisease(dId, lang);
-                        const isDiscovered = (settings.aiAwareness === 'full') || (currentEntity.pregnancyWeeks >= (disease.discoveryWeek || 20));
-                        if (isDiscovered && disease?.type === 'prenatal') {
-                            lines.push(`<div style="margin-bottom: 6px;"><b>• Плод #${idx + 1} (${genderLabel}):</b> <span style="color: #fcd34d; font-weight: bold;">${disease.name}</span><br><span style="opacity: 0.85; font-style: italic; font-size: 0.95em; padding-left: 10px; display: block;">${disease.desc}</span></div>`);
-                        }
-                    }
-                });
-                if (lines.length > 0) itemsHtml = lines.join('');
-            }
-            if (itemsHtml) {
-                fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;"><strong style="font-size: 1.0em; color: #fbbf24; display: block; margin-bottom: 4px;">${getText('fetalAnomalyTitle', lang)}</strong>${itemsHtml}</div>`;
-            }
-        }
-
-        if (settings.aiAwareness === 'hidden') {
-            wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">${getText('medievalLocked', lang)}</div>`;
-        } else if (settings.aiAwareness === 'dynamic') {
-            if (currentEntity.pregnancyWeeks >= 20) {
-                wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('babiesCount', lang)} <b>${currentEntity.babiesCount}</b><br>• ${getText('babiesSex', lang)} <b>${currentEntity.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b></div>`;
-            } else if (currentEntity.pregnancyWeeks >= 12) {
-                wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('babiesCount', lang)} <b>${currentEntity.babiesCount}</b><br><span style="color: #a1a1aa; font-style: italic;">${getText('ultrasound20Locked', lang)}</span></div>`;
-            } else {
-                wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">${getText('ultrasound12Locked', lang)}</div>`;
             }
         } else {
-            wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('babiesCount', lang)} <b>${currentEntity.babiesCount}</b><br>• ${getText('babiesSex', lang)} <b>${currentEntity.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b></div>`;
+            const fetus = getFetusData(currentEntity.pregnancyWeeks, lang);
+            fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('fetusTitle', lang)}</strong>
+                • ${getText('fetusSizeLabel', lang)} <span style="color: #38bdf8; font-weight: bold;">${fetus.size}</span><br>
+                • ${getText('fetusWeightLabel', lang)} <span>${fetus.weight}</span><br>
+                • ${getText('fetusBellyLabel', lang)} <span>${fetus.belly}</span><br>
+                <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
+            </div>`;
+
+            if (currentEntity.babiesDiseases?.some(Boolean) && settings.aiAwareness !== 'hidden') {
+                const lines = currentEntity.babiesDiseases.map((dId, idx) => {
+                    if (!dId) return '';
+                    const d = getFetalDisease(dId, lang);
+                    return d?.type === 'prenatal' ? `<div><b>• #${idx+1}:</b> <span style="color: #fcd34d;">${d.name}</span></div>` : '';
+                }).join('');
+                if (lines) fetalDiseaseHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em;">${lines}</div>`;
+            }
+
+            if (settings.aiAwareness !== 'hidden') {
+                wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('babiesCount', lang)} <b>${currentEntity.babiesCount}</b><br>• ${getText('babiesSex', lang)} <b>${currentEntity.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b></div>`;
+            }
         }
 
         if (chatData.lastRpDate) {
-            const maxWeeks = currentEntity.maxPregnancyWeeks || (currentEntity.mode === 'omegaverse' ? 36 : 40);
+            const maxWeeks = currentEntity.maxPregnancyWeeks || (isOviposition ? 6 : (currentEntity.mode === 'omegaverse' ? 36 : 40));
             const daysRemaining = (maxWeeks * 7) - currentEntity.pregnancyDaysTotal;
             const parts = chatData.lastRpDate.split('-').map(Number);
             const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
-            const eddDateStr = daysToDateString(currentTotalDays + daysRemaining);
-            const eddParts = eddDateStr.split('-');
+            const eddParts = daysToDateString(currentTotalDays + daysRemaining).split('-');
             eddHtml = `<div style="margin-bottom: 4px;"><strong>${getText('eddLabel', lang)}</strong> <span style="color: #f472b6; font-weight: bold;">${eddParts[2]}.${eddParts[1]}.${eddParts[0]}</span></div>`;
         }
     }
 
     let postpartumHtml = '';
     if (currentEntity.postpartumDays > 0) {
-        const pData = getPostpartumData(currentEntity.postpartumDays, currentEntity.deliveryMethod, lang);
-        const isCS = currentEntity.deliveryMethod === 'c_section';
-        const isMiscarriage = currentEntity.deliveryMethod === 'miscarriage';
-        const maxRecovery = isMiscarriage ? 14 : 40;
-        
-        let outcomeText = lang === 'en' ? 'Natural Delivery (Vaginal)' : 'Естественные роды (ЕР)';
-        if (isCS) outcomeText = lang === 'en' ? 'Cesarean Section (C-Section)' : 'Кесарево сечение (КС)';
-        if (isMiscarriage) outcomeText = lang === 'en' ? 'Postgravid Restoration / Loss' : 'Постгравидарное восстановление / Прерывание';
-
-        postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: ${isMiscarriage ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border: 1px solid ${isMiscarriage ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}; border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-            <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader', lang)}${currentEntity.postpartumDays}/${maxRecovery})</strong>
-            <b>${getText('outcomeType', lang)}</b> <span style="color: ${isMiscarriage ? '#ef4444' : '#10b981'}; font-weight: bold;">${outcomeText}</span><br>
-            <b>${getText('stageLabel', lang)}</b> <span>${pData.name}</span><br>
-            <span style="opacity: 0.85; display: block; margin-top: 4px; font-style: italic;">${pData.desc}</span>
-        </div>`;
-    }
-
-    let complicationHtml = '';
-    if (isCurrentlyPregnantDiscovered && currentEntity.activeComplication?.isDiscovered) {
-        const comp = getComplication(currentEntity.activeComplication.id, lang);
-        if (comp) {
-            complicationHtml = `<div style="margin: 8px 0 10px 0; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                <strong style="color: #f87171; display: block; margin-bottom: 4px;">${getText('complicationTitle', lang)} ${comp.name}</strong>
-                <span style="opacity: 0.9; display: block; margin-bottom: 6px;">${comp.desc}</span>
-                ${comp.curable ? `<button id="repro-cure-complication" class="menu_button" style="width: 100%; background: #059669; color: white; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center;">${getText('cureBtn', lang)}</button>` : ''}
+        if (isOviposition) {
+            const pData = getPostLayingData(currentEntity.postpartumDays, lang);
+            postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                <strong style="font-size: 1.05em; color: #10b981; display: block; margin-bottom: 4px;">${getText('postLayingHeader', lang)}${currentEntity.postpartumDays}/28)</strong>
+                <b>${getText('stageLabel', lang)}</b> <span>${pData.name}</span><br>
+                <span style="opacity: 0.85; display: block; margin-top: 4px; font-style: italic;">${pData.desc}</span>
+            </div>`;
+        } else {
+            const pData = getPostpartumData(currentEntity.postpartumDays, currentEntity.deliveryMethod, lang);
+            const isMiscarriage = currentEntity.deliveryMethod === 'miscarriage';
+            postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: ${isMiscarriage ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border: 1px solid ${isMiscarriage ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}; border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader', lang)}${currentEntity.postpartumDays}/${isMiscarriage ? 14 : 40})</strong>
+                <b>${getText('stageLabel', lang)}</b> <span>${pData.name}</span><br>
+                <span style="opacity: 0.85; display: block; margin-top: 4px; font-style: italic;">${pData.desc}</span>
             </div>`;
         }
     }
@@ -133,37 +113,26 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     if (currentEntity.childrenList?.length > 0) {
         familyHtml = `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; text-align: left; font-size: 0.85em;">
             <strong style="color: #f472b6; display: block; margin-bottom: 6px;">${getText('newbornTitle', lang)}</strong>
-            ${currentEntity.childrenList.map((c, i) => {
-                let featureHtml = '';
-                if (c.diseaseId) {
-                    const feat = getFetalDisease(c.diseaseId, lang);
-                    if (feat) featureHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fcd34d;">• ${getText('congenitalFeatureLabel', lang)} <b>${feat.name}</b></div>`;
-                }
-                return `<div style="margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.08);">👶 ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b>${featureHtml}</div>`;
-            }).join('')}
+            ${currentEntity.childrenList.map((c, i) => `
+                <div style="margin-bottom: 4px;">🪺 ${isOviposition ? getText('eggLabel', lang) : getText('childLabel', lang)} #${i+1}: <b>${translateGender(c.gender, lang)}</b></div>
+            `).join('')}
         </div>`;
     }
 
-    let genderOptionsHtml = currentEntity.mode === 'realism'
-        ? `<option value="female" ${currentEntity.gender === 'female' ? 'selected' : ''}>${getText('female', lang)}</option>`
-        : `<option value="female_omega" ${currentEntity.gender === 'female_omega' ? 'selected' : ''}>${getText('female_omega', lang)}</option>
-           <option value="male_omega" ${currentEntity.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega', lang)}</option>`;
-
-    let canAbort = false;
-    if (isCurrentlyPregnantDiscovered) {
-        const isUnder12Weeks = (currentEntity.pregnancyWeeks < 12) || (currentEntity.pregnancyWeeks === 12 && (currentEntity.pregnancyDays || 0) === 0);
-        if (isUnder12Weeks) {
-            canAbort = true;
-        } else if (settings.aiAwareness !== 'hidden' && currentEntity.babiesDiseases?.length > 0) {
-            canAbort = currentEntity.babiesDiseases.some(dId => {
-                if (!dId) return false;
-                const d = getFetalDisease(dId, 'en');
-                return d?.type === 'prenatal' && d.abortionIndicated && ((settings.aiAwareness === 'full') || (currentEntity.pregnancyWeeks >= (d.discoveryWeek || 20)));
-            });
-        }
+    let genderOptionsHtml = '';
+    if (currentEntity.mode === 'oviposition') {
+        genderOptionsHtml = `
+            <option value="female_oviposition" ${currentEntity.gender === 'female_oviposition' ? 'selected' : ''}>${getText('female_oviposition', lang)}</option>
+            <option value="male_oviposition" ${currentEntity.gender === 'male_oviposition' ? 'selected' : ''}>${getText('male_oviposition', lang)}</option>
+        `;
+    } else if (currentEntity.mode === 'omegaverse') {
+        genderOptionsHtml = `
+            <option value="female_omega" ${currentEntity.gender === 'female_omega' ? 'selected' : ''}>${getText('female_omega', lang)}</option>
+            <option value="male_omega" ${currentEntity.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega', lang)}</option>
+        `;
+    } else {
+        genderOptionsHtml = `<option value="female" ${currentEntity.gender === 'female' ? 'selected' : ''}>${getText('female', lang)}</option>`;
     }
-
-    const checkBtnLabel = (settings.aiAwareness === 'hidden') ? getText('checkPregnancyBtn', lang) : getText('takeTestBtn', lang);
 
     const activeTabStyle = `flex: 1; padding: 7px 0; font-size: 12px; font-weight: 700; justify-content: center; background: linear-gradient(135deg, #ec4899, #be185d) !important; color: #ffffff !important; border: 1px solid #f472b6 !important; box-shadow: 0 0 10px rgba(244, 114, 182, 0.45); border-radius: 6px; cursor: pointer; transition: all 0.15s ease;`;
     const inactiveTabStyle = `flex: 1; padding: 7px 0; font-size: 12px; font-weight: 500; justify-content: center; background: rgba(255, 255, 255, 0.05) !important; color: #94a3b8 !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 6px; cursor: pointer; opacity: 0.75; transition: all 0.15s ease;`;
@@ -176,7 +145,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     ` : '';
 
     const html = `
-        <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
+        <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px;">
             <span style="color: #f472b6 !important; font-weight: 600;">${getText('title', lang)}</span>
             <i id="repro-toggle-arrow" class="fa-solid ${isMenuCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}" style="opacity: 0.6; font-size: 12px; margin-right: 4px;"></i>
         </div>
@@ -187,14 +156,14 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-enabled" ${settings.isEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-enabled" style="font-size: 0.9em; cursor: pointer; color: var(--text-color, #f8fafc); opacity: 0.85;">${getText('enableExt', lang)}</label>
+                        <label for="repro-is-enabled" style="font-size: 0.9em; cursor: pointer;">${getText('enableExt', lang)}</label>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="repro-is-notifications-enabled" ${settings.isNotificationsEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer; opacity: 0.85; color: var(--text-color, #f8fafc);">${getText('enableNotif', lang)}</label>
+                        <label for="repro-is-notifications-enabled" style="font-size: 0.9em; cursor: pointer;">${getText('enableNotif', lang)}</label>
                     </div>
                 </div>
-                <select id="repro-lang-select" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: #f472b6; font-weight: 700; font-size: 12px; min-width: 58px; height: 32px; padding: 4px 6px; border-radius: 6px; outline: none; cursor: pointer; text-align: center;">
+                <select id="repro-lang-select" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: #f472b6; font-weight: 700; font-size: 12px; min-width: 58px; height: 32px; padding: 4px 6px; border-radius: 6px; cursor: pointer;">
                     <option value="ru" ${settings.language === 'ru' ? 'selected' : ''}>RU</option>
                     <option value="en" ${settings.language === 'en' ? 'selected' : ''}>EN</option>
                 </select>
@@ -231,6 +200,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <select id="repro-mode" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         <option value="realism" ${currentEntity.mode === 'realism' ? 'selected' : ''}>${getText('realism', lang)}</option>
                         <option value="omegaverse" ${currentEntity.mode === 'omegaverse' ? 'selected' : ''}>${getText('omegaverse', lang)}</option>
+                        <option value="oviposition" ${currentEntity.mode === 'oviposition' ? 'selected' : ''}>${getText('oviposition', lang)}</option>
                     </select>
                 </div>
 
@@ -238,15 +208,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('physiology', lang)} ${getTooltipHtml('physiology', lang)}</label>
                     <select id="repro-gender" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         ${genderOptionsHtml}
-                    </select>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('aiLogic', lang)} ${getTooltipHtml('aiAwareness', lang)}</label>
-                    <select id="repro-awareness" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
-                        <option value="dynamic" ${settings.aiAwareness === 'dynamic' ? 'selected' : ''}>${getText('ultrasound', lang)}</option>
-                        <option value="hidden" ${settings.aiAwareness === 'hidden' ? 'selected' : ''}>${getText('medieval', lang)}</option>
-                        <option value="full" ${settings.aiAwareness === 'full' ? 'selected' : ''}>${getText('knowsAll', lang)}</option>
                     </select>
                 </div>
 
@@ -261,17 +222,16 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 <div style="background: rgba(0, 0, 0, 0.25); border-left: 3px solid #f472b6; border-radius: 4px; padding: 10px; margin: 12px 0; font-size: 0.9em; text-align: left;">
-                    <div style="margin-bottom: 4px;"><strong>${currentEntity.mode === 'realism' ? getText('phaseRealism', lang) : getText('phaseOmega', lang)}</strong> <span style="color: #4ade80; font-weight: 700;">${getEntityBodyPhase(currentEntity, lang)}</span></div>
+                    <div style="margin-bottom: 4px;"><strong>${isOviposition ? getText('phaseOviposition', lang) : (currentEntity.mode === 'realism' ? getText('phaseRealism', lang) : getText('phaseOmega', lang))}</strong> <span style="color: #4ade80; font-weight: 700;">${getEntityBodyPhase(currentEntity, lang)}</span></div>
                     
                     ${symptomsHtml}
                     ${fetusHtml}
                     ${fetalDiseaseHtml}
                     ${postpartumHtml}
-                    ${complicationHtml}
                     ${familyHtml}
 
                     ${isCurrentlyPregnantDiscovered ? `
-                        <div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>
+                        <div style="margin-bottom: 4px;"><strong>${isOviposition ? getText('termOvipositionInRp', lang) : getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>
                         ${eddHtml}
                         ${wombMapHtml}
                     ` : `
@@ -281,15 +241,11 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 ${(!isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0) ? `
-                    <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
+                    <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${isOviposition ? getText('checkEggsBtn', lang) : getText('takeTestBtn', lang)}</button>
                 ` : ''}
 
                 ${isCurrentlyPregnantDiscovered ? `
-                    <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('giveBirthBtn', lang)}</button>
-                ` : ''}
-
-                ${canAbort ? `
-                    <button id="repro-btn-abort" class="menu_button" style="width: 100%; background: #991b1b; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('abortBtn', lang)}</button>
+                    <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${isOviposition ? getText('layEggsBtn', lang) : getText('giveBirthBtn', lang)}</button>
                 ` : ''}
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -303,53 +259,32 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${currentEntity.mode === 'omegaverse' ? getText('periodDurationOmega', lang) : getText('periodDurationLabel', lang)} ${getTooltipHtml('periodDuration', lang)}</label>
+                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${isOviposition ? getText('periodDurationOviposition', lang) : (currentEntity.mode === 'omegaverse' ? getText('periodDurationOmega', lang) : getText('periodDurationLabel', lang))} ${getTooltipHtml('periodDuration', lang)}</label>
                     <input type="number" id="repro-input-period" min="2" max="10" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.periodDuration || 5}"/>
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('maxWeeksLabel', lang)} ${getTooltipHtml('maxWeeks', lang)}</label>
-                    <input type="number" id="repro-input-maxweeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.maxPregnancyWeeks || 40}" min="1" max="50"/>
+                    <input type="number" id="repro-input-maxweeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.maxPregnancyWeeks || (isOviposition ? 6 : 40)}" min="1" max="50"/>
                 </div>
-                
-                ${isCurrentlyPregnantDiscovered ? `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 0.9em; opacity: 0.85;">${getText('pregnancyWeekLabel', lang)}</label>
-                        <div style="display: flex; gap: 6px; width: 55%;">
-                            <input type="number" id="repro-input-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyWeeks}" min="0" max="50"/>
-                            <input type="number" id="repro-input-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyDays || 0}" min="0" max="6"/>
-                        </div>
-                    </div>
-                ` : `
-                    ${currentEntity.postpartumDays === 0 ? `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 0.9em; opacity: 0.85;">${getText('cycleDayLabel', lang)} </label>
-                        <input type="number" id="repro-input-day" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleDay}"/>
-                    </div>` : ''}
-                `}
 
                 <button id="repro-apply-params" class="menu_button type_primary" style="width: 100%; margin-top: 10px; font-weight: 600;">${getText('applyBtn', lang)}</button>
 
                 ${(!isCurrentlyPregnantDiscovered && currentEntity.postpartumDays === 0) ? `
                     <div style="background: rgba(244, 114, 182, 0.03); border: 1px dashed rgba(244, 114, 182, 0.2); border-radius: 8px; padding: 12px; margin: 14px 0 10px 0; text-align: left;">
-                        <div style="font-size: 0.85em; font-weight: 700; color: #f472b6; margin-bottom: 8px; text-transform: uppercase;">${getText('initPregnancyHeader', lang)}</div>
+                        <div style="font-size: 0.85em; font-weight: 700; color: #f472b6; margin-bottom: 8px; text-transform: uppercase;">${isOviposition ? getText('initOvipositionHeader', lang) : getText('initPregnancyHeader', lang)}</div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualWeeks', lang)}</label>
                             <div style="display: flex; gap: 6px; width: 55%;">
-                                <input type="number" id="repro-manual-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="4" min="0" max="40"/>
+                                <input type="number" id="repro-manual-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${isOviposition ? 2 : 4}" min="0" max="40"/>
                                 <input type="number" id="repro-manual-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="0" min="0" max="6"/>
                             </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualCount', lang)} </label>
-                            <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="1" min="1" max="12"/>
+                            <label style="font-size: 0.9em; opacity: 0.85;">${isOviposition ? getText('manualEggsCount', lang) : getText('manualCount', lang)}</label>
+                            <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${isOviposition ? 3 : 1}" min="1" max="12"/>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0;"/>
-                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel', lang)}</label>
-                            ${getTooltipHtml('fetalPathology', lang)}
-                        </div>
-                        <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${getText('startPregnancyBtn', lang)}</button>
+                        <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${isOviposition ? getText('startOvipositionBtn', lang) : getText('startPregnancyBtn', lang)}</button>
                     </div>
                 ` : ''}
 
@@ -358,11 +293,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 ` : ''}
 
                 <button id="repro-reset" class="menu_button type_danger" style="width: 100%; margin-top: 10px; font-weight: 600;">${getText('resetAllBtn', lang)}</button>
-                
-                <div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78em; color: #64748b; text-align: center; font-style: italic;">
-                    ${getText('globalRollsLabel', lang)} <span style="font-weight: bold; font-family: monospace; color: #94a3b8; margin-left: 2px;">${settings.globalRollsCount || 0}</span>
-                </div>
-
                 <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('exportLogsBtn', lang)}</button>
             </div>
         </div>
@@ -381,17 +311,13 @@ export function exportReproLogs({ data, chatId, language, isNotificationsEnabled
     textContent += `  REPRODUCTIVE SYSTEM EXTENSION - ACTIVITY LOGS\n`;
     textContent += `  Chat ID: ${chatId}\n`;
     textContent += `  Export Date: ${new Date().toISOString()}\n`;
-    textContent += `  Current RP Date: ${data.lastRpDate || 'N/A'}\n`;
-    textContent += `  Active Tracking Target: ${data.targetMode.toUpperCase()}\n`;
     textContent += `=====================================================\n\n`;
 
     const formatEntityInfo = (ent, label) => {
         let str = `--- [${label}] ---\n`;
         str += `Mode: ${ent.mode} | Gender: ${ent.gender} | Contraception: ${ent.contraception}\n`;
-        str += `State: ${ent.isPregnant ? (ent.isDiscovered ? 'Pregnant (Discovered)' : 'Pregnant (Secret)') : 'Not Pregnant'}\n`;
-        str += `Cycle Day: ${ent.cycleDay}/${ent.cycleLength} (Target: ${ent.currentCycleTargetLength})\n`;
-        str += `Pregnancy Term: ${ent.pregnancyWeeks}w ${ent.pregnancyDays}d\n`;
-        str += `Babies: ${ent.babiesCount} (${(ent.babiesGenders || []).join(', ') || 'None'})\n\n`;
+        str += `State: ${ent.isPregnant ? 'Gravid/Pregnant' : 'Not Gravid'} | Weeks: ${ent.pregnancyWeeks}w ${ent.pregnancyDays}d\n`;
+        str += `Count: ${ent.babiesCount}\n\n`;
         return str;
     };
 
@@ -399,11 +325,7 @@ export function exportReproLogs({ data, chatId, language, isNotificationsEnabled
     if (data.char) textContent += formatEntityInfo(data.char, 'CHAR PROFILE');
 
     textContent += `=== EVENT LOGS ===\n`;
-    if (data.activityLogs && data.activityLogs.length > 0) {
-        textContent += data.activityLogs.join('\n');
-    } else {
-        textContent += `(No event logs recorded yet for this session)\n`;
-    }
+    if (data.activityLogs?.length > 0) textContent += data.activityLogs.join('\n');
 
     try {
         const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
@@ -411,22 +333,10 @@ export function exportReproLogs({ data, chatId, language, isNotificationsEnabled
         const a = document.createElement('a');
         a.href = url;
         a.download = `repro_logs_${chatId}_${Date.now()}.txt`;
-        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        
-        setTimeout(() => {
-            if (document.body.contains(a)) document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 1500);
-
-        if (isNotificationsEnabled && typeof toastr !== 'undefined') {
-            toastr.success(language === 'en' ? 'Log file downloaded!' : 'Файл логов скачивается!');
-        }
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
     } catch (err) {
         console.error('Repro export failed:', err);
-        if (typeof toastr !== 'undefined') {
-            toastr.error('Download failed: ' + err.message);
-        }
     }
 }
