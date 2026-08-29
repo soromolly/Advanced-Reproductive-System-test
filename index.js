@@ -28,6 +28,7 @@ import {
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
 import { renderUI, exportReproLogs } from './ui.js';
+import { getComplication } from './symptoms.js';
 
 const EXTENSION_NAME = 'st-advanced-reproductive-system';
 
@@ -238,7 +239,6 @@ function processIncomingMessage(messageIndex, isUser = false) {
     const data = getChatData();
 
     if (isUser) {
-        // ТОЛЬКО ДЛЯ СООБЩЕНИЙ ПОЛЬЗОВАТЕЛЯ: относительные таймскипы ("прошло 3 недели")
         const relativeDays = parseRelativeDaysFromText(text);
         if (relativeDays > 0) {
             pendingUserTimeskipDays = relativeDays;
@@ -267,15 +267,12 @@ function processIncomingMessage(messageIndex, isUser = false) {
             }
         }
     } else {
-        // ДЛЯ СООБЩЕНИЙ ИИ: считываем СТРОГО дату из хедера/плашки.
-        // Никакие слова "три недели" из мыслей или диалогов бота не перематывают время!
         const parsedDate = parseRpDateFromText(text);
         if (parsedDate) {
             const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
             const newDateStr = daysToDateString(newTotalDays);
 
             if (pendingUserTimeskipDays > 0) {
-                // Таймскип уже был применен в сообщении юзера, просто выравниваем дату
                 pendingUserTimeskipDays = 0;
                 data.lastRpDate = newDateStr;
                 logReproEvent(`[AI DATE ALIGN] Aligned date to ${newDateStr} after user timeskip.`);
@@ -400,6 +397,50 @@ function bindGlobalEvents() {
     $(document).off('change', '#repro-fetal-pathology-enabled').on('change', '#repro-fetal-pathology-enabled', function() {
         getChatData()[getActiveEntityKey()].isFetalPathologyEnabled = $(this).is(':checked');
         saveSettingsDebounced();
+    });
+
+    // Обработчик кнопки проверки беременности / теста
+    $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        const lang = settings.language || 'ru';
+        
+        if (entity.isPregnant) {
+            entity.isDiscovered = true;
+            logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Positive test result confirmed.`);
+            notify(`${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
+        } else {
+            logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Negative test result (Cycle delay).`);
+            notify(getText('toastTestNegative', lang), 'info');
+        }
+
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    // Обработчик ручного вызова родов
+    $(document).off('click', '#repro-btn-birth-trigger').on('click', '#repro-btn-birth-trigger', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        while (entity.babiesCount > 0) {
+            deliverEntitySingleBaby(entity, 'natural', settings.language, logReproEvent, notify);
+        }
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    // Обработчик лечения осложнений
+    $(document).off('click', '#repro-cure-complication').on('click', '#repro-cure-complication', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        if (entity.activeComplication?.curable) {
+            const comp = getComplication(entity.activeComplication.id, settings.language);
+            logReproEvent(`[COMPLICATION CURED] [${entity.key.toUpperCase()}] Cured ${entity.activeComplication.id}`);
+            entity.activeComplication = null;
+            saveSettingsDebounced();
+            refreshUI();
+            updatePrompt();
+            notify(settings.language === 'en' ? 'Complication treated successfully!' : 'Осложнение успешно вылечено!', 'success');
+        }
     });
 
     $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
