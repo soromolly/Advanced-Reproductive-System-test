@@ -56,7 +56,7 @@ function getChatData() {
     const chatId = getCurrentChatId();
     if (!settings.chatPregnancyData[chatId]) {
         settings.chatPregnancyData[chatId] = {
-            targetMode: 'user',
+            targetMode: 'user', // 'user' | 'char' | 'both'
             lastRpDate: null,
             activityLogs: [],
             user: createDefaultEntityState('user'),
@@ -126,6 +126,7 @@ function refreshUI() {
 }
 
 function advanceTimeAll(days) {
+    if (!days || days <= 0) return;
     const data = getChatData();
     const lang = settings.language || 'ru';
     if (data.targetMode === 'user' || data.targetMode === 'both') {
@@ -237,6 +238,7 @@ function processIncomingMessage(messageIndex, isUser = false) {
     const data = getChatData();
 
     if (isUser) {
+        // ТОЛЬКО ДЛЯ СООБЩЕНИЙ ПОЛЬЗОВАТЕЛЯ: относительные таймскипы ("прошло 3 недели")
         const relativeDays = parseRelativeDaysFromText(text);
         if (relativeDays > 0) {
             pendingUserTimeskipDays = relativeDays;
@@ -246,7 +248,7 @@ function processIncomingMessage(messageIndex, isUser = false) {
                 const currentTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
                 data.lastRpDate = daysToDateString(currentTotalDays + relativeDays);
             }
-            logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via relative user text.`);
+            logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via user message.`);
         } else {
             const parsedDate = parseRpDateFromText(text);
             if (parsedDate) {
@@ -256,23 +258,27 @@ function processIncomingMessage(messageIndex, isUser = false) {
                     const parts = data.lastRpDate.split('-').map(Number);
                     const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
                     const diff = newTotalDays - prevTotalDays;
-                    if (diff > 0) advanceTimeAll(diff);
+                    if (diff > 0) {
+                        advanceTimeAll(diff);
+                        logReproEvent(`[USER DATE SYNC] Date changed from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
+                    }
                 }
                 data.lastRpDate = newDateStr;
             }
         }
     } else {
-        // Из постов ИИ берется строго дата из хедера
+        // ДЛЯ СООБЩЕНИЙ ИИ: считываем СТРОГО дату из хедера/плашки.
+        // Никакие слова "три недели" из мыслей или диалогов бота не перематывают время!
         const parsedDate = parseRpDateFromText(text);
         if (parsedDate) {
             const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
             const newDateStr = daysToDateString(newTotalDays);
 
             if (pendingUserTimeskipDays > 0) {
-                // Таймскип уже был начислен в посте юзера: синхронизируем дату без повторного начисления
+                // Таймскип уже был применен в сообщении юзера, просто выравниваем дату
                 pendingUserTimeskipDays = 0;
                 data.lastRpDate = newDateStr;
-                logReproEvent(`[AI DATE SYNC] Date aligned to ${newDateStr} after user timeskip.`);
+                logReproEvent(`[AI DATE ALIGN] Aligned date to ${newDateStr} after user timeskip.`);
             } else if (data.lastRpDate && data.lastRpDate !== newDateStr) {
                 const parts = data.lastRpDate.split('-').map(Number);
                 const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
@@ -283,7 +289,7 @@ function processIncomingMessage(messageIndex, isUser = false) {
                     notify(`${getText('toastTimePassed', settings.language || 'ru')}${diff}.`, 'info');
                 }
                 data.lastRpDate = newDateStr;
-            } else {
+            } else if (!data.lastRpDate) {
                 data.lastRpDate = newDateStr;
             }
         }
@@ -522,9 +528,9 @@ jQuery(async () => {
         if (event_types.MESSAGE_SWIPED) eventSource.on(event_types.MESSAGE_SWIPED, async (i) => processIncomingMessage(i, false));
         if (event_types.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
-                pendingUserTimeskipDays = 0;
                 processedBirthMessages.clear();
                 lastProcessedMessageUid = null;
+                pendingUserTimeskipDays = 0;
                 loadSettings(); 
             });
         }
