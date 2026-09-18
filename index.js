@@ -43,7 +43,7 @@ const DEFAULT_SETTINGS = {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
-let activeTab = 'user';
+let activeTab = 'user'; // 'user' | 'char'
 let activeChatId = null;
 let pendingUserTimeskipDays = 0;
 const processedBirthMessages = new Set();
@@ -57,7 +57,7 @@ function getChatData() {
     const chatId = getCurrentChatId();
     if (!settings.chatPregnancyData[chatId]) {
         settings.chatPregnancyData[chatId] = {
-            targetMode: 'user',
+            targetMode: 'user', // 'user' | 'char' | 'both'
             lastRpDate: null,
             activityLogs: [],
             user: createDefaultEntityState('user'),
@@ -310,7 +310,7 @@ function bindGlobalEvents() {
         const tip = $(this).attr('data-tip') || $(this).attr('title');
         if (tip) notify(tip, 'info');
     });
-    
+
     $(document).off('click', '.repro-custom-btn-toggle').on('click', '.repro-custom-btn-toggle', function() {
         isMenuCollapsed = !isMenuCollapsed; 
         $('#repro-content-wrapper').slideToggle(150);
@@ -404,6 +404,7 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
+    // Редактирование имени ребенка
     $(document).off('click', '.repro-edit-child-name-btn').on('click', '.repro-edit-child-name-btn', function(e) {
         e.stopPropagation();
         e.preventDefault();
@@ -430,17 +431,14 @@ function bindGlobalEvents() {
     $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
         const entity = getChatData()[getActiveEntityKey()];
         const lang = settings.language || 'ru';
-        const isMedieval = settings.aiAwareness === 'hidden';
         
         if (entity.isPregnant) {
             entity.isDiscovered = true;
             logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Positive test result confirmed.`);
-            const positiveToast = isMedieval ? getText('toastMedievalPositive', lang) : getText('toastTestPositive', lang);
-            notify(`${positiveToast}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
+            notify(`${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
         } else {
             logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Negative test result (Cycle delay).`);
-            const negativeToast = isMedieval ? getText('toastMedievalNegative', lang) : getText('toastTestNegative', lang);
-            notify(negativeToast, 'info');
+            notify(getText('toastTestNegative', lang), 'info');
         }
 
         saveSettingsDebounced();
