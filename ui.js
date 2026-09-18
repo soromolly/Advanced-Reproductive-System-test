@@ -145,7 +145,8 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
                 return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px dashed rgba(255,255,255,0.08);">
                     <div style="flex: 1; padding-right: 8px;">
-                        👶 ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}${featureHtml}
+                        👶 ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}
+                        ${featureHtml}
                     </div>
                     <button class="repro-edit-child-name-btn menu_button" data-child-id="${c.id}" title="${lang === 'en' ? 'Edit name' : 'Изменить имя'}" style="padding: 2px 7px; font-size: 11px; height: 24px; min-width: 26px; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: var(--text-color);">
                         <i class="fa-solid fa-pen" style="pointer-events: none;"></i>
@@ -282,15 +283,16 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     ${familyHtml}
 
                     ${isCurrentlyPregnantDiscovered ? `
-                        <div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks}${getText('weeksShort', lang)} ${currentEntity.pregnancyDays}${getText('daysShort', lang)}</div>
-                        ${eddHtml}${wombMapHtml}
+                        <div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>
+                        ${eddHtml}
+                        ${wombMapHtml}
                     ` : `
                         ${currentEntity.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
                     `}
                     <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync', lang)} ${displayDate}</div>
                 </div>
 
-                ${(!isCurrentlyPregnantDiscovered && currentEntity.isSecretConception && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0) ? `
+                ${(!isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0) ? `
                     <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
                 ` : ''}
 
@@ -327,7 +329,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         <label style="font-size: 0.9em; opacity: 0.85;">${getText('pregnancyWeekLabel', lang)}</label>
                         <div style="display: flex; gap: 6px; width: 55%;">
                             <input type="number" id="repro-input-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyWeeks}" min="0" max="50"/>
-                            <input type="number" id="repro-input-days" style="background: var(--input-border, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyDays || 0}" min="0" max="6"/>
+                            <input type="number" id="repro-input-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyDays || 0}" min="0" max="6"/>
                         </div>
                     </div>
                 ` : `
@@ -356,7 +358,8 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                             <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0;"/>
-                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel', lang)}</label>${getTooltipHtml('fetalPathology', lang)}
+                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel', lang)}</label>
+                            ${getTooltipHtml('fetalPathology', lang)}
                         </div>
                         <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${getText('startPregnancyBtn', lang)}</button>
                     </div>
