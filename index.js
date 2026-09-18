@@ -307,7 +307,7 @@ function bindGlobalEvents() {
     $(document).off('click', '.repro-tooltip-btn, .repro-tooltip-icon').on('click', '.repro-tooltip-btn, .repro-tooltip-icon', function(e) {
         e.stopPropagation();
         e.preventDefault();
-        const tip = $(this).attr('data-tip') || $(this).attr('title');
+        const tip = $(this).attr('data-tip') \vert{}\vert{}$(this).attr('title');
         if (tip) notify(tip, 'info');
     });
 
@@ -431,14 +431,17 @@ function bindGlobalEvents() {
     $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
         const entity = getChatData()[getActiveEntityKey()];
         const lang = settings.language || 'ru';
+        const isMedieval = settings.aiAwareness === 'hidden';
         
         if (entity.isPregnant) {
             entity.isDiscovered = true;
             logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Positive test result confirmed.`);
-            notify(`${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
+            const positiveToast = isMedieval ? getText('toastMedievalPositive', lang) : getText('toastTestPositive', lang);
+            notify(`${positiveToast}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
         } else {
             logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Negative test result (Cycle delay).`);
-            notify(getText('toastTestNegative', lang), 'info');
+            const negativeToast = isMedieval ? getText('toastMedievalNegative', lang) : getText('toastTestNegative', lang);
+            notify(negativeToast, 'info');
         }
 
         saveSettingsDebounced();
