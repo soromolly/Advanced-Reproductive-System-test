@@ -307,10 +307,10 @@ function bindGlobalEvents() {
     $(document).off('click', '.repro-tooltip-btn, .repro-tooltip-icon').on('click', '.repro-tooltip-btn, .repro-tooltip-icon', function(e) {
         e.stopPropagation();
         e.preventDefault();
-        const tip = $(this).attr('data-tip') \vert{}\vert{}$(this).attr('title');
+        const tip = $(this).attr('data-tip') || $(this).attr('title');
         if (tip) notify(tip, 'info');
     });
-
+    
     $(document).off('click', '.repro-custom-btn-toggle').on('click', '.repro-custom-btn-toggle', function() {
         isMenuCollapsed = !isMenuCollapsed; 
         $('#repro-content-wrapper').slideToggle(150);
