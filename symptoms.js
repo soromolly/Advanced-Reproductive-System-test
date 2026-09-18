@@ -323,26 +323,17 @@ export const COMPLICATIONS_POOL = {
     ]
 };
 
-// Полная база патологий плода и новорожденных
-// discoveryWeek — акушерский срок (в неделях) раннего обнаружения на УЗИ/НИПТ
-// abortionIndicated — истинно, если порок тяжелый/несовместимый с жизнью (Категории 1 и 2) и консилиум предлагает аборт
 export const FETAL_DISEASES = {
     ru: [
-        // --- Group A: Выявляются на УЗИ/скрининге пренатально ---
-        // Хромосомные синдромы
         { id: "down_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Синдром Дауна (Трисомия 21)", desc: "Генетическая особенность (маркеры ТВП 11–13 нед). Врачебный консилиум предоставляет семье информированный выбор." },
         { id: "edwards_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Синдром Эдвардса (Трисомия 18)", desc: "Тяжелая хромосомная патология (ЗВУР, пороки сердца и черепа). Абсолютное медицинское показание к прерыванию." },
         { id: "patau_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Синдром Патау (Трисомия 13)", desc: "Крайне тяжелые пороки ЦНС и лица. Абсолютное медицинское показание к прерыванию беременности." },
         { id: "turner_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Синдром Шерешевского — Тёрнера", desc: "Моносомия X (выраженная шейная гигрома/отёк на 1-м скрининге). Консилиум предлагает прерывание при тяжелом гидропсе." },
-
-        // Нервная система и дефекты брюшной стенки
         { id: "anencephaly", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Анэнцефалия", desc: "Отсутствие свода черепа и полушарий мозга (11–13 нед). Порок 100% несовместим с жизнью, строгое показание к прерыванию." },
         { id: "spina_bifida", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Спина бифида (расщепление позвоночника)", desc: "Дефект позвоночного канала (12–13 нед). Настойчиво предлагается прерывание из-за риска паралича и гидроцефалии." },
         { id: "omphalocele", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Омпфалоцеле", desc: "Выход органов брюшной полости в грыжевой мешок пуповины (12–13 нед). При крупных сочетанных формах предлагается прерывание." },
         { id: "gastroschisis", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Гастрошизис", desc: "Выпадение петель кишечника вне брюшной полости (12–13 нед). Консилиум оценивает сочетанные риски." },
         { id: "hydrocephalus", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Врожденная гидроцефалия", desc: "Избыток ликвора в желудочках мозга (18–20 нед). Подлежит плановому неонатальному шунтированию." },
-
-        // Челюстно-лицевые и костно-мышечные
         { id: "phocomelia", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Фокомелия", desc: "Грубое недоразвитие/отсутствие сегментов конечностей (12–13 нед). Ведет к тяжелой инвалидности, консилиум предлагает выбор." },
         { id: "cleft_lip", type: "prenatal", discoveryWeek: 13, abortionIndicated: false, name: "Заячья губа (Хейлосхизис)", desc: "Несращение верхней губы (13–14 нед). Успешно и бесследно оперируется в первые месяцы. Прерывание НЕ показано." },
         { id: "polydactyly", type: "prenatal", discoveryWeek: 14, abortionIndicated: false, name: "Полидактилия (шестипалость)", desc: "Дополнительный пальчик (14–16 нед). Легко удаляется хирургически. Прерывание НЕ показано." },
@@ -350,8 +341,6 @@ export const FETAL_DISEASES = {
         { id: "cleft_palate", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Волчья пасть (Палатосхизис)", desc: "Расщепление нёба (18–20 нед). Полностью восстанавливается реконструктивной хирургией. Прерывание НЕ показано." },
         { id: "syndactyly", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Синдактилия", desc: "Сращение пальчиков (18–20 нед). Планово разделяется хирургами. Прерывание НЕ показано." },
         { id: "achondroplasia", type: "prenatal", discoveryWeek: 20, abortionIndicated: false, name: "Ахондроплазия (карликовость)", desc: "Особенность роста трубчатых костей (20–24 нед). Не угрожает жизни, интеллект сохранен. Прерывание НЕ показано." },
-
-        // Пороки сердца и сосудов
         { id: "tetralogy_of_fallot", type: "prenatal", discoveryWeek: 13, abortionIndicated: true, name: "Тетрада Фалло", desc: "Сложный порок сердца (13–14 нед). Требует открытой кардиохирургии; консилиум обсуждает хирургический прогноз." },
         { id: "hlhs", type: "prenatal", discoveryWeek: 13, abortionIndicated: true, name: "Синдром гипоплазии левых отделов сердца (СГЛОС)", desc: "Недоразвитие левого желудочка (13–14 нед). Без этапных операций летальность 100%, врачи всегда предлагают аборт." },
         { id: "vsd", type: "prenatal", discoveryWeek: 16, abortionIndicated: false, name: "Дефект межжелудочковой перегородки (ДМЖП)", desc: "Окно в перегородке сердца (16–18 нед). Часто закрывается само или легко оперируется. Прерывание НЕ показано." },
@@ -359,8 +348,6 @@ export const FETAL_DISEASES = {
         { id: "aortic_coarctation", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Коарктация аорты", desc: "Сужение аорты (18–21 нед). Устраняется малоинвазивным вмешательством. Прерывание НЕ показано." },
         { id: "asd", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Дефект межпредсердной перегородки (ДМПП)", desc: "Окно между предсердиями (18–20 нед). Благоприятный порок. Прерывание НЕ показано." },
         { id: "ebstein_anomaly", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Аномалия Эбштейна", desc: "Смещение трехстворчатого клапана (18–20 нед). Плановое кардионаблюдение. Прерывание НЕ показано." },
-
-        // Внутренние органы
         { id: "renal_agenesis", type: "prenatal", discoveryWeek: 13, abortionIndicated: true, name: "Агенезия почек (Синдром Поттера)", desc: "Отсутствие почек и выраженное маловодие (13–14 нед). Плод нежизнеспособен, строгое показание к прерыванию." },
         { id: "diaphragmatic_hernia", type: "prenatal", discoveryWeek: 14, abortionIndicated: false, name: "Диафрагмальная грыжа", desc: "Смещение органов ЖКТ в грудную клетку (14–16 нед). Планово вправляется детскими хирургами после родов." },
         { id: "hydronephrosis", type: "prenatal", discoveryWeek: 16, abortionIndicated: false, name: "Врожденный гидронефроз", desc: "Расширение почечных лоханок (16–18 нед). Благоприятный прогноз, лечится после родов." },
@@ -368,8 +355,6 @@ export const FETAL_DISEASES = {
         { id: "esophageal_atresia", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Атрезия пищевода", desc: "Непроходимость пищевода и многоводие (18–20 нед). Успешно восстанавливается хирургами в первые сутки." },
         { id: "cpam", type: "prenatal", discoveryWeek: 18, abortionIndicated: true, name: "Кистозно-аденоматозный порок легких (КАМЛ)", desc: "Кистозное поражение доли легкого (18–20 нед). При крупных формах консилиум оценивает прогноз." },
         { id: "pulmonary_hypoplasia", type: "prenatal", discoveryWeek: 20, abortionIndicated: true, name: "Гипоплазия легких", desc: "Критический дефицит объема легочной ткани (20–22 нед). Высокий риск дыхательной недостаточности." },
-
-        // --- Group B: Постнатальные (0 нед, НЕ выявляются на УЗИ) ---
         { id: "pda", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Открытый артериальный проток (ОАП)", desc: "Сосуд не закрылся после рождения. Корректируется медикаментозно в роддоме." },
         { id: "hearing_loss", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Врожденная тугоухость / Глухота", desc: "Диагностируется неонатальным аудиоскринингом. Компенсируется аппаратами/имплантами." },
         { id: "congenital_cataract", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Врожденная катаракта / Анофтальмия", desc: "Помутнение хрусталика. Подлежит ранней микрохирургической коррекции." },
@@ -384,18 +369,15 @@ export const FETAL_DISEASES = {
         { id: "galactosemia", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Галактоземия", desc: "Непереносимость лактозы. Требует безлактозного питания." }
     ],
     en: [
-        // --- Group A: Prenatal ---
         { id: "down_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Down Syndrome (Trisomy 21)", desc: "Genetic condition (NT scan 11–13 wks). Medical board provides informed parental choice." },
         { id: "edwards_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Edwards Syndrome (Trisomy 18)", desc: "Severe chromosomal disorder (growth restriction, heart/cranial defects). Absolute indication for termination." },
         { id: "patau_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Patau Syndrome (Trisomy 13)", desc: "Severe CNS and craniofacial malformations. Absolute indication for medical termination." },
         { id: "turner_syndrome", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Turner Syndrome (Monosomy X)", desc: "Cystic hygroma on 1st trimester scan. Termination offered in severe hydrops cases." },
-
         { id: "anencephaly", type: "prenatal", discoveryWeek: 11, abortionIndicated: true, name: "Anencephaly", desc: "Absence of major portion of brain/skull (11–13 wks). 100% fatal, strict medical indication for abortion." },
         { id: "spina_bifida", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Spina Bifida", desc: "Neural tube defect (12–13 wks). Termination strongly offered due to severe paralysis risk." },
         { id: "omphalocele", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Omphalocele", desc: "Herniation of abdominal organs into umbilical cord (12–13 wks). Termination offered for complex forms." },
         { id: "gastroschisis", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Gastroschisis", desc: "Extrusion of intestines outside abdomen (12–13 wks). Surgical prognosis evaluated." },
         { id: "hydrocephalus", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Congenital Hydrocephalus", desc: "Excess CSF in brain ventricles (18–20 wks). Managed via postnatal neurosurgical shunting." },
-
         { id: "phocomelia", type: "prenatal", discoveryWeek: 12, abortionIndicated: true, name: "Phocomelia", desc: "Severe limb reduction (12–13 wks). Severe disability; termination offered to parents." },
         { id: "cleft_lip", type: "prenatal", discoveryWeek: 13, abortionIndicated: false, name: "Cleft Lip (Cheiloschisis)", desc: "Upper lip defect (13–14 wks). Easily repaired in infancy. Abortion NOT indicated." },
         { id: "polydactyly", type: "prenatal", discoveryWeek: 14, abortionIndicated: false, name: "Polydactyly (Extra Digits)", desc: "Extra finger/toe (14–16 wks). Minor cosmetic surgery. Abortion NOT indicated." },
@@ -403,7 +385,6 @@ export const FETAL_DISEASES = {
         { id: "cleft_palate", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Cleft Palate (Palatoschisis)", desc: "Roof of mouth opening (18–20 wks). Restored with pediatric surgery. Abortion NOT indicated." },
         { id: "syndactyly", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Syndactyly (Webbed Digits)", desc: "Webbed fingers/toes (18–20 wks). Elective separation surgery. Abortion NOT indicated." },
         { id: "achondroplasia", type: "prenatal", discoveryWeek: 20, abortionIndicated: false, name: "Achondroplasia (Dwarfism)", desc: "Short-limb disproportion (20–24 wks). Normal lifespan and cognition. Abortion NOT indicated." },
-
         { id: "tetralogy_of_fallot", type: "prenatal", discoveryWeek: 13, abortionIndicated: true, name: "Tetralogy of Fallot", desc: "Complex heart defect (13–14 wks). Requires open-heart surgery; termination offered if prognosis is guarded." },
         { id: "hlhs", type: "prenatal", discoveryWeek: 13, abortionIndicated: true, name: "Hypoplastic Left Heart Syndrome (HLHS)", desc: "Underdeveloped left heart (13–14 wks). Highly lethal without staged surgeries; termination recommended." },
         { id: "vsd", type: "prenatal", discoveryWeek: 16, abortionIndicated: false, name: "Ventricular Septal Defect (VSD)", desc: "Opening between ventricles (16–18 wks). Frequently resolves spontaneously. Abortion NOT indicated." },
@@ -411,7 +392,6 @@ export const FETAL_DISEASES = {
         { id: "aortic_coarctation", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Coarctation of the Aorta", desc: "Aortic narrowing (18–21 wks). Corrected via minor intervention. Abortion NOT indicated." },
         { id: "asd", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Atrial Septal Defect (ASD)", desc: "Benign upper chamber opening (18–20 wks). Abortion NOT indicated." },
         { id: "ebstein_anomaly", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Ebstein's Anomaly", desc: "Tricuspid valve displacement (18–20 wks). Monitored postnatally. Abortion NOT indicated." },
-
         { id: "renal_agenesis", type: "prenatal", discoveryWeek: 13, abortionIndicated: true, name: "Renal Agenesis (Potter Syndrome)", desc: "Bilateral absent kidneys with anuria (13–14 wks). Incompatible with life; strict indication for abortion." },
         { id: "diaphragmatic_hernia", type: "prenatal", discoveryWeek: 14, abortionIndicated: false, name: "Diaphragmatic Hernia", desc: "Diaphragm opening (14–16 wks). Repaired surgically after birth. Abortion NOT indicated." },
         { id: "hydronephrosis", type: "prenatal", discoveryWeek: 16, abortionIndicated: false, name: "Congenital Hydronephrosis", desc: "Enlarged renal pelvis (16–18 wks). Resolves naturally or treated postnatally. Abortion NOT indicated." },
@@ -419,8 +399,6 @@ export const FETAL_DISEASES = {
         { id: "esophageal_atresia", type: "prenatal", discoveryWeek: 18, abortionIndicated: false, name: "Esophageal Atresia", desc: "GI discontinuity (18–20 wks). Repaired immediately after delivery. Abortion NOT indicated." },
         { id: "cpam", type: "prenatal", discoveryWeek: 18, abortionIndicated: true, name: "Congenital Pulmonary Airway Malformation (CPAM)", desc: "Cystic lung mass (18–20 wks). Termination offered for extensive bilateral lesions." },
         { id: "pulmonary_hypoplasia", type: "prenatal", discoveryWeek: 20, abortionIndicated: true, name: "Pulmonary Hypoplasia", desc: "Underdeveloped lung volume (20–22 wks). High risk of neonatal respiratory failure." },
-
-        // --- Group B: Postnatal (0 wks) ---
         { id: "pda", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Patent Ductus Arteriosus (PDA)", desc: "Persistent fetal vessel. Easily closed with medication in the nursery." },
         { id: "hearing_loss", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Congenital Hearing Loss / Deafness", desc: "Diagnosed on newborn auditory test. Managed with hearing aids or implants." },
         { id: "congenital_cataract", type: "postnatal", discoveryWeek: 0, abortionIndicated: false, name: "Congenital Cataract / Anophthalmia", desc: "Ocular lens clouding. Managed with early pediatric ophthalmology." },
@@ -478,8 +456,8 @@ export function rollComplication(trimester) {
     if (!pool || pool.length === 0) return null;
     const selected = pool[Math.floor(Math.random() * pool.length)];
     
-    let startWeek = 4;
-    if (trimester === 1) startWeek = Math.floor(Math.random() * 9) + 4;
+    let startWeek = 5;
+    if (trimester === 1) startWeek = Math.floor(Math.random() * 8) + 5;
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
 
