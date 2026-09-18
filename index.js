@@ -43,7 +43,7 @@ const DEFAULT_SETTINGS = {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
-let activeTab = 'user'; // 'user' | 'char'
+let activeTab = 'user';
 let activeChatId = null;
 let pendingUserTimeskipDays = 0;
 const processedBirthMessages = new Set();
@@ -57,7 +57,7 @@ function getChatData() {
     const chatId = getCurrentChatId();
     if (!settings.chatPregnancyData[chatId]) {
         settings.chatPregnancyData[chatId] = {
-            targetMode: 'user', // 'user' | 'char' | 'both'
+            targetMode: 'user',
             lastRpDate: null,
             activityLogs: [],
             user: createDefaultEntityState('user'),
@@ -404,7 +404,6 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
-    // Редактирование имени ребенка
     $(document).off('click', '.repro-edit-child-name-btn').on('click', '.repro-edit-child-name-btn', function(e) {
         e.stopPropagation();
         e.preventDefault();
