@@ -146,11 +146,9 @@ export function updateEntitySymptoms(entity) {
 
     if (isRevealedPregnancy) {
         const week = entity.pregnancyWeeks;
-        // До 5-й недели симптомов токсикоза и капризов физиологически нет
-        if (week >= 5 && week <= 12) phaseKey = 'preg_trimester_1';
+        if (week <= 12) phaseKey = 'preg_trimester_1';
         else if (week >= 13 && week <= 26) phaseKey = 'preg_trimester_2';
-        else if (week >= 27) phaseKey = 'preg_trimester_3';
-        else phaseKey = null;
+        else phaseKey = 'preg_trimester_3';
     } else {
         const day = entity.cycleDay;
         const targetLength = entity.currentCycleTargetLength || entity.cycleLength || 28;
@@ -327,6 +325,8 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
 export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.isPregnant = true;
 
+    // В Омегаверсе течка начинается с 1-го дня цикла, поэтому срок считается напрямую от 1-го дня течки (от текущего дня цикла)
+    // В Реализме овуляция наступает на ~14 день, поэтому акушерский срок начинается с первого дня последних месячных (+14 дней)
     if (entity.mode === 'omegaverse') {
         entity.pregnancyDaysTotal = Math.max(1, entity.cycleDay || 1);
     } else {
