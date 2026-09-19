@@ -32,12 +32,14 @@ import {
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
 import { renderUI, exportReproLogs } from './ui.js';
-import { getComplication } from './symptoms.js';
+import { 
+    getComplication,
+    getRandomEggEmbryoDiseaseId
+} from './symptoms.js';
 import { 
     rollEggCount, 
     rollEggIncubationDays, 
-    getRandomEggShellDefectId, 
-    getRandomEggEmbryoDiseaseId,
+    getRandomEggShellDefectId,
     EGG_INCUBATION_DISPLAY_MAX
 } from './eggSystem.js';
 
@@ -102,7 +104,6 @@ function getChatData() {
         if (data[k].eggsHatched === undefined) data[k].eggsHatched = 0;
         if (data[k].isNestActive === undefined) data[k].isNestActive = false;
 
-        // Миграция: старые значения инкубации (60-119) → новые 120
         if (data[k].isNestActive && data[k].eggIncubationTotal && data[k].eggIncubationTotal !== EGG_INCUBATION_DISPLAY_MAX) {
             data[k].eggIncubationTotal = EGG_INCUBATION_DISPLAY_MAX;
         }
@@ -170,26 +171,18 @@ function advanceTimeAll(days) {
     }
 }
 
-// ============================================================
-// Хелпер: применение распарсенной даты только ВПЕРЁД
-// Если новая дата <= текущей — игнорируем (защита от флешбеков
-// и упоминаний прошлых дат в тексте).
-// Возвращает: 'set-initial' | 'advanced' | 'same' | 'ignored'
-// ============================================================
 function applyDateForwardOnly(data, parsedDate, source) {
     if (!parsedDate) return 'ignored';
 
     const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
     const newDateStr = daysToDateString(newTotalDays);
 
-    // Первая установка (нет текущей даты) — принимаем любую
     if (!data.lastRpDate) {
         data.lastRpDate = newDateStr;
         logReproEvent(`[${source} DATE INIT] Initial date set to ${newDateStr}.`);
         return 'set-initial';
     }
 
-    // Та же дата — ничего не делаем
     if (data.lastRpDate === newDateStr) {
         return 'same';
     }
@@ -198,13 +191,11 @@ function applyDateForwardOnly(data, parsedDate, source) {
     const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
     const diff = newTotalDays - prevTotalDays;
 
-    // Дата назад — ИГНОРИРУЕМ (защита от флешбеков)
     if (diff < 0) {
         logReproEvent(`[${source} DATE IGNORED] Parsed date ${newDateStr} is EARLIER than current ${data.lastRpDate} (${diff} days). Possibly a flashback/mention. Date unchanged.`);
         return 'ignored';
     }
 
-    // Дата вперёд — продвигаем время и сохраняем
     if (diff > 0) {
         advanceTimeAll(diff);
         data.lastRpDate = newDateStr;
@@ -271,7 +262,6 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
         checkConceptionForEntity(data.char, text, isTargetClimax);
     }
 
-    // Аборт
     if (/<!--\s*ABORTION_USER\s*-->/i.test(text) || /<!--\s*ABORTION\s*-->/i.test(text)) {
         if (data.user.isPregnant && data.user.mode !== 'oviposition') processEntityAbortion(data.user, settings.language, logReproEvent, notify);
     }
@@ -279,7 +269,6 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
         if (data.char.isPregnant && data.char.mode !== 'oviposition') processEntityAbortion(data.char, settings.language, logReproEvent, notify);
     }
 
-    // Кладка яиц — поштучно
     if (!processedLayMessages.has(layMsgKey)) {
         const checkLayFor = (entity, tagKey) => {
             if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
@@ -295,7 +284,6 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
         processedLayMessages.add(layMsgKey);
     }
 
-    // Вылупление яиц — поштучно
     if (!processedHatchMessages.has(hatchMsgKey)) {
         const checkHatchFor = (entity, tagKey) => {
             if (entity.mode !== 'oviposition' || !entity.isNestActive) return;
@@ -311,7 +299,6 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
         processedHatchMessages.add(hatchMsgKey);
     }
 
-    // Роды через тег (обычная беременность)
     if (!processedBirthMessages.has(msgKey)) {
         const checkBirthFor = (entity, tagKey) => {
             if (!entity.isPregnant || !entity.babiesGenders || entity.babiesGenders.length === 0) return;
@@ -359,7 +346,6 @@ function processIncomingMessage(messageIndex, isUser = false) {
     const data = getChatData();
 
     if (isUser) {
-        // Сначала проверяем явный таймскип (только вперёд по определению)
         const relativeDays = parseRelativeDaysFromText(text);
         if (relativeDays > 0) {
             pendingUserTimeskipDays = relativeDays;
@@ -371,23 +357,19 @@ function processIncomingMessage(messageIndex, isUser = false) {
             }
             logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via user message.`);
         } else {
-            // Иначе — пытаемся распарсить явную дату. Только вперёд!
             const parsedDate = parseRpDateFromText(text);
             applyDateForwardOnly(data, parsedDate, 'USER');
         }
     } else {
-        // AI: сначала учтём pending timeskip от пользователя
         const parsedDate = parseRpDateFromText(text);
 
         if (pendingUserTimeskipDays > 0 && parsedDate) {
-            // Пользователь уже сделал timeskip — просто синхронизируем дату на любую (это выравнивание)
             const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
             const newDateStr = daysToDateString(newTotalDays);
             pendingUserTimeskipDays = 0;
             data.lastRpDate = newDateStr;
             logReproEvent(`[AI DATE ALIGN] Aligned date to ${newDateStr} after user timeskip.`);
         } else {
-            // Обычная синхронизация — только вперёд!
             applyDateForwardOnly(data, parsedDate, 'AI');
         }
     }
@@ -624,7 +606,6 @@ function bindGlobalEvents() {
         const maxWeeksInput = root.find('#repro-input-maxweeks');
         if (maxWeeksInput.length) entity.maxPregnancyWeeks = parseInt(maxWeeksInput.val(), 10) || 40;
         
-        // Ручной ввод даты через UI — БЕЗ ограничений "только вперёд" (это настройка самого пользователя)
         const manualDateVal = root.find('#repro-input-rpdate').val();
         const normalized = normalizeInputDate(manualDateVal);
         if (normalized) {
