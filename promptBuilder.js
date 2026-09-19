@@ -87,16 +87,30 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
         p += `Laid eggs: ${entity.eggsLaid}. Hatched so far: ${entity.eggsHatched || 0}. ${macroName} is highly protective of the nest and its partner, dislikes strangers near it.\n`;
 
         if (aiAwareness === 'full' && entity.laidEggs?.length > 0) {
-            const known = entity.laidEggs.map((e, i) => `#${i+1}: ${translateGender(e.gender, 'en')}${e.hatched ? ' [hatched]' : ''}${e.diseaseId ? ` (${getEggEmbryoDisease(e.diseaseId, 'en')?.name})` : ''}`).join('; ');
+            // Всеведение — показываем всё, включая postnatal.
+            const known = entity.laidEggs.map((e, i) => {
+                let diseaseStr = '';
+                if (e.diseaseId) {
+                    const d = getEggEmbryoDisease(e.diseaseId, 'en');
+                    if (d) diseaseStr = ` (${d.name})`;
+                }
+                const hatchStr = e.hatched ? ' [hatched]' : '';
+                return `#${i+1}: ${translateGender(e.gender, 'en')}${hatchStr}${diseaseStr}`;
+            }).join('; ');
             p += `[OMNISCIENCE] Known contents: ${known}.\n`;
         } else if (aiAwareness === 'dynamic') {
             if (entity.laidEggs?.length > 0) {
+                // Осмотр яиц: показываем только те патологии, что видны при осмотре (НЕ postnatal).
                 const lines = entity.laidEggs.map((e, i) => {
                     const genderStr = translateGender(e.gender, 'en');
                     let diseaseStr = '';
                     if (e.diseaseId) {
                         const d = getEggEmbryoDisease(e.diseaseId, 'en');
-                        if (d) diseaseStr = ` — condition: ${d.name}`;
+                        if (d && d.type !== 'postnatal') {
+                            diseaseStr = ` — condition: ${d.name}`;
+                        } else if (d && d.type === 'postnatal') {
+                            diseaseStr = ` — [postnatal condition, hidden until hatching]`;
+                        }
                     }
                     let defectStr = '';
                     if (e.shellDefect) {
