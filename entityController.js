@@ -215,7 +215,7 @@ export function updateEntitySymptoms(entity) {
             }
         } else if (entity.mode === 'oviposition') {
             if (day <= periodDays) {
-                phaseKey = (entity.gender === 'male') ? 'heat_male' : 'heat_female';
+                phaseKey = (entity.gender === 'male') ? 'egg_heat_male' : 'egg_heat_female';
             } else {
                 phaseKey = 'egg_quiescence';
             }
@@ -393,7 +393,6 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         }
         logFn?.(`[EGG INCUBATION] [${entity.key.toUpperCase()}] Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}`);
         if (entity.eggIncubationDays >= entity.eggIncubationTotal) {
-            // Форсированное полное вылупление, если ИИ так и не поставил теги
             hatchEggs(entity, lang, logFn, notifyFn);
         }
         return;
@@ -623,7 +622,6 @@ export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn) {
         notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Egg hatched!' : 'Яйцо вылупилось!'} (${genderLabel})${extraNote}`, 'success');
     }
 
-    // Если все яйца обработаны (вылупились или мертвы) — завершаем инкубацию
     const allDone = entity.laidEggs.every(e => e.hatched);
     if (allDone) {
         finishIncubation(entity, lang, logFn, notifyFn);
@@ -653,7 +651,6 @@ function finishIncubation(entity, lang = 'ru', logFn, notifyFn) {
     entity.eggDiseases = [];
 }
 
-// Форсированное вылупление всех оставшихся яиц (для кнопки)
 export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
     if (!entity.isNestActive) return;
     let guard = 20;
