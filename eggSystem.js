@@ -43,6 +43,14 @@ export const EGG_SYMPTOMS = {
             "Повышенная эмоциональная уязвимость",
             "Желание не отпускать партнёра от гнезда",
             "Ощущение «пустоты» после кладки"
+        ],
+        egg_quiescence: [
+            "Спокойное, ровное состояние — тело отдыхает между циклами",
+            "Отсутствие тяги к близости, стабильный гормональный фон",
+            "Обычный аппетит и нормальный уровень энергии",
+            "Никаких признаков фертильности или течки",
+            "Легкая задумчивость, желание рутины и предсказуемости",
+            "Тело копит силы к следующему циклу кладки"
         ]
     },
     en: {
@@ -85,6 +93,14 @@ export const EGG_SYMPTOMS = {
             "Heightened emotional vulnerability",
             "Unwillingness to let partner leave the nest",
             "Feeling of 'emptiness' after laying"
+        ],
+        egg_quiescence: [
+            "Calm, steady state — body resting between cycles",
+            "No urge for intimacy, stable hormonal baseline",
+            "Normal appetite and ordinary energy levels",
+            "No signs of fertility or heat",
+            "Mild thoughtfulness, craving routine and predictability",
+            "Body gathering strength for the next laying cycle"
         ]
     }
 };
@@ -242,13 +258,11 @@ export function getRandomEggSymptomIndices(phase, maxCount = 3) {
 }
 
 export function rollEggCount() {
-    // 2-7 яиц
-    return Math.floor(Math.random() * 6) + 2;
+    return Math.floor(Math.random() * 6) + 2; // 2-7 яиц
 }
 
 export function rollEggIncubationDays() {
-    // 60-120 дней
-    return 60 + Math.floor(Math.random() * 61);
+    return 60 + Math.floor(Math.random() * 61); // 60-120 дней
 }
 
 export function getRandomEggShellDefectId() {
@@ -262,11 +276,9 @@ export function getRandomEggEmbryoDiseaseId() {
 }
 
 export function rollEggShellDefect() {
-    // ~15% шанс дефекта скорлупы
     return Math.random() * 100 < 15 ? getRandomEggShellDefectId() : null;
 }
 
 export function rollEggEmbryoDisease() {
-    // ~10% шанс патологии эмбриона
     return Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null;
 }
