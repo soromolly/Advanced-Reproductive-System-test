@@ -194,3 +194,97 @@ export function translateGender(genderStr, targetLang = 'en') {
     };
     return map[clean] || clean;
 }
+// ===== Яйцекладка =====
+oviposition: 'Яйцекладка',
+modeRealism: 'Реализм',
+modeOmega: 'ОмегаВерс',
+modeOviposition: 'Яйцекладка',
+
+eggCarryingTitle: '🥚 Вынашивание яиц:',
+eggIncubationTitle: '🥚 Инкубация кладки:',
+eggCountLabel: 'Яиц в кладке:',
+eggCountUnknown: 'Неизвестно',
+eggsLaidLabel: 'Отложено яиц:',
+eggsHatchedLabel: 'Вылупилось:',
+eggIncubationProgress: 'Инкубация:',
+eggIncubationDayUnit: 'дн.',
+eggNestStatusWarm: 'Гнездо тёплое',
+eggNestStatusCold: 'Гнездо холодное (риск!)',
+
+eggShellDefectTitle: '🧬 Дефекты скорлупы (УЗИ):',
+eggEmbryoDiseaseTitle: '🧬 Патологии эмбрионов (после кладки):',
+eggNoDefects: 'Дефектов не выявлено',
+
+eggCarryingLabel: 'Срок вынашивания:',
+eggIncubationLabel: 'Инкубация (дней):',
+
+layEggsBtn: '🥚 ОТЛОЖИТЬ ЯЙЦА',
+hatchEggsBtn: '🐣 ВЫЛУПИТЬ ЯЙЦА',
+manualEggsBtn: '🥚 Начать кладку вручную',
+manualEggCount: 'Кол-во яиц:',
+
+resetEggCarryingBtn: '🥚 Сбросить вынашивание яиц',
+
+toastEggConception: '🥚 ЗАЧАТИЕ ПРОИЗОШЛО! Идёт формирование яиц.',
+toastEggLaid: '🥚 Яйца отложены! Началась инкубация.',
+toastEggHatched: '🐣 Яйца вылупились!',
+toastEggCarryingDiscovered: '🥚 Вынашивание яиц подтверждено!',
+toastEggIncubationStart: '🪺 Началась инкубация кладки.',
+toastEggReadyToLay: '🥚 Пора откладывать яйца!',
+
+eggPostLayHeader: 'Состояние после кладки (День ',
+
+eggPhaseForming: 'Формирование яиц 🥚',
+eggPhaseCarrying: 'Вынашивание яиц 🥚',
+eggPhaseCarryingLate: 'Перед кладкой 🥚',
+eggPhaseLaying: 'Кладка 🥚',
+eggPhaseRecovery: 'Восстановление после кладки 🪺',
+eggPhaseIncubation: 'Инкубация кладки 🪺',
+eggPhaseQuiescence: 'Период покоя (кладка не активна)',
+    // ===== Oviposition =====
+oviposition: 'Oviposition',
+modeRealism: 'Realism',
+modeOmega: 'OmegaVerse',
+modeOviposition: 'Oviposition',
+
+eggCarryingTitle: '🥚 Egg Carrying:',
+eggIncubationTitle: '🥚 Clutch Incubation:',
+eggCountLabel: 'Eggs in clutch:',
+eggCountUnknown: 'Unknown',
+eggsLaidLabel: 'Eggs laid:',
+eggsHatchedLabel: 'Hatched:',
+eggIncubationProgress: 'Incubation:',
+eggIncubationDayUnit: 'days',
+eggNestStatusWarm: 'Nest warm',
+eggNestStatusCold: 'Nest cold (risk!)',
+
+eggShellDefectTitle: '🧬 Shell defects (ultrasound):',
+eggEmbryoDiseaseTitle: '🧬 Embryo pathologies (post-lay):',
+eggNoDefects: 'No defects detected',
+
+eggCarryingLabel: 'Carrying term:',
+eggIncubationLabel: 'Incubation (days):',
+
+layEggsBtn: '🥚 LAY EGGS',
+hatchEggsBtn: '🐣 HATCH EGGS',
+manualEggsBtn: '🥚 Start carrying manually',
+manualEggCount: 'Egg count:',
+
+resetEggCarryingBtn: '🥚 Reset egg carrying',
+
+toastEggConception: '🥚 CONCEPTION OCCURRED! Eggs are forming.',
+toastEggLaid: '🥚 Eggs laid! Incubation begun.',
+toastEggHatched: '🐣 Eggs hatched!',
+toastEggCarryingDiscovered: '🥚 Egg carrying confirmed!',
+toastEggIncubationStart: '🪺 Clutch incubation has begun.',
+toastEggReadyToLay: '🥚 Time to lay eggs!',
+
+eggPostLayHeader: 'Post-lay state (Day ',
+
+eggPhaseForming: 'Egg formation 🥚',
+eggPhaseCarrying: 'Egg carrying 🥚',
+eggPhaseCarryingLate: 'Pre-laying 🥚',
+eggPhaseLaying: 'Laying 🥚',
+eggPhaseRecovery: 'Post-lay recovery 🪺',
+eggPhaseIncubation: 'Clutch incubation 🪺',
+eggPhaseQuiescence: 'Rest period (no clutch)',
