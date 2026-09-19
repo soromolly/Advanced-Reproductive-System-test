@@ -56,6 +56,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     let wombMapHtml = '';
     let eggHtml = '';
     let eggIncubationHtml = '';
+    let eggContentsHtml = '';
 
     // ============ ЯЙЦЕКЛАДКА — вынашивание ============
     if (isEggGravid) {
@@ -105,6 +106,30 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             • ${getText('eggIncubationProgress', lang)} <b>${progress}</b><br>
             <span style="display:block; margin-top:4px; opacity:0.85; font-style:italic;">${incub.desc}</span>
         </div>`;
+
+        // ===== Осмотр яиц после кладки (только Современность и Всеведение) =====
+        const showInspection = (settings.aiAwareness === 'dynamic' || settings.aiAwareness === 'full');
+        if (showInspection && currentEntity.laidEggs?.length > 0) {
+            const lines = currentEntity.laidEggs.map((e, i) => {
+                const genderStr = translateGender(e.gender, lang) || '?';
+                let diseaseHtml = '';
+                if (e.diseaseId) {
+                    const d = getEggEmbryoDisease(e.diseaseId, lang);
+                    if (d) diseaseHtml = ` — <span style="color: #fcd34d;">${d.name}</span>`;
+                }
+                let defectHtml = '';
+                if (e.shellDefect) {
+                    const sd = getEggShellDefect(e.shellDefect, lang);
+                    if (sd) defectHtml = ` <span style="color: #f87171;">[${sd.name}]</span>`;
+                }
+                return `<li style="margin-bottom: 3px;">Яйцо #${i+1}: <b>${genderStr}</b>${diseaseHtml}${defectHtml}</li>`;
+            }).join('');
+
+            eggContentsHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(244, 114, 182, 0.08); border: 1px solid rgba(244, 114, 182, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+                <strong style="font-size: 1.0em; color: #f472b6; display: block; margin-bottom: 5px;">🔍 ${lang === 'en' ? 'Egg Inspection (post-lay)' : 'Осмотр яиц (после кладки)'}</strong>
+                <ul style="margin: 0; padding-left: 18px; opacity: 0.95; color: var(--text-color);">${lines}</ul>
+            </div>`;
+        }
     }
 
     // ============ Обычная беременность ============
@@ -118,7 +143,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${fetus.desc}</span>
         </div>`;
 
-        // Патологии плода
         const hasAnyPathology = currentEntity.babiesDiseases?.some(Boolean);
         if (hasAnyPathology && settings.aiAwareness !== 'hidden') {
             let itemsHtml = '';
@@ -147,7 +171,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             }
         }
 
-        // Womb map
         if (settings.aiAwareness === 'hidden') {
             wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">${getText('medievalLocked', lang)}</div>`;
         } else if (settings.aiAwareness === 'dynamic') {
@@ -162,7 +185,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('babiesCount', lang)} <b>${currentEntity.babiesCount}</b><br>• ${getText('babiesSex', lang)} <b>${currentEntity.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b></div>`;
         }
 
-        // EDD
         if (chatData.lastRpDate) {
             const maxWeeks = currentEntity.maxPregnancyWeeks || (currentEntity.mode === 'omegaverse' ? 36 : 40);
             const daysRemaining = (maxWeeks * 7) - currentEntity.pregnancyDaysTotal;
@@ -203,7 +225,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         }
     }
 
-    // Осложнения беременности (только не для яйцекладки)
     let complicationHtml = '';
     if (!isOviposition && isCurrentlyPregnantDiscovered && currentEntity.activeComplication?.isDiscovered) {
         const comp = getComplication(currentEntity.activeComplication.id, lang);
@@ -216,7 +237,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         }
     }
 
-    // Семья
     let familyHtml = '';
     if (currentEntity.childrenList?.length > 0) {
         familyHtml = `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; text-align: left; font-size: 0.85em;">
@@ -245,7 +265,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         </div>`;
     }
 
-    // Пол
     let genderOptionsHtml = '';
     if (currentEntity.mode === 'realism' || currentEntity.mode === 'oviposition') {
         genderOptionsHtml = `
@@ -257,7 +276,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             <option value="male_omega" ${currentEntity.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega', lang)}</option>`;
     }
 
-    // Аборт
     let canAbort = false;
     if (!isOviposition && isCurrentlyPregnantDiscovered) {
         const isUnder12Weeks = (currentEntity.pregnancyWeeks < 12) || (currentEntity.pregnancyWeeks === 12 && (currentEntity.pregnancyDays || 0) === 0);
@@ -375,6 +393,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     ${symptomsHtml}
                     ${eggHtml}
                     ${eggIncubationHtml}
+                    ${eggContentsHtml}
                     ${fetusHtml}
                     ${fetalDiseaseHtml}
                     ${postpartumHtml}
