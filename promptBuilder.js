@@ -14,9 +14,6 @@ import {
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase } from './entityController.js';
 
-// ============================================================
-// Ярлыки: Система + Физиология (для инъекции в промпт)
-// ============================================================
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
     const gender = entity.gender;
@@ -50,6 +47,26 @@ function getSystemAndPhysiologyLabels(entity, isEn) {
     return { system: mode, physiology: gender };
 }
 
+// Общий блок семьи для яйцекладки
+function buildFamilyBlock(entity, macroName) {
+    if (!entity.childrenList?.length) return '';
+    const kidsInfo = entity.childrenList.map((c, i) => {
+        const gEn = translateGender(c.gender, 'en');
+        const nameStr = (c.name && c.name.trim()) ? `Name: "${c.name.trim()}"` : 'Name: Unnamed';
+        let diseaseStr = '';
+        if (c.diseaseId) {
+            const d = getEggEmbryoDisease(c.diseaseId, 'en') || getFetalDisease(c.diseaseId, 'en');
+            if (d) diseaseStr = `, Condition: ${d.name}`;
+        }
+        return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})`;
+    }).join('\n');
+
+    return `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
+${macroName} has ${entity.childrenList.length} born child(ren):
+${kidsInfo}
+Direct Canon Instruction: Always remember these children in family interactions.\n`;
+}
+
 // ============================================================
 // Ветка промпта для режима ЯЙЦЕКЛАДКА
 // ============================================================
@@ -59,7 +76,7 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
-    // Фаза внешней инкубации — ВСЕГДА видна (кладка уже произошла, это физическое событие)
+    // Фаза внешней инкубации
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
         p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}\n`;
@@ -91,12 +108,11 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             p += `[SECRET DATA] Egg contents (genders, pathologies) remain hidden until hatching.\n`;
         }
 
-        // Семья
         p += buildFamilyBlock(entity, macroName);
         return p;
     }
 
-    // Фаза восстановления после кладки — тоже всегда видна
+    // Фаза восстановления после кладки
     if (entity.postpartumDays > 0) {
         const pl = getEggPostLayData(entity.postpartumDays, 'en');
         p += `Status: POST-LAY RECOVERY (Day ${entity.postpartumDays}/7)\n`;
@@ -109,11 +125,11 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
 
     const isRevealed = entity.isDiscovered || !entity.isSecretConception;
 
-    // Фаза вынашивания — ТОЛЬКО если раскрыто (иначе сохраняем интригу)
+    // Фаза вынашивания — ТОЛЬКО если раскрыто
     if (entity.isPregnant && isRevealed) {
         const carrying = getEggCarryingData(entity.pregnancyDaysTotal, 'en');
 
-        p += `Status: EGG CARRYING | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
+        p += `Status: EGG CARRYING | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days. | Eggs laid so far: ${entity.eggsLaid}/${entity.eggCount}.\n`;
         p += `Physical state: ${carrying.belly}. ${carrying.desc}\n`;
 
         const symptoms = getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
@@ -136,19 +152,38 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             p += `[SECRET DATA] Egg count, sexes, and pathologies are hidden until hatching.\n`;
         }
 
-        if (entity.pregnancyDaysTotal >= 42) {
+        // Инструкция с тегами поштучной кладки — начиная с 30-го дня
+        const remainingEggs = entity.eggCount - entity.eggsLaid;
+        if (entity.pregnancyDaysTotal >= 30 && remainingEggs > 0) {
+            const tagSuffix = entity.key.toUpperCase();
+            const startNum = entity.eggsLaid + 1;
+            const endNum = entity.eggCount;
+            const exampleEnd = Math.min(startNum + 1, endNum);
+            let exampleTags = '';
+            for (let i = startNum; i <= exampleEnd; i++) {
+                exampleTags += `<!--LAY_EGG_${tagSuffix}_${i}-->`;
+            }
+
             p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
-If ${macroName} lays eggs in this response, append tag at the very end:
-- <!--LAY_EGGS_${entity.key.toUpperCase()}-->\n`;
+${macroName} is carrying ${entity.eggCount} egg(s); already laid: ${entity.eggsLaid}. Remaining: ${remainingEggs}.
+When laying occurs in this response, append ONE tag PER EGG laid, in order, at the very end of the response. Do NOT lay all eggs at once unless the narrative explicitly requires it — each contraction/push typically delivers exactly ONE egg.
+Tag format (use the correct sequential number for each egg):
+  • 1st egg laid this scene: <!--LAY_EGG_${tagSuffix}_${startNum}-->
+  • 2nd egg laid this scene: <!--LAY_EGG_${tagSuffix}_${startNum + 1}-->
+  • ...and so on up to <!--LAY_EGG_${tagSuffix}_${endNum}-->
+Example (if laying ${exampleEnd - startNum + 1} egg(s) in one response): ${exampleTags}
+`;
+        }
+
+        if (entity.pregnancyDaysTotal >= 42) {
+            p += `\n⏰ ${macroName} has reached the full term (42 days). Laying is biologically due — narrate it soon.\n`;
         }
 
         p += buildFamilyBlock(entity, macroName);
         return p;
     }
 
-    // ===== Обычный цикл =====
-    // Сюда попадаем и когда НЕ беременны, и когда вынашивание СКРЫТО.
-    // Во втором случае ИИ видит просто цикл — интрига сохраняется.
+    // ===== Обычный цикл (в т.ч. СКРЫТОЕ вынашивание) =====
     const baseCycle = entity.cycleLength || 28;
     const target = entity.currentCycleTargetLength || baseCycle;
     const periodDays = entity.periodDuration || 5;
@@ -164,7 +199,6 @@ If ${macroName} lays eggs in this response, append tag at the very end:
 
     if (entity.contraception !== 'none') p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
 
-    // Симптомы: для течки — обычные, для покоя — egg_quiescence
     const isEggPhase = (entity.symptomPhaseKey || '').startsWith('egg_');
     const symptoms = isEggPhase
         ? getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en')
@@ -173,26 +207,6 @@ If ${macroName} lays eggs in this response, append tag at the very end:
 
     p += buildFamilyBlock(entity, macroName);
     return p;
-}
-
-// Общий блок семьи для яйцекладки
-function buildFamilyBlock(entity, macroName) {
-    if (!entity.childrenList?.length) return '';
-    const kidsInfo = entity.childrenList.map((c, i) => {
-        const gEn = translateGender(c.gender, 'en');
-        const nameStr = (c.name && c.name.trim()) ? `Name: "${c.name.trim()}"` : 'Name: Unnamed';
-        let diseaseStr = '';
-        if (c.diseaseId) {
-            const d = getEggEmbryoDisease(c.diseaseId, 'en') || getFetalDisease(c.diseaseId, 'en');
-            if (d) diseaseStr = `, Condition: ${d.name}`;
-        }
-        return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})`;
-    }).join('\n');
-
-    return `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
-${macroName} has ${entity.childrenList.length} born child(ren):
-${kidsInfo}
-Direct Canon Instruction: Always remember these children in family interactions.\n`;
 }
 
 // ============================================================
@@ -282,7 +296,9 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
                 p += `\n🚨 CRITICAL BIRTH TAG DIRECTIVE FOR ${macroName}:
 If ${macroName} gives birth in this response, append tag at the very end:
 - Natural birth: <!--BIRTH_NATURAL_${tagSuffix}_${nextNum}--> (or <!--BIRTH_NATURAL_${tagSuffix}-->)
-- C-Section: <!--BIRTH_C_SECTION_${tagSuffix}_${nextNum}--> (or <!--BIRTH_C_SECTION_${tagSuffix}-->)\n`;
+- C-Section: <!--BIRTH_C_SECTION_${tagSuffix}_${nextNum}--> (or <!--BIRTH_C_SECTION_${tagSuffix}-->)
+One tag per baby, sequentially.
+`;
             }
         } else {
             const baseCycle = entity.cycleLength || 28;
@@ -327,7 +343,6 @@ Note: Pregnancy has NOT been verified or confirmed yet.\n`;
         }
     }
 
-    // Семья
     if (entity.childrenList?.length > 0) {
         const kidsInfo = entity.childrenList.map((c, i) => {
             const gEn = translateGender(c.gender, 'en');
