@@ -393,6 +393,7 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         }
         logFn?.(`[EGG INCUBATION] [${entity.key.toUpperCase()}] Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}`);
         if (entity.eggIncubationDays >= entity.eggIncubationTotal) {
+            // Форсированное полное вылупление, если ИИ так и не поставил теги
             hatchEggs(entity, lang, logFn, notifyFn);
         }
         return;
@@ -571,7 +572,6 @@ export function layAllEggs(entity, lang = 'ru', logFn, notifyFn) {
     }
 }
 
-// Совместимость со старым названием
 export function layEggs(entity, lang = 'ru', logFn, notifyFn) {
     layAllEggs(entity, lang, logFn, notifyFn);
 }
@@ -593,51 +593,57 @@ function finishLaying(entity, lang = 'ru', logFn, notifyFn) {
     notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'All eggs laid!' : 'Все яйца отложены!'} (${entity.eggCount})`, 'success');
 }
 
-export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
-    if (!entity.laidEggs || entity.laidEggs.length === 0) {
-        entity.isNestActive = false;
-        return;
-    }
+// =============== Вылупление по одному яйцу ===============
+export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn) {
+    if (entity.mode !== 'oviposition' || !entity.isNestActive) return false;
+    if (!entity.laidEggs || entity.laidEggs.length === 0) return false;
 
-    let hatchedCount = 0;
-    let deadCount = 0;
+    const egg = entity.laidEggs.find(e => !e.hatched);
+    if (!egg) return false;
 
-    entity.laidEggs.forEach(egg => {
-        if (egg.hatched) return;
-        egg.hatched = true;
+    egg.hatched = true;
 
-        if (egg.diseaseId === 'embryo_dead') {
-            deadCount++;
-            logFn?.(`[EGG DEAD] [${entity.key.toUpperCase()}] Egg ID ${egg.id} — embryo dead, no hatching.`);
-            return;
-        }
-
-        entity.childrenList.push({
+    if (egg.diseaseId === 'embryo_dead') {
+        logFn?.(`[EGG DEAD] [${entity.key.toUpperCase()}] Egg ID ${egg.id} — embryo dead, no hatching.`);
+        notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'One egg did not hatch.' : 'Одно яйцо не вылупилось.'}`, 'warning');
+    } else {
+        const child = {
             id: egg.id,
             gender: egg.gender || generateBabyGender('realism', 'en'),
             name: '',
             diseaseId: egg.diseaseId || null
-        });
-        hatchedCount++;
-    });
+        };
+        entity.childrenList.push(child);
+        entity.eggsHatched = (entity.eggsHatched || 0) + 1;
 
-    entity.eggsHatched = hatchedCount;
+        const genderLabel = translateGender(child.gender, lang);
+        const disease = egg.diseaseId ? getEggEmbryoDisease(egg.diseaseId, lang) : null;
+        const extraNote = disease ? ` (${disease.name})` : '';
+        logFn?.(`[EGG HATCHED] [${entity.key.toUpperCase()}] Child: ${child.gender}${disease ? ' | ' + disease.name : ''}`);
+        notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Egg hatched!' : 'Яйцо вылупилось!'} (${genderLabel})${extraNote}`, 'success');
+    }
+
+    // Если все яйца обработаны (вылупились или мертвы) — завершаем инкубацию
+    const allDone = entity.laidEggs.every(e => e.hatched);
+    if (allDone) {
+        finishIncubation(entity, lang, logFn, notifyFn);
+    }
+
+    updateEntitySymptoms(entity);
+    return true;
+}
+
+function finishIncubation(entity, lang = 'ru', logFn, notifyFn) {
     entity.isNestActive = false;
     entity.eggIncubationDays = 0;
     entity.eggIncubationTotal = 0;
     entity.postpartumDays = 0;
     entity.deliveryMethod = 'none';
-
     entity.cycleDay = 1;
     entity.currentCycleTargetLength = rollNewCycleTarget(entity);
 
-    logFn?.(`[HATCHING] [${entity.key.toUpperCase()}] Hatched: ${hatchedCount} | Dead: ${deadCount}`);
-    if (hatchedCount > 0) {
-        notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Eggs hatched!' : 'Яйца вылупились!'} (${hatchedCount})`, 'success');
-    }
-    if (deadCount > 0) {
-        notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Some eggs never hatched.' : 'Часть яиц не вылупилась.'} (${deadCount})`, 'warning');
-    }
+    logFn?.(`[INCUBATION COMPLETE] [${entity.key.toUpperCase()}] All eggs processed.`);
+    notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Clutch fully hatched!' : 'Кладка полностью вылупилась!'}`, 'success');
 
     entity.laidEggs = [];
     entity.eggsLaid = 0;
@@ -645,8 +651,15 @@ export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
     entity.eggShellDefects = [];
     entity.eggGenders = [];
     entity.eggDiseases = [];
+}
 
-    updateEntitySymptoms(entity);
+// Форсированное вылупление всех оставшихся яиц (для кнопки)
+export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
+    if (!entity.isNestActive) return;
+    let guard = 20;
+    while (entity.isNestActive && guard-- > 0) {
+        if (!hatchSingleEgg(entity, lang, logFn, notifyFn)) break;
+    }
 }
 
 export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn) {
