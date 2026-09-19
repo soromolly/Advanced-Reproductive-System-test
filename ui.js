@@ -100,33 +100,51 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     if (isNestActive) {
         const incub = getEggIncubationData(currentEntity.eggIncubationDays, lang);
         const progress = `${currentEntity.eggIncubationDays} / ${currentEntity.eggIncubationTotal} ${getText('eggIncubationDayUnit', lang)}`;
+
+        const totalLaid = (currentEntity.laidEggs || []).length;
+        const hatchedCount = (currentEntity.laidEggs || []).filter(e => e.hatched && e.diseaseId !== 'embryo_dead').length;
+        const deadCount = (currentEntity.laidEggs || []).filter(e => e.hatched && e.diseaseId === 'embryo_dead').length;
+        const remainingCount = totalLaid - hatchedCount - deadCount;
+
+        const hatchedProgressHtml = totalLaid > 0
+            ? `<div style="margin-top: 4px; color: #10b981; font-weight: 700;">🐣 ${lang === 'en' ? 'Hatched' : 'Вылуплено'}: ${hatchedCount} / ${totalLaid}${remainingCount > 0 ? ` <span style="color:#a855f7; font-weight:600;">(${lang === 'en' ? 'remaining' : 'осталось'}: ${remainingCount})</span>` : ''}${deadCount > 0 ? ` <span style="color:#f87171;">[${lang === 'en' ? 'dead' : 'мертвых'}: ${deadCount}]</span>` : ''}</div>`
+            : '';
+
         eggIncubationHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.05em; color: #a855f7; display: block; margin-bottom: 5px;">${getText('eggIncubationTitle', lang)}</strong>
             • ${getText('eggsLaidLabel', lang)} <b>${currentEntity.eggsLaid}</b><br>
             • ${getText('eggIncubationProgress', lang)} <b>${progress}</b><br>
             <span style="display:block; margin-top:4px; opacity:0.85; font-style:italic;">${incub.desc}</span>
+            ${hatchedProgressHtml}
         </div>`;
 
-        // ===== Осмотр яиц после кладки (только Современность и Всеведение) =====
+        // ===== Осмотр яиц — показываем ТОЛЬКО невылупившиеся =====
         const showInspection = (settings.aiAwareness === 'dynamic' || settings.aiAwareness === 'full');
-        if (showInspection && currentEntity.laidEggs?.length > 0) {
-            const lines = currentEntity.laidEggs.map((e, i) => {
+        const unhatchedEggs = (currentEntity.laidEggs || []).filter(e => !e.hatched);
+
+        if (showInspection && unhatchedEggs.length > 0) {
+            const lines = unhatchedEggs.map((e) => {
+                // Индекс в исходной кладке (для нумерации "Яйцо #N")
+                const originalIndex = (currentEntity.laidEggs || []).indexOf(e);
                 const genderStr = translateGender(e.gender, lang) || '?';
+
                 let diseaseHtml = '';
                 if (e.diseaseId) {
                     const d = getEggEmbryoDisease(e.diseaseId, lang);
                     if (d) diseaseHtml = ` — <span style="color: #fcd34d;">${d.name}</span>`;
                 }
+
                 let defectHtml = '';
                 if (e.shellDefect) {
                     const sd = getEggShellDefect(e.shellDefect, lang);
                     if (sd) defectHtml = ` <span style="color: #f87171;">[${sd.name}]</span>`;
                 }
-                return `<li style="margin-bottom: 3px;">Яйцо #${i+1}: <b>${genderStr}</b>${diseaseHtml}${defectHtml}</li>`;
+
+                return `<li style="margin-bottom: 3px;">🥚 Яйцо #${originalIndex + 1}: <b>${genderStr}</b>${diseaseHtml}${defectHtml}</li>`;
             }).join('');
 
             eggContentsHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(244, 114, 182, 0.08); border: 1px solid rgba(244, 114, 182, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                <strong style="font-size: 1.0em; color: #f472b6; display: block; margin-bottom: 5px;">🔍 ${lang === 'en' ? 'Egg Inspection (post-lay)' : 'Осмотр яиц (после кладки)'}</strong>
+                <strong style="font-size: 1.0em; color: #f472b6; display: block; margin-bottom: 5px;">🔍 ${lang === 'en' ? 'Egg Inspection (remaining)' : 'Осмотр яиц (остались в гнезде)'}</strong>
                 <ul style="margin: 0; padding-left: 18px; opacity: 0.95; color: var(--text-color);">${lines}</ul>
             </div>`;
         }
@@ -531,8 +549,10 @@ export function exportReproLogs({ data, chatId, language, isNotificationsEnabled
         let str = `--- [${label}] ---\n`;
         str += `Mode: ${ent.mode} | Gender: ${ent.gender} | Contraception: ${ent.contraception}\n`;
         if (ent.mode === 'oviposition') {
+            const totalLaid = (ent.laidEggs || []).length;
+            const hatched = (ent.laidEggs || []).filter(e => e.hatched && e.diseaseId !== 'embryo_dead').length;
             str += `State: ${ent.isNestActive ? 'Nest Active (Incubation)' : (ent.isPregnant ? 'Egg Carrying' : 'Not Gravid')}\n`;
-            str += `Egg count: ${ent.eggCount} | Laid: ${ent.eggsLaid} | Hatched: ${ent.eggsHatched}\n`;
+            str += `Egg count: ${ent.eggCount} | Laid: ${ent.eggsLaid} | Hatched: ${hatched}/${totalLaid}\n`;
             str += `Incubation: ${ent.eggIncubationDays}/${ent.eggIncubationTotal}\n`;
         } else {
             str += `State: ${ent.isPregnant ? (ent.isDiscovered ? 'Pregnant (Discovered)' : 'Pregnant (Secret)') : 'Not Pregnant'}\n`;
