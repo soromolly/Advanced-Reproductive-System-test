@@ -4,6 +4,22 @@
 
 export const EGG_SYMPTOMS = {
     ru: {
+        egg_heat_female: [
+            "Ощутимая тяжесть и тепло внизу живота",
+            "Повышенная температура тела, легкие приливы жара",
+            "Повышенная чувствительность кожи и слизистых",
+            "Естественное усиление смазки в интимной зоне",
+            "Обостренное обоняние и вкус",
+            "Настойчивое желание близости и телесного тепла"
+        ],
+        egg_heat_male: [
+            "Ощутимая тяжесть и тепло внизу живота",
+            "Повышенная температура тела, легкие приливы жара",
+            "Повышенная чувствительность кожи и слизистых",
+            "Легкое внутреннее напряжение в области таза",
+            "Обостренное обоняние и вкус",
+            "Настойчивое желание близости и телесного тепла"
+        ],
         egg_forming: [
             "Легкое распирание и тяжесть внизу живота",
             "Повышенный аппетит и тяга к теплу",
@@ -54,6 +70,22 @@ export const EGG_SYMPTOMS = {
         ]
     },
     en: {
+        egg_heat_female: [
+            "Noticeable heaviness and warmth in lower abdomen",
+            "Elevated body temperature, mild hot flashes",
+            "Heightened sensitivity of skin and mucous membranes",
+            "Naturally increased lubrication in the intimate area",
+            "Sharpened sense of smell and taste",
+            "Strong urge for closeness and physical warmth"
+        ],
+        egg_heat_male: [
+            "Noticeable heaviness and warmth in lower abdomen",
+            "Elevated body temperature, mild hot flashes",
+            "Heightened sensitivity of skin and mucous membranes",
+            "Mild internal tension in the pelvic area",
+            "Sharpened sense of smell and taste",
+            "Strong urge for closeness and physical warmth"
+        ],
         egg_forming: [
             "Mild bloating and heaviness in lower abdomen",
             "Increased appetite and craving for warmth",
@@ -266,7 +298,6 @@ export function rollEggCount() {
 }
 
 // Возвращает фиксированное значение для UI — 120 дней.
-// Логика "когда вылупление может начаться" определяется через EGG_INCUBATION_HATCHING_PROMPT_DAY.
 export function rollEggIncubationDays() {
     return EGG_INCUBATION_DISPLAY_MAX;
 }
