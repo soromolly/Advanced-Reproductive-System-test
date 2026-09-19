@@ -6,6 +6,21 @@ import {
     getFetalDisease 
 } from './symptoms.js';
 import { getText, translateGender } from './translations.js';
+import {
+    getEggCarryingData,
+    getEggPostLayData,
+    getEggIncubationData,
+    getEggSymptomList,
+    getRandomEggSymptomIndices,
+    getRandomEggShellDefectId,
+    getRandomEggEmbryoDiseaseId,
+    getEggShellDefect,
+    getEggEmbryoDisease,
+    rollEggCount,
+    rollEggIncubationDays,
+    rollEggShellDefect,
+    rollEggEmbryoDisease
+} from './eggSystem.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
     return {
@@ -40,7 +55,19 @@ export function createDefaultEntityState(entityKey = 'user') {
         postpartumDays: 0,
         deliveryMethod: 'none',
         childrenList: [],
-        fetalDiseaseId: null
+        fetalDiseaseId: null,
+
+        // ===== Поля для режима Яйцекладка =====
+        eggCount: 0,               // Всего яиц в кладке
+        eggShellDefects: [],       // id дефектов скорлупы (по индексу)
+        eggGenders: [],            // пол каждого яйца (null до раскрытия)
+        eggDiseases: [],           // id патологий эмбриона (null до раскрытия)
+        eggsLaid: 0,               // Сколько уже отложено
+        laidEggs: [],              // [{id, gender, diseaseId, hatched:false}]
+        eggIncubationDays: 0,      // Дней инкубации
+        eggIncubationTotal: 0,     // Всего нужно дней
+        eggsHatched: 0,            // Вылупилось
+        isNestActive: false        // Идёт внешняя инкубация
     };
 }
 
@@ -67,27 +94,18 @@ export function generateBabyGender(mode, lang = 'ru') {
     if (mode === 'omegaverse') {
         const roll = Math.random() * 100;
         let sec = isRu ? 'Бета' : 'Beta';
-        
-        if (roll < 33.33) {
-            sec = isRu ? 'Альфа' : 'Alpha';
-        } else if (roll < 66.66) {
-            sec = isRu ? 'Омега' : 'Omega';
-        } else {
-            sec = isRu ? 'Бета' : 'Beta';
-        }
-        
+        if (roll < 33.33) sec = isRu ? 'Альфа' : 'Alpha';
+        else if (roll < 66.66) sec = isRu ? 'Омега' : 'Omega';
         if (isRu) return isBoy ? `${sec}-мальчик ♂` : `${sec}-девочка ♀`;
         return isBoy ? `${sec} Boy ♂` : `${sec} Girl ♀`;
-    } else {
-        if (isRu) return isBoy ? 'Мальчик ♂' : 'Девочка ♀';
-        return isBoy ? 'Boy ♂' : 'Girl ♀';
     }
+    // realism + oviposition — простые полы
+    if (isRu) return isBoy ? 'Мальчик ♂' : 'Девочка ♀';
+    return isBoy ? 'Boy ♂' : 'Girl ♀';
 }
 
 function formatDelayDays(days, lang = 'ru') {
-    if (lang === 'en') {
-        return `${days} ${days === 1 ? 'day' : 'days'}`;
-    }
+    if (lang === 'en') return `${days} ${days === 1 ? 'day' : 'days'}`;
     const abs = Math.abs(days) % 100;
     const last = abs % 10;
     if (abs >= 11 && abs <= 19) return `${days} дней`;
@@ -100,8 +118,16 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const isRevealedPregnancy = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
 
+    // Фаза внешней инкубации
+    if (entity.isNestActive) {
+        return l === 'en' ? 'Egg Incubation (Nest) 🥚' : 'Инкубация яиц (гнездо) 🥚';
+    }
+
     if (entity.postpartumDays > 0) return getText('postpartumPhase', l);
     if (isRevealedPregnancy) {
+        if (entity.mode === 'oviposition') {
+            return l === 'en' ? 'Egg Carrying 🥚' : 'Вынашивание яиц 🥚';
+        }
         return entity.mode === 'realism' ? getText('pregnancy', l) : getText('pregnancyOmega', l);
     }
 
@@ -125,6 +151,7 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
         if (day >= ovulStart && day <= ovulEnd) return getText('ovulation', l);
         return getText('luteal', l);
     } else {
+        // omegaverse AND oviposition: heat at beginning
         if (day > baseLength) {
             const delay = day - baseLength;
             return `${getText('delayedHeat', l)} (${formatDelayDays(delay, l)})`;
@@ -135,16 +162,37 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
 }
 
 export function updateEntitySymptoms(entity) {
-    if (entity.postpartumDays > 0) {
+    // Фаза внешней инкубации — не показываем симптомы тела
+    if (entity.isNestActive) {
         entity.symptomPhaseKey = null;
         entity.symptomIndices = [];
         return;
     }
 
+    if (entity.postpartumDays > 0) {
+        if (entity.mode === 'oviposition') {
+            if (entity.symptomPhaseKey !== 'egg_recovery' || !entity.symptomIndices?.length) {
+                entity.symptomPhaseKey = 'egg_recovery';
+                entity.symptomIndices = getRandomEggSymptomIndices('egg_recovery', 3);
+            }
+        } else {
+            entity.symptomPhaseKey = null;
+            entity.symptomIndices = [];
+        }
+        return;
+    }
+
     const isRevealedPregnancy = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
     let phaseKey = null;
+    let useEggSymptoms = false;
 
-    if (isRevealedPregnancy) {
+    if (isRevealedPregnancy && entity.mode === 'oviposition') {
+        const days = entity.pregnancyDaysTotal;
+        if (days < 8) phaseKey = 'egg_forming';
+        else if (days < 29) phaseKey = 'egg_carrying';
+        else phaseKey = 'egg_carrying_late';
+        useEggSymptoms = true;
+    } else if (isRevealedPregnancy) {
         const week = entity.pregnancyWeeks;
         if (week <= 12) phaseKey = 'preg_trimester_1';
         else if (week >= 13 && week <= 26) phaseKey = 'preg_trimester_2';
@@ -159,15 +207,19 @@ export function updateEntitySymptoms(entity) {
                 const ovulPeak = Math.max(periodDays + 2, targetLength - 14);
                 const ovulStart = Math.max(periodDays + 1, ovulPeak - 3);
                 const ovulEnd = ovulPeak + 1;
-
                 if (day <= periodDays) phaseKey = 'menstruation';
                 else if (day < ovulStart) phaseKey = 'follicular';
                 else if (day >= ovulStart && day <= ovulEnd) phaseKey = 'ovulation';
                 else phaseKey = 'luteal';
             }
         } else {
+            // omegaverse + oviposition
             if (day <= periodDays) {
-                phaseKey = (entity.gender === 'male_omega') ? 'heat_male' : 'heat_female';
+                if (entity.mode === 'oviposition') {
+                    phaseKey = (entity.gender === 'male_omega' || entity.gender === 'male') ? 'heat_male' : 'heat_female';
+                } else {
+                    phaseKey = (entity.gender === 'male_omega') ? 'heat_male' : 'heat_female';
+                }
             }
         }
     }
@@ -175,7 +227,9 @@ export function updateEntitySymptoms(entity) {
     if (phaseKey) {
         if (entity.symptomPhaseKey !== phaseKey || !entity.symptomIndices || entity.symptomIndices.length === 0) {
             entity.symptomPhaseKey = phaseKey;
-            entity.symptomIndices = getRandomSymptomIndices(phaseKey, 3);
+            entity.symptomIndices = useEggSymptoms 
+                ? getRandomEggSymptomIndices(phaseKey, 3)
+                : getRandomSymptomIndices(phaseKey, 3);
         }
     } else {
         entity.symptomPhaseKey = null;
@@ -184,6 +238,9 @@ export function updateEntitySymptoms(entity) {
 }
 
 export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
+    // Для яйцекладки осложнения беременности не применяются
+    if (entity.mode === 'oviposition') return;
+
     const isRevealed = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
     if (!isRevealed) return;
 
@@ -212,6 +269,8 @@ export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
 }
 
 export function checkEntityFetalDemise(entity, logFn) {
+    // Для яйцекладки патологии яиц обрабатываются отдельно (патология выявляется после кладки)
+    if (entity.mode === 'oviposition') return;
     if (!entity.isPregnant || !entity.isFetalPathologyEnabled || (entity.fetalDemise && entity.fetalDemise.isDead)) return;
     
     const week = entity.pregnancyWeeks;
@@ -232,6 +291,13 @@ export function checkEntityFetalDemise(entity, logFn) {
 }
 
 export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notifyFn) {
+    // =============== Режим ЯЙЦЕКЛАДКА ===============
+    if (entity.mode === 'oviposition') {
+        advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notifyFn);
+        return;
+    }
+
+    // =============== Обычные режимы ===============
     if (entity.postpartumDays > 0) {
         entity.postpartumDays += days;
         const maxRecoveryDays = (entity.deliveryMethod === 'miscarriage') ? 14 : 40;
@@ -322,11 +388,82 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
     }
 }
 
+// =============== Логика вынашивания/кладки яиц ===============
+function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notifyFn) {
+    // Фаза 1: Внешняя инкубация (гнездо)
+    if (entity.isNestActive) {
+        entity.eggIncubationDays += days;
+        if (entity.postpartumDays > 0) {
+            entity.postpartumDays += days;
+            if (entity.postpartumDays > 7) entity.postpartumDays = 0;
+        }
+        logFn?.(`[EGG INCUBATION] [${entity.key.toUpperCase()}] Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}`);
+        if (entity.eggIncubationDays >= entity.eggIncubationTotal) {
+            hatchEggs(entity, lang, logFn, notifyFn);
+        }
+        return;
+    }
+
+    // Фаза 2: Послекладковое восстановление (без активного гнезда — не должно случиться, но на всякий)
+    if (entity.postpartumDays > 0) {
+        entity.postpartumDays += days;
+        if (entity.postpartumDays > 7) {
+            entity.postpartumDays = 0;
+            entity.deliveryMethod = 'none';
+            entity.cycleDay = 1;
+            entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+        }
+        updateEntitySymptoms(entity);
+        return;
+    }
+
+    // Фаза 3: Вынашивание яиц
+    if (entity.isPregnant) {
+        entity.pregnancyDaysTotal += days;
+        entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
+        entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
+        entity.cycleDay += days;
+
+        const autoDiscoveryWeek = (aiAwareness === 'hidden') ? 3 : 2;
+        if (!entity.isDiscovered && entity.pregnancyWeeks >= autoDiscoveryWeek) {
+            entity.isDiscovered = true;
+            logFn?.(`[EGG CARRYING DISCOVERED] [${entity.key.toUpperCase()}] Confirmed at week ${entity.pregnancyWeeks}.`);
+            notifyFn?.(lang === 'en' 
+                ? `🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Egg carrying confirmed (~${entity.pregnancyWeeks} wks)!`
+                : `🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Вынашивание яиц подтверждено (~${entity.pregnancyWeeks} нед.)!`, 'success');
+        }
+
+        updateEntitySymptoms(entity);
+
+        if (entity.pregnancyDaysTotal >= 42) {
+            notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Time to lay eggs!' : 'Пора откладывать яйца!'}`, 'warning');
+        }
+        return;
+    }
+
+    // Фаза 4: Обычный цикл
+    const target = entity.currentCycleTargetLength || entity.cycleLength || 28;
+    entity.cycleDay += days;
+    if (entity.cycleDay > target) {
+        entity.cycleDay = ((entity.cycleDay - 1) % target) + 1;
+        entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+        entity.symptomPhaseKey = null;
+        logFn?.(`[CYCLE RESET] [${entity.key.toUpperCase()}] New cycle after ${target} days.`);
+        notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastNewHeat', lang)}`, 'info');
+    }
+    updateEntitySymptoms(entity);
+}
+
 export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
+    // ========== Режим ЯЙЦЕКЛАДКА ==========
+    if (entity.mode === 'oviposition') {
+        triggerEggGravid(entity, lang, logFn, notifyFn);
+        return;
+    }
+
+    // ========== Обычные режимы ==========
     entity.isPregnant = true;
 
-    // В Омегаверсе течка начинается с 1-го дня цикла, поэтому срок считается напрямую от 1-го дня течки (от текущего дня цикла)
-    // В Реализме овуляция наступает на ~14 день, поэтому акушерский срок начинается с первого дня последних месячных (+14 дней)
     if (entity.mode === 'omegaverse') {
         entity.pregnancyDaysTotal = Math.max(1, entity.cycleDay || 1);
     } else {
@@ -358,7 +495,6 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
         const primaryDisease = getRandomFetalDiseaseId();
         entity.fetalDiseaseId = primaryDisease;
         entity.babiesDiseases[0] = primaryDisease;
-
         for (let i = 1; i < entity.babiesCount; i++) {
             if (Math.random() * 100 < 5) entity.babiesDiseases[i] = getRandomFetalDiseaseId();
         }
@@ -374,7 +510,148 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     }
 }
 
+function triggerEggGravid(entity, lang = 'ru', logFn, notifyFn) {
+    entity.isPregnant = true;
+    entity.pregnancyDaysTotal = Math.max(1, entity.cycleDay || 1);
+    entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
+    entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
+    entity.isDiscovered = !entity.isSecretConception;
+    entity.deliveryMethod = 'none';
+    entity.eggsLaid = 0;
+    entity.laidEggs = [];
+    entity.eggsHatched = 0;
+    entity.isNestActive = false;
+    entity.eggIncubationDays = 0;
+    entity.eggIncubationTotal = 0;
+
+    // Количество яиц 2-7
+    entity.eggCount = rollEggCount();
+
+    // Скорлупа (дефекты) — рандомим заранее, но UI раскрывает по режиму
+    entity.eggShellDefects = [];
+    for (let i = 0; i < entity.eggCount; i++) {
+        entity.eggShellDefects.push(rollEggShellDefect());
+    }
+
+    // Пол яиц и патологии эмбриона — рандомим заранее, раскрываем по режиму
+    entity.eggGenders = [];
+    entity.eggDiseases = [];
+    for (let i = 0; i < entity.eggCount; i++) {
+        entity.eggGenders.push(generateBabyGender('realism', 'en'));
+        entity.eggDiseases.push(entity.isFetalPathologyEnabled ? rollEggEmbryoDisease() : null);
+    }
+
+    logFn?.(`[EGG GRAVID INITIATED] [${entity.key.toUpperCase()}] Eggs: ${entity.eggCount} | Secret: ${entity.isSecretConception}`);
+
+    updateEntitySymptoms(entity);
+    if (entity.isDiscovered) {
+        notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Egg carrying has begun.' : 'Началось вынашивание яиц.'}`, 'success');
+    }
+}
+
+// =============== Кладка яиц ===============
+export function layEggs(entity, lang = 'ru', logFn, notifyFn) {
+    if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
+
+    const totalLaid = entity.eggCount;
+    entity.laidEggs = [];
+    for (let i = 0; i < totalLaid; i++) {
+        entity.laidEggs.push({
+            id: Date.now() + i,
+            gender: entity.eggGenders[i] || null,
+            diseaseId: entity.eggDiseases[i] || null,
+            shellDefect: entity.eggShellDefects[i] || null,
+            hatched: false
+        });
+    }
+    entity.eggsLaid = totalLaid;
+
+    // Сброс состояния вынашивания
+    entity.isPregnant = false;
+    entity.isDiscovered = false;
+    entity.pregnancyDaysTotal = 0;
+    entity.pregnancyWeeks = 0;
+    entity.pregnancyDays = 0;
+
+    // Начинаем восстановление + внешнюю инкубацию
+    entity.postpartumDays = 1;
+    entity.deliveryMethod = 'oviposition';
+    entity.isNestActive = true;
+    entity.eggIncubationDays = 0;
+    entity.eggIncubationTotal = rollEggIncubationDays();
+
+    logFn?.(`[EGG LAYING] [${entity.key.toUpperCase()}] Laid ${totalLaid} eggs. Incubation: ${entity.eggIncubationTotal} days.`);
+    notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Eggs laid!' : 'Яйца отложены!'} (${totalLaid})`, 'success');
+
+    updateEntitySymptoms(entity);
+}
+
+// =============== Вылупление ===============
+export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
+    if (!entity.laidEggs || entity.laidEggs.length === 0) {
+        entity.isNestActive = false;
+        return;
+    }
+
+    let hatchedCount = 0;
+    let deadCount = 0;
+
+    entity.laidEggs.forEach(egg => {
+        if (egg.hatched) return;
+        egg.hatched = true;
+
+        // Если эмбрион мёртв — не вылупляется
+        if (egg.diseaseId === 'embryo_dead') {
+            deadCount++;
+            logFn?.(`[EGG DEAD] [${entity.key.toUpperCase()}] Egg ID ${egg.id} — embryo dead, no hatching.`);
+            return;
+        }
+
+        // Добавляем ребёнка в семью
+        entity.childrenList.push({
+            id: egg.id,
+            gender: egg.gender || generateBabyGender('realism', 'en'),
+            name: '',
+            diseaseId: egg.diseaseId || null
+        });
+        hatchedCount++;
+    });
+
+    entity.eggsHatched = hatchedCount;
+    entity.isNestActive = false;
+    entity.eggIncubationDays = 0;
+    entity.eggIncubationTotal = 0;
+    entity.postpartumDays = 0;
+    entity.deliveryMethod = 'none';
+
+    // Запускаем новый цикл
+    entity.cycleDay = 1;
+    entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+
+    logFn?.(`[HATCHING] [${entity.key.toUpperCase()}] Hatched: ${hatchedCount} | Dead: ${deadCount}`);
+    if (hatchedCount > 0) {
+        notifyFn?.(`🐣 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Eggs hatched!' : 'Яйца вылупились!'} (${hatchedCount})`, 'success');
+    }
+    if (deadCount > 0) {
+        notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Some eggs never hatched.' : 'Часть яиц не вылупилась.'} (${deadCount})`, 'warning');
+    }
+
+    // Очищаем состояние кладки
+    entity.laidEggs = [];
+    entity.eggsLaid = 0;
+    entity.eggCount = 0;
+    entity.eggShellDefects = [];
+    entity.eggGenders = [];
+    entity.eggDiseases = [];
+
+    updateEntitySymptoms(entity);
+}
+
+// =============== Старые функции ===============
+
 export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn) {
+    if (entity.mode === 'oviposition') return; // для яйцекладки используется layEggs
+
     if (!entity.isPregnant && (!entity.babiesGenders || entity.babiesGenders.length === 0)) return;
 
     const rawGender = entity.babiesGenders.shift();
