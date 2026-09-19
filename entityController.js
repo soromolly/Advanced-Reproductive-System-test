@@ -3,7 +3,10 @@ import {
     rollComplication, 
     getComplication, 
     getRandomFetalDiseaseId, 
-    getFetalDisease 
+    getFetalDisease,
+    getEggEmbryoDisease,
+    getRandomEggEmbryoDiseaseId,
+    rollEggEmbryoDisease
 } from './symptoms.js';
 import { getText, translateGender } from './translations.js';
 import {
@@ -13,13 +16,10 @@ import {
     getEggSymptomList,
     getRandomEggSymptomIndices,
     getRandomEggShellDefectId,
-    getRandomEggEmbryoDiseaseId,
     getEggShellDefect,
-    getEggEmbryoDisease,
     rollEggCount,
     rollEggIncubationDays,
-    rollEggShellDefect,
-    rollEggEmbryoDisease
+    rollEggShellDefect
 } from './eggSystem.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
