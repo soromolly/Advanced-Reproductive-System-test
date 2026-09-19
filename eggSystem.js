@@ -177,23 +177,27 @@ export const EGG_EMBRYO_DISEASES = {
     ]
 };
 
-// Стадии инкубации (внешние, 60–120 дней)
+// Стадии инкубации (внешние, до 120 дней)
 export const EGG_INCUBATION_STAGES = {
     ru: {
         1:  { name: "Начало инкубации", desc: "Свежая кладка. Скорлупа теплая, слегка пульсирует слабым внутренним свечением." },
         30: { name: "Раннее развитие", desc: "Внутри яиц формируются основные системы эмбрионов. Свечение становится ровнее и ярче." },
         60: { name: "Средняя инкубация", desc: "Эмбрионы активно растут. Яйца заметно тяжелее, скорлупа уплотнилась." },
-        90: { name: "Поздняя инкубация", desc: "Плоды полностью сформированы. Слышны слабые ритмичные постукивания изнутри." },
+        90: { name: "Поздняя инкубация", desc: "Плоды полностью сформированы. Слышны слабые ритмичные постукивания изнутри. Вылупление может начаться в любой день." },
         120:{ name: "Готовы к вылуплению", desc: "Скорлупа начинает трескаться. Птенцы активно двигаются внутри, готовясь выйти." }
     },
     en: {
         1:  { name: "Incubation begins", desc: "Fresh clutch. Shell warm, faintly pulsing with inner glow." },
         30: { name: "Early development", desc: "Core embryo systems forming inside. Glow becomes steadier and brighter." },
         60: { name: "Mid-incubation", desc: "Embryos actively growing. Eggs noticeably heavier, shells hardened." },
-        90: { name: "Late incubation", desc: "Fetuses fully formed. Faint rhythmic tapping audible from inside." },
+        90: { name: "Late incubation", desc: "Fetuses fully formed. Faint rhythmic tapping audible from inside. Hatching may begin any day." },
         120:{ name: "Ready to hatch", desc: "Shells begin to crack. Hatchlings move actively inside, preparing to emerge." }
     }
 };
+
+// ================== Константы ==================
+export const EGG_INCUBATION_DISPLAY_MAX = 120;      // Максимум для UI (дней)
+export const EGG_INCUBATION_HATCHING_PROMPT_DAY = 90; // С этого дня ИИ получает инструкцию о вылуплении
 
 // ================== Хелперы ==================
 
@@ -261,8 +265,10 @@ export function rollEggCount() {
     return Math.floor(Math.random() * 6) + 2; // 2-7 яиц
 }
 
+// Возвращает фиксированное значение для UI — 120 дней.
+// Логика "когда вылупление может начаться" определяется через EGG_INCUBATION_HATCHING_PROMPT_DAY.
 export function rollEggIncubationDays() {
-    return 60 + Math.floor(Math.random() * 61); // 60-120 дней
+    return EGG_INCUBATION_DISPLAY_MAX;
 }
 
 export function getRandomEggShellDefectId() {
