@@ -36,7 +36,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         inputDateValue = `${parts[2]}.${parts[1]}.${parts[0]}`;
     }
 
-    // ===== Симптомы (FIX: используем egg-список только для фаз, начинающихся с "egg_") =====
+    // ===== Симптомы =====
     const isEggPhase = isOviposition && (currentEntity.symptomPhaseKey || '').startsWith('egg_');
     const currentSymptoms = isEggPhase
         ? getEggSymptomList(currentEntity.symptomPhaseKey, currentEntity.symptomIndices, lang)
@@ -57,7 +57,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     let eggHtml = '';
     let eggIncubationHtml = '';
 
-    // ============ ЯЙЦЕКЛАДКА ============
+    // ============ ЯЙЦЕКЛАДКА — вынашивание ============
     if (isEggGravid) {
         const carrying = getEggCarryingData(currentEntity.pregnancyDaysTotal, lang);
         const revealCount = 
@@ -81,11 +81,16 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             }
         }
 
+        const laidProgressHtml = (currentEntity.eggsLaid > 0 && currentEntity.eggsLaid < currentEntity.eggCount)
+            ? `<div style="margin-top: 4px; color: #a855f7; font-weight: 700;">🥚 ${getText('eggsLaidLabel', lang)} ${currentEntity.eggsLaid} / ${currentEntity.eggCount}</div>`
+            : '';
+
         eggHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('eggCarryingTitle', lang)}</strong>
             • ${getText('eggCountLabel', lang)} <span style="color: #38bdf8; font-weight: bold;">${countText}</span><br>
             • ${getText('eggCarryingLabel', lang)} <b>${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</b><br>
             <span style="display: block; margin-top: 4px; opacity: 0.85; font-style: italic;">${carrying.desc}</span>
+            ${laidProgressHtml}
             ${shellDefectsHtml}
         </div>`;
     }
