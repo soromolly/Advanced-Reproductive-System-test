@@ -9,10 +9,12 @@ import {
     getEggIncubationData,
     getEggSymptomList,
     getEggShellDefect,
-    getEggEmbryoDisease,
-    EGG_INCUBATION_DISPLAY_MAX,
-    EGG_INCUBATION_HATCHING_PROMPT_DAY
+    getEggEmbryoDisease
 } from './symptoms.js';
+import { 
+    EGG_INCUBATION_DISPLAY_MAX, 
+    EGG_INCUBATION_HATCHING_PROMPT_DAY 
+} from './eggSystem.js';
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase } from './entityController.js';
 
