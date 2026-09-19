@@ -170,6 +170,52 @@ function advanceTimeAll(days) {
     }
 }
 
+// ============================================================
+// Хелпер: применение распарсенной даты только ВПЕРЁД
+// Если новая дата <= текущей — игнорируем (защита от флешбеков
+// и упоминаний прошлых дат в тексте).
+// Возвращает: 'set-initial' | 'advanced' | 'same' | 'ignored'
+// ============================================================
+function applyDateForwardOnly(data, parsedDate, source) {
+    if (!parsedDate) return 'ignored';
+
+    const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
+    const newDateStr = daysToDateString(newTotalDays);
+
+    // Первая установка (нет текущей даты) — принимаем любую
+    if (!data.lastRpDate) {
+        data.lastRpDate = newDateStr;
+        logReproEvent(`[${source} DATE INIT] Initial date set to ${newDateStr}.`);
+        return 'set-initial';
+    }
+
+    // Та же дата — ничего не делаем
+    if (data.lastRpDate === newDateStr) {
+        return 'same';
+    }
+
+    const parts = data.lastRpDate.split('-').map(Number);
+    const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+    const diff = newTotalDays - prevTotalDays;
+
+    // Дата назад — ИГНОРИРУЕМ (защита от флешбеков)
+    if (diff < 0) {
+        logReproEvent(`[${source} DATE IGNORED] Parsed date ${newDateStr} is EARLIER than current ${data.lastRpDate} (${diff} days). Possibly a flashback/mention. Date unchanged.`);
+        return 'ignored';
+    }
+
+    // Дата вперёд — продвигаем время и сохраняем
+    if (diff > 0) {
+        advanceTimeAll(diff);
+        data.lastRpDate = newDateStr;
+        logReproEvent(`[${source} DATE SYNC] Synced from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
+        notify(`${getText('toastTimePassed', settings.language || 'ru')}${diff}.`, 'info');
+        return 'advanced';
+    }
+
+    return 'same';
+}
+
 function checkConceptionForEntity(entity, text, isReceivedClimax) {
     if (!isReceivedClimax || entity.isPregnant || entity.postpartumDays > 0 || entity.isNestActive) return;
 
@@ -313,6 +359,7 @@ function processIncomingMessage(messageIndex, isUser = false) {
     const data = getChatData();
 
     if (isUser) {
+        // Сначала проверяем явный таймскип (только вперёд по определению)
         const relativeDays = parseRelativeDaysFromText(text);
         if (relativeDays > 0) {
             pendingUserTimeskipDays = relativeDays;
@@ -324,45 +371,24 @@ function processIncomingMessage(messageIndex, isUser = false) {
             }
             logReproEvent(`[USER TIMESKIP] Advanced by ${relativeDays} days via user message.`);
         } else {
+            // Иначе — пытаемся распарсить явную дату. Только вперёд!
             const parsedDate = parseRpDateFromText(text);
-            if (parsedDate) {
-                const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
-                const newDateStr = daysToDateString(newTotalDays);
-                if (data.lastRpDate && data.lastRpDate !== newDateStr) {
-                    const parts = data.lastRpDate.split('-').map(Number);
-                    const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
-                    const diff = newTotalDays - prevTotalDays;
-                    if (diff > 0) {
-                        advanceTimeAll(diff);
-                        logReproEvent(`[USER DATE SYNC] Date changed from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
-                    }
-                }
-                data.lastRpDate = newDateStr;
-            }
+            applyDateForwardOnly(data, parsedDate, 'USER');
         }
     } else {
+        // AI: сначала учтём pending timeskip от пользователя
         const parsedDate = parseRpDateFromText(text);
-        if (parsedDate) {
+
+        if (pendingUserTimeskipDays > 0 && parsedDate) {
+            // Пользователь уже сделал timeskip — просто синхронизируем дату на любую (это выравнивание)
             const newTotalDays = dateToDays(parsedDate.year, parsedDate.month, parsedDate.day);
             const newDateStr = daysToDateString(newTotalDays);
-
-            if (pendingUserTimeskipDays > 0) {
-                pendingUserTimeskipDays = 0;
-                data.lastRpDate = newDateStr;
-                logReproEvent(`[AI DATE ALIGN] Aligned date to ${newDateStr} after user timeskip.`);
-            } else if (data.lastRpDate && data.lastRpDate !== newDateStr) {
-                const parts = data.lastRpDate.split('-').map(Number);
-                const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
-                const diff = newTotalDays - prevTotalDays;
-                if (diff > 0) {
-                    advanceTimeAll(diff);
-                    logReproEvent(`[AI DATE SYNC] Synced from ${data.lastRpDate} to ${newDateStr} (+${diff} days).`);
-                    notify(`${getText('toastTimePassed', settings.language || 'ru')}${diff}.`, 'info');
-                }
-                data.lastRpDate = newDateStr;
-            } else if (!data.lastRpDate) {
-                data.lastRpDate = newDateStr;
-            }
+            pendingUserTimeskipDays = 0;
+            data.lastRpDate = newDateStr;
+            logReproEvent(`[AI DATE ALIGN] Aligned date to ${newDateStr} after user timeskip.`);
+        } else {
+            // Обычная синхронизация — только вперёд!
+            applyDateForwardOnly(data, parsedDate, 'AI');
         }
     }
 
@@ -598,9 +624,18 @@ function bindGlobalEvents() {
         const maxWeeksInput = root.find('#repro-input-maxweeks');
         if (maxWeeksInput.length) entity.maxPregnancyWeeks = parseInt(maxWeeksInput.val(), 10) || 40;
         
+        // Ручной ввод даты через UI — БЕЗ ограничений "только вперёд" (это настройка самого пользователя)
         const manualDateVal = root.find('#repro-input-rpdate').val();
         const normalized = normalizeInputDate(manualDateVal);
-        if (normalized) data.lastRpDate = normalized;
+        if (normalized) {
+            const manualDays = dateToDays(
+                parseInt(normalized.split('-')[0], 10),
+                parseInt(normalized.split('-')[1], 10) - 1,
+                parseInt(normalized.split('-')[2], 10)
+            );
+            data.lastRpDate = normalized;
+            logReproEvent(`[MANUAL DATE SET] User manually set date to ${normalized} (timestamp ${manualDays}).`);
+        }
 
         if (entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception)) { 
             const weeks = parseInt(root.find('#repro-input-weeks').val(), 10) || 0;
