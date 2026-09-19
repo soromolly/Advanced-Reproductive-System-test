@@ -59,7 +59,7 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
-    // Фаза внешней инкубации
+    // Фаза внешней инкубации — ВСЕГДА видна (кладка уже произошла, это физическое событие)
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
         p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}\n`;
@@ -90,28 +90,30 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
         } else {
             p += `[SECRET DATA] Egg contents (genders, pathologies) remain hidden until hatching.\n`;
         }
+
+        // Семья
+        p += buildFamilyBlock(entity, macroName);
         return p;
     }
 
-    // Фаза восстановления после кладки
+    // Фаза восстановления после кладки — тоже всегда видна
     if (entity.postpartumDays > 0) {
         const pl = getEggPostLayData(entity.postpartumDays, 'en');
         p += `Status: POST-LAY RECOVERY (Day ${entity.postpartumDays}/7)\n`;
         p += `Physical Condition: ${pl.desc}\n`;
         p += `Character is weak, needs warmth, food, and closeness to partner. Strong attachment to laid eggs.\n`;
+
+        p += buildFamilyBlock(entity, macroName);
         return p;
     }
 
-    // Фаза вынашивания
-    if (entity.isPregnant) {
-        const carrying = getEggCarryingData(entity.pregnancyDaysTotal, 'en');
-        const isRevealed = entity.isDiscovered || !entity.isSecretConception;
+    const isRevealed = entity.isDiscovered || !entity.isSecretConception;
 
-        if (isRevealed) {
-            p += `Status: EGG CARRYING | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
-        } else {
-            p += `Status: HIDDEN EGG CARRYING (undiscovered, character unaware she is gravid).\n`;
-        }
+    // Фаза вынашивания — ТОЛЬКО если раскрыто (иначе сохраняем интригу)
+    if (entity.isPregnant && isRevealed) {
+        const carrying = getEggCarryingData(entity.pregnancyDaysTotal, 'en');
+
+        p += `Status: EGG CARRYING | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
         p += `Physical state: ${carrying.belly}. ${carrying.desc}\n`;
 
         const symptoms = getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
@@ -121,7 +123,7 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             p += `[OMNISCIENCE] Egg count: ${entity.eggCount}. Genders: ${entity.eggGenders.map(g => translateGender(g, 'en')).join(', ')}.\n`;
             const defects = (entity.eggShellDefects || []).map((id, i) => id ? `Egg #${i+1}: ${getEggShellDefect(id, 'en')?.name}` : null).filter(Boolean);
             if (defects.length > 0) p += `Shell findings: ${defects.join('; ')}.\n`;
-        } else if (aiAwareness === 'dynamic' && isRevealed && entity.pregnancyWeeks >= 3) {
+        } else if (aiAwareness === 'dynamic' && entity.pregnancyWeeks >= 3) {
             p += `[ULTRASOUND] Scan reveals egg count: ${entity.eggCount}.\n`;
             const defects = (entity.eggShellDefects || []).map((id, i) => id ? `Egg #${i+1}: ${getEggShellDefect(id, 'en')?.name}` : null).filter(Boolean);
             if (defects.length > 0) {
@@ -139,50 +141,58 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
 If ${macroName} lays eggs in this response, append tag at the very end:
 - <!--LAY_EGGS_${entity.key.toUpperCase()}-->\n`;
         }
-    } else {
-        // Обычный цикл
-        const baseCycle = entity.cycleLength || 28;
-        const target = entity.currentCycleTargetLength || baseCycle;
-        const periodDays = entity.periodDuration || 5;
 
-        if (entity.cycleDay <= periodDays) {
-            p += `Current Status: HEAT / FERTILITY WINDOW ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Peak conception window.\n`;
-        } else if (entity.cycleDay > target) {
-            p += `Current Status: CYCLE DELAY (Late by ${entity.cycleDay - target} days).\n`;
-        } else {
-            p += `Current Status: QUIESCENCE / REST PERIOD (Day ${entity.cycleDay}/${baseCycle}). Not fertile.\n`;
-        }
-
-        if (entity.contraception !== 'none') p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
-
-        // Симптомы (для течки берём обычные, для покоя — egg_quiescence)
-        const isEggPhase = (entity.symptomPhaseKey || '').startsWith('egg_');
-        const symptoms = isEggPhase
-            ? getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en')
-            : getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
-        if (symptoms.length > 0) p += `Current Physiological Symptoms: ${symptoms.join(', ')}.\n`;
+        p += buildFamilyBlock(entity, macroName);
+        return p;
     }
 
-    // Семья
-    if (entity.childrenList?.length > 0) {
-        const kidsInfo = entity.childrenList.map((c, i) => {
-            const gEn = translateGender(c.gender, 'en');
-            const nameStr = (c.name && c.name.trim()) ? `Name: "${c.name.trim()}"` : 'Name: Unnamed';
-            let diseaseStr = '';
-            if (c.diseaseId) {
-                const d = getEggEmbryoDisease(c.diseaseId, 'en') || getFetalDisease(c.diseaseId, 'en');
-                if (d) diseaseStr = `, Condition: ${d.name}`;
-            }
-            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})`;
-        }).join('\n');
+    // ===== Обычный цикл =====
+    // Сюда попадаем и когда НЕ беременны, и когда вынашивание СКРЫТО.
+    // Во втором случае ИИ видит просто цикл — интрига сохраняется.
+    const baseCycle = entity.cycleLength || 28;
+    const target = entity.currentCycleTargetLength || baseCycle;
+    const periodDays = entity.periodDuration || 5;
 
-        p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
+    if (entity.cycleDay <= periodDays) {
+        p += `Current Status: HEAT / FERTILITY WINDOW ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Peak conception window.\n`;
+    } else if (entity.cycleDay > target) {
+        p += `Current Status: CYCLE DELAY (Late by ${entity.cycleDay - target} days). Menstruation/Heat has not arrived yet.\n`;
+        p += `Note: Pregnancy/carrying has NOT been verified or confirmed. No visible signs of gravidity.\n`;
+    } else {
+        p += `Current Status: QUIESCENCE / REST PERIOD (Day ${entity.cycleDay}/${baseCycle}). Not fertile.\n`;
+    }
+
+    if (entity.contraception !== 'none') p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
+
+    // Симптомы: для течки — обычные, для покоя — egg_quiescence
+    const isEggPhase = (entity.symptomPhaseKey || '').startsWith('egg_');
+    const symptoms = isEggPhase
+        ? getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en')
+        : getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
+    if (symptoms.length > 0) p += `Current Physiological Symptoms: ${symptoms.join(', ')}.\n`;
+
+    p += buildFamilyBlock(entity, macroName);
+    return p;
+}
+
+// Общий блок семьи для яйцекладки
+function buildFamilyBlock(entity, macroName) {
+    if (!entity.childrenList?.length) return '';
+    const kidsInfo = entity.childrenList.map((c, i) => {
+        const gEn = translateGender(c.gender, 'en');
+        const nameStr = (c.name && c.name.trim()) ? `Name: "${c.name.trim()}"` : 'Name: Unnamed';
+        let diseaseStr = '';
+        if (c.diseaseId) {
+            const d = getEggEmbryoDisease(c.diseaseId, 'en') || getFetalDisease(c.diseaseId, 'en');
+            if (d) diseaseStr = `, Condition: ${d.name}`;
+        }
+        return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})`;
+    }).join('\n');
+
+    return `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
 ${macroName} has ${entity.childrenList.length} born child(ren):
 ${kidsInfo}
 Direct Canon Instruction: Always remember these children in family interactions.\n`;
-    }
-
-    return p;
 }
 
 // ============================================================
