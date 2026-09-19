@@ -15,12 +15,51 @@ import { translateGender } from './translations.js';
 import { getEntityBodyPhase } from './entityController.js';
 
 // ============================================================
+// Ярлыки: Система + Физиология (для инъекции в промпт)
+// ============================================================
+function getSystemAndPhysiologyLabels(entity, isEn) {
+    const mode = entity.mode;
+    const gender = entity.gender;
+
+    if (mode === 'realism') {
+        return {
+            system: isEn ? 'Realism' : 'Реализм',
+            physiology: gender === 'female' 
+                ? (isEn ? 'Female' : 'Женщина')
+                : (isEn ? 'Male' : 'Мужчина')
+        };
+    }
+    if (mode === 'omegaverse') {
+        let phys;
+        if (gender === 'female_omega') phys = isEn ? 'Female Omega' : 'Женщина-Омега';
+        else if (gender === 'male_omega') phys = isEn ? 'Male Omega' : 'Мужчина-Омега';
+        else phys = isEn ? 'Unknown' : 'Неизвестно';
+        return {
+            system: isEn ? 'OmegaVerse' : 'ОмегаВерс',
+            physiology: phys
+        };
+    }
+    if (mode === 'oviposition') {
+        return {
+            system: isEn ? 'Oviposition' : 'Яйцекладка',
+            physiology: gender === 'female' 
+                ? (isEn ? 'Female' : 'Женщина')
+                : (isEn ? 'Male' : 'Мужчина')
+        };
+    }
+    return { system: mode, physiology: gender };
+}
+
+// ============================================================
 // Ветка промпта для режима ЯЙЦЕКЛАДКА
 // ============================================================
 function buildEggEntityPrompt(entity, macroName, aiAwareness) {
-    let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Oviposition Status]\n`;
+    const labels = getSystemAndPhysiologyLabels(entity, true);
 
-    // Фаза внешней инкубации (после кладки)
+    let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
+    p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
+
+    // Фаза внешней инкубации
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
         p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}\n`;
@@ -31,7 +70,6 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             const known = entity.laidEggs.map((e, i) => `#${i+1}: ${translateGender(e.gender, 'en')}${e.diseaseId ? ` (${getEggEmbryoDisease(e.diseaseId, 'en')?.name})` : ''}`).join('; ');
             p += `[OMNISCIENCE] Known contents: ${known}.\n`;
         } else if (aiAwareness === 'dynamic') {
-            // Осмотр после кладки: пол и патологии видны
             if (entity.laidEggs?.length > 0) {
                 const lines = entity.laidEggs.map((e, i) => {
                     const genderStr = translateGender(e.gender, 'en');
@@ -102,26 +140,30 @@ If ${macroName} lays eggs in this response, append tag at the very end:
 - <!--LAY_EGGS_${entity.key.toUpperCase()}-->\n`;
         }
     } else {
-        // Обычный цикл (до зачатия)
+        // Обычный цикл
         const baseCycle = entity.cycleLength || 28;
         const target = entity.currentCycleTargetLength || baseCycle;
         const periodDays = entity.periodDuration || 5;
 
         if (entity.cycleDay <= periodDays) {
-            p += `Current Status: FERTILITY WINDOW ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Peak conception window.\n`;
+            p += `Current Status: HEAT / FERTILITY WINDOW ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Peak conception window.\n`;
         } else if (entity.cycleDay > target) {
             p += `Current Status: CYCLE DELAY (Late by ${entity.cycleDay - target} days).\n`;
         } else {
-            p += `Current Status: QUIESCENCE (Day ${entity.cycleDay}/${baseCycle}). Not fertile.\n`;
+            p += `Current Status: QUIESCENCE / REST PERIOD (Day ${entity.cycleDay}/${baseCycle}). Not fertile.\n`;
         }
 
         if (entity.contraception !== 'none') p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
 
-        const symptoms = getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
+        // Симптомы (для течки берём обычные, для покоя — egg_quiescence)
+        const isEggPhase = (entity.symptomPhaseKey || '').startsWith('egg_');
+        const symptoms = isEggPhase
+            ? getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en')
+            : getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
         if (symptoms.length > 0) p += `Current Physiological Symptoms: ${symptoms.join(', ')}.\n`;
     }
 
-    // Семья — общий блок
+    // Семья
     if (entity.childrenList?.length > 0) {
         const kidsInfo = entity.childrenList.map((c, i) => {
             const gEn = translateGender(c.gender, 'en');
@@ -137,7 +179,7 @@ If ${macroName} lays eggs in this response, append tag at the very end:
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
 ${macroName} has ${entity.childrenList.length} born child(ren):
 ${kidsInfo}
-Direct Canon Instruction: Always remember these children in family interactions, daily life, dialogue, and roleplay context.\n`;
+Direct Canon Instruction: Always remember these children in family interactions.\n`;
     }
 
     return p;
@@ -151,7 +193,10 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
         return buildEggEntityPrompt(entity, macroName, aiAwareness);
     }
 
+    const labels = getSystemAndPhysiologyLabels(entity, true);
+
     let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
+    p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
     if (entity.postpartumDays > 0) {
         const pData = getPostpartumData(entity.postpartumDays, entity.deliveryMethod, 'en');
@@ -272,7 +317,7 @@ Note: Pregnancy has NOT been verified or confirmed yet.\n`;
         }
     }
 
-    // Семья — общий блок
+    // Семья
     if (entity.childrenList?.length > 0) {
         const kidsInfo = entity.childrenList.map((c, i) => {
             const gEn = translateGender(c.gender, 'en');
