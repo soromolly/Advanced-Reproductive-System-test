@@ -16,7 +16,9 @@ import {
     deliverEntitySingleBaby, 
     processEntityAbortion, 
     getEntityBodyPhase,
-    generateBabyGender
+    generateBabyGender,
+    layEggs,
+    hatchEggs
 } from './entityController.js';
 import { getText } from './translations.js';
 import { 
@@ -29,6 +31,12 @@ import {
 import { buildMultiEntityPrompt } from './promptBuilder.js';
 import { renderUI, exportReproLogs } from './ui.js';
 import { getComplication } from './symptoms.js';
+import { 
+    rollEggCount, 
+    rollEggIncubationDays, 
+    getRandomEggShellDefectId, 
+    getRandomEggEmbryoDiseaseId 
+} from './eggSystem.js';
 
 const EXTENSION_NAME = 'st-advanced-reproductive-system';
 
@@ -43,10 +51,11 @@ const DEFAULT_SETTINGS = {
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let isMenuCollapsed = true; 
-let activeTab = 'user'; // 'user' | 'char'
+let activeTab = 'user';
 let activeChatId = null;
 let pendingUserTimeskipDays = 0;
 const processedBirthMessages = new Set();
+const processedLayMessages = new Set();
 let lastProcessedMessageUid = null;
 
 function getCurrentChatId() {
@@ -57,7 +66,7 @@ function getChatData() {
     const chatId = getCurrentChatId();
     if (!settings.chatPregnancyData[chatId]) {
         settings.chatPregnancyData[chatId] = {
-            targetMode: 'user', // 'user' | 'char' | 'both'
+            targetMode: 'user',
             lastRpDate: null,
             activityLogs: [],
             user: createDefaultEntityState('user'),
@@ -76,6 +85,21 @@ function getChatData() {
     if (!data.char) data.char = createDefaultEntityState('char');
     if (!data.targetMode) data.targetMode = 'user';
     if (!data.activityLogs) data.activityLogs = [];
+
+    // Гарантируем наличие новых полей для яйцекладки (для старых чатов)
+    ['user', 'char'].forEach(k => {
+        if (data[k].eggCount === undefined) data[k].eggCount = 0;
+        if (!data[k].eggShellDefects) data[k].eggShellDefects = [];
+        if (!data[k].eggGenders) data[k].eggGenders = [];
+        if (!data[k].eggDiseases) data[k].eggDiseases = [];
+        if (data[k].eggsLaid === undefined) data[k].eggsLaid = 0;
+        if (!data[k].laidEggs) data[k].laidEggs = [];
+        if (data[k].eggIncubationDays === undefined) data[k].eggIncubationDays = 0;
+        if (data[k].eggIncubationTotal === undefined) data[k].eggIncubationTotal = 0;
+        if (data[k].eggsHatched === undefined) data[k].eggsHatched = 0;
+        if (data[k].isNestActive === undefined) data[k].isNestActive = false;
+    });
+
     return data;
 }
 
@@ -139,7 +163,7 @@ function advanceTimeAll(days) {
 }
 
 function checkConceptionForEntity(entity, text, isReceivedClimax) {
-    if (!isReceivedClimax || entity.isPregnant || entity.postpartumDays > 0) return;
+    if (!isReceivedClimax || entity.isPregnant || entity.postpartumDays > 0 || entity.isNestActive) return;
 
     settings.globalRollsCount = (settings.globalRollsCount || 0) + 1;
     const phase = getEntityBodyPhase(entity, 'en');
@@ -147,7 +171,7 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
 
     let finalChance = 0;
     if (entity.contraception === 'none') {
-        finalChance = isFertile ? (entity.mode === 'omegaverse' ? 85 : 25) : (entity.mode === 'omegaverse' ? 5 : 0.5);
+        finalChance = isFertile ? (entity.mode === 'omegaverse' || entity.mode === 'oviposition' ? 85 : 25) : (entity.mode === 'omegaverse' || entity.mode === 'oviposition' ? 5 : 0.5);
     } else if (entity.contraception === 'condom') finalChance = 2;
     else if (entity.contraception === 'pills') finalChance = 0.1;
     else if (entity.contraception === 'iud') finalChance = 0.2;
@@ -172,6 +196,7 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
     const data = getChatData();
     const chatId = getCurrentChatId();
     const msgKey = `${chatId}_${messageIndex}_birth`;
+    const layMsgKey = `${chatId}_${messageIndex}_lay`;
 
     const text = (rawText || '')
         .replace(/<think[\s\S]*?<\/think>/gi, ' ')
@@ -183,24 +208,41 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
     const cumAnalChar = /<!--\s*CUM_ANAL_CHAR\s*-->/i.test(text);
 
     if (data.targetMode === 'user' || data.targetMode === 'both') {
-        const isTargetClimax = (data.user.gender === 'male_omega') ? cumAnalUser : cumVagUser;
+        const isTargetClimax = (data.user.gender === 'male_omega' || data.user.gender === 'male') ? cumAnalUser : cumVagUser;
         checkConceptionForEntity(data.user, text, isTargetClimax);
     }
     if (data.targetMode === 'char' || data.targetMode === 'both') {
-        const isTargetClimax = (data.char.gender === 'male_omega') ? cumAnalChar : cumVagChar;
+        const isTargetClimax = (data.char.gender === 'male_omega' || data.char.gender === 'male') ? cumAnalChar : cumVagChar;
         checkConceptionForEntity(data.char, text, isTargetClimax);
     }
 
+    // Аборт (только для не-яйцекладки)
     if (/<!--\s*ABORTION_USER\s*-->/i.test(text) || /<!--\s*ABORTION\s*-->/i.test(text)) {
-        if (data.user.isPregnant) processEntityAbortion(data.user, settings.language, logReproEvent, notify);
+        if (data.user.isPregnant && data.user.mode !== 'oviposition') processEntityAbortion(data.user, settings.language, logReproEvent, notify);
     }
     if (/<!--\s*ABORTION_CHAR\s*-->/i.test(text)) {
-        if (data.char.isPregnant) processEntityAbortion(data.char, settings.language, logReproEvent, notify);
+        if (data.char.isPregnant && data.char.mode !== 'oviposition') processEntityAbortion(data.char, settings.language, logReproEvent, notify);
     }
 
+    // Ручная кладка яиц через тег
+    if (!processedLayMessages.has(layMsgKey)) {
+        const checkLayFor = (entity, tagKey) => {
+            if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
+            const regex = new RegExp(`<!--\\s*LAY_EGGS_${tagKey}\\s*-->`, 'gi');
+            if (regex.test(text)) {
+                layEggs(entity, settings.language, logReproEvent, notify);
+            }
+        };
+        checkLayFor(data.user, 'USER');
+        checkLayFor(data.char, 'CHAR');
+        processedLayMessages.add(layMsgKey);
+    }
+
+    // Ручные роды через тег (для обычной беременности)
     if (!processedBirthMessages.has(msgKey)) {
         const checkBirthFor = (entity, tagKey) => {
             if (!entity.isPregnant || !entity.babiesGenders || entity.babiesGenders.length === 0) return;
+            if (entity.mode === 'oviposition') return;
             const regex = new RegExp(`<!--\\s*BIRTH_(NATURAL|C_SECTION)_${tagKey}(?:_(\\d+))?\\s*-->`, 'gi');
             let match;
             while ((match = regex.exec(text)) !== null) {
@@ -369,11 +411,20 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
+    // Смена режима
     $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
         const entity = getChatData()[getActiveEntityKey()];
         entity.mode = $(this).val(); 
         if (entity.mode === 'realism') entity.gender = 'female';
-        else if (entity.mode === 'omegaverse' && entity.gender === 'female') entity.gender = 'female_omega';
+        else if (entity.mode === 'omegaverse' && (entity.gender === 'female' || entity.gender === 'male')) entity.gender = 'female_omega';
+        else if (entity.mode === 'oviposition' && entity.gender !== 'male' && entity.gender !== 'female') entity.gender = 'female';
+        // Сброс беременности при смене режима
+        if (entity.mode !== 'oviposition' && entity.isNestActive) {
+            entity.isNestActive = false;
+            entity.laidEggs = [];
+            entity.eggIncubationDays = 0;
+            entity.eggIncubationTotal = 0;
+        }
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
@@ -428,16 +479,23 @@ function bindGlobalEvents() {
         }
     });
 
+    // Тест на беременность
     $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
         const entity = getChatData()[getActiveEntityKey()];
         const lang = settings.language || 'ru';
         
         if (entity.isPregnant) {
             entity.isDiscovered = true;
-            logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Positive test result confirmed.`);
-            notify(`${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
+            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Positive test confirmed.`);
+            if (entity.mode === 'oviposition') {
+                notify(lang === 'en' 
+                    ? `🥚 Egg carrying confirmed (${entity.pregnancyWeeks} wks ${entity.pregnancyDays} d)!`
+                    : `🥚 Вынашивание яиц подтверждено (${entity.pregnancyWeeks} нед. ${entity.pregnancyDays} дн.)!`, 'success');
+            } else {
+                notify(`${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
+            }
         } else {
-            logReproEvent(`[PREGNANCY TEST] [${entity.key.toUpperCase()}] Negative test result (Cycle delay).`);
+            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Negative test (Cycle delay).`);
             notify(getText('toastTestNegative', lang), 'info');
         }
 
@@ -446,8 +504,10 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
+    // Роды (обычная беременность)
     $(document).off('click', '#repro-btn-birth-trigger').on('click', '#repro-btn-birth-trigger', function() {
         const entity = getChatData()[getActiveEntityKey()];
+        if (entity.mode === 'oviposition') return;
         while (entity.babiesCount > 0) {
             deliverEntitySingleBaby(entity, 'natural', settings.language, logReproEvent, notify);
         }
@@ -456,19 +516,41 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
+    // Кладка яиц
+    $(document).off('click', '#repro-btn-lay-eggs').on('click', '#repro-btn-lay-eggs', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
+        layEggs(entity, settings.language, logReproEvent, notify);
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    // Вылупление яиц (ручное ускорение)
+    $(document).off('click', '#repro-btn-hatch-eggs').on('click', '#repro-btn-hatch-eggs', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        if (!entity.isNestActive) return;
+        if (!confirm(settings.language === 'en' ? 'Force hatching all eggs now?' : 'Форсировать вылупление всех яиц сейчас?')) return;
+        hatchEggs(entity, settings.language, logReproEvent, notify);
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    // Лечение осложнения
     $(document).off('click', '#repro-cure-complication').on('click', '#repro-cure-complication', function() {
         const entity = getChatData()[getActiveEntityKey()];
         if (entity.activeComplication?.curable) {
-            const comp = getComplication(entity.activeComplication.id, settings.language);
-            logReproEvent(`[COMPLICATION CURED] [${entity.key.toUpperCase()}] Cured ${entity.activeComplication.id}`);
+            logReproEvent(`[COMPLICATION CURED] [${entity.key.toUpperCase()}] ${entity.activeComplication.id}`);
             entity.activeComplication = null;
             saveSettingsDebounced();
             refreshUI();
             updatePrompt();
-            notify(settings.language === 'en' ? 'Complication treated successfully!' : 'Осложнение успешно вылечено!', 'success');
+            notify(settings.language === 'en' ? 'Complication treated!' : 'Осложнение вылечено!', 'success');
         }
     });
 
+    // Аборт
     $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
         if (confirm("Подтвердить прерывание беременности? / Confirm abortion?")) {
             processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
@@ -487,6 +569,7 @@ function bindGlobalEvents() {
         });
     });
 
+    // Применить параметры
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const data = getChatData();
@@ -494,7 +577,9 @@ function bindGlobalEvents() {
         
         entity.cycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || 28;
         entity.periodDuration = parseInt(root.find('#repro-input-period').val(), 10) || 5;
-        entity.maxPregnancyWeeks = parseInt(root.find('#repro-input-maxweeks').val(), 10) || 40;
+        
+        const maxWeeksInput = root.find('#repro-input-maxweeks');
+        if (maxWeeksInput.length) entity.maxPregnancyWeeks = parseInt(maxWeeksInput.val(), 10) || 40;
         
         const manualDateVal = root.find('#repro-input-rpdate').val();
         const normalized = normalizeInputDate(manualDateVal);
@@ -506,8 +591,9 @@ function bindGlobalEvents() {
             entity.pregnancyWeeks = weeks; 
             entity.pregnancyDays = Math.max(0, Math.min(6, days)); 
             entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
-        } else if (entity.postpartumDays === 0) { 
-            entity.cycleDay = parseInt(root.find('#repro-input-day').val(), 10) || 1; 
+        } else if (entity.postpartumDays === 0 && !entity.isNestActive) { 
+            const dayInput = root.find('#repro-input-day');
+            if (dayInput.length) entity.cycleDay = parseInt(dayInput.val(), 10) || 1; 
         }
 
         saveSettingsDebounced(); 
@@ -516,30 +602,61 @@ function bindGlobalEvents() {
         notify(getText('toastSaved', settings.language), 'success');
     });
 
+    // Ручная инициация беременности / кладки
     $(document).off('click', '#repro-btn-manual-preg').on('click', '#repro-btn-manual-preg', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const entity = getChatData()[getActiveEntityKey()];
+        const lang = settings.language || 'ru';
         const weeks = parseInt(root.find('#repro-manual-weeks').val(), 10) || 0;
         const days = parseInt(root.find('#repro-manual-days').val(), 10) || 0;
         const count = parseInt(root.find('#repro-manual-count').val(), 10) || 1;
 
-        entity.isPregnant = true; 
-        entity.isDiscovered = true;
-        entity.pregnancyWeeks = weeks; 
-        entity.pregnancyDays = Math.max(0, Math.min(6, days)); 
-        entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
-        entity.babiesCount = count; 
-        entity.currentDeliveredCount = 0;
-        entity.babiesGenders = Array.from({ length: count }, () => generateBabyGender(entity.mode, 'en'));
-        entity.babiesDiseases = Array.from({ length: count }, () => null);
-        entity.deliveryMethod = 'none';
+        if (entity.mode === 'oviposition') {
+            // Ручная инициация яйцекладки
+            entity.isPregnant = true;
+            entity.isDiscovered = true;
+            entity.pregnancyWeeks = weeks;
+            entity.pregnancyDays = Math.max(0, Math.min(6, days));
+            entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
+            entity.eggCount = Math.max(2, Math.min(7, count));
+            entity.eggsLaid = 0;
+            entity.laidEggs = [];
+            entity.eggsHatched = 0;
+            entity.isNestActive = false;
+            entity.eggIncubationDays = 0;
+            entity.eggIncubationTotal = 0;
+            entity.postpartumDays = 0;
+            entity.deliveryMethod = 'none';
+
+            entity.eggShellDefects = [];
+            entity.eggGenders = [];
+            entity.eggDiseases = [];
+            for (let i = 0; i < entity.eggCount; i++) {
+                entity.eggShellDefects.push(Math.random() * 100 < 15 ? getRandomEggShellDefectId() : null);
+                entity.eggGenders.push(generateBabyGender('realism', 'en'));
+                entity.eggDiseases.push(entity.isFetalPathologyEnabled ? (Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null) : null);
+            }
+            notify(`${lang === 'en' ? 'Egg carrying started: ' : 'Вынашивание яиц установлено: '}${weeks}w ${days}d, ${entity.eggCount} eggs`, 'success');
+        } else {
+            entity.isPregnant = true; 
+            entity.isDiscovered = true;
+            entity.pregnancyWeeks = weeks; 
+            entity.pregnancyDays = Math.max(0, Math.min(6, days)); 
+            entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
+            entity.babiesCount = count; 
+            entity.currentDeliveredCount = 0;
+            entity.babiesGenders = Array.from({ length: count }, () => generateBabyGender(entity.mode, 'en'));
+            entity.babiesDiseases = Array.from({ length: count }, () => null);
+            entity.deliveryMethod = 'none';
+            notify(`${getText('toastManualPreg', lang)}${weeks}w ${days}d`, 'success');
+        }
 
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
-        notify(`${getText('toastManualPreg', settings.language)}${weeks}w ${days}d`, 'success');
     });
 
+    // Сброс беременности / вынашивания яиц
     $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
         const entity = getChatData()[getActiveEntityKey()];
         entity.isPregnant = false; 
@@ -551,11 +668,23 @@ function bindGlobalEvents() {
         entity.babiesGenders = [];
         entity.babiesDiseases = [];
         entity.postpartumDays = 0;
+        // Очистка полей яйцекладки
+        entity.eggCount = 0;
+        entity.eggsLaid = 0;
+        entity.laidEggs = [];
+        entity.eggsHatched = 0;
+        entity.isNestActive = false;
+        entity.eggIncubationDays = 0;
+        entity.eggIncubationTotal = 0;
+        entity.eggShellDefects = [];
+        entity.eggGenders = [];
+        entity.eggDiseases = [];
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
     });
 
+    // Полный сброс
     $(document).off('click', '#repro-reset').on('click', '#repro-reset', function() {
         if (confirm("Полностью сбросить репродуктивные данные этого чата? / Reset all chat data?")) {
             const chatId = getCurrentChatId();
@@ -596,6 +725,7 @@ jQuery(async () => {
         if (event_types.CHAT_CHANGED) {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
                 processedBirthMessages.clear();
+                processedLayMessages.clear();
                 lastProcessedMessageUid = null;
                 pendingUserTimeskipDays = 0;
                 loadSettings(); 
