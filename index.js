@@ -37,7 +37,8 @@ import {
     rollEggCount, 
     rollEggIncubationDays, 
     getRandomEggShellDefectId, 
-    getRandomEggEmbryoDiseaseId 
+    getRandomEggEmbryoDiseaseId,
+    EGG_INCUBATION_DISPLAY_MAX
 } from './eggSystem.js';
 
 const EXTENSION_NAME = 'st-advanced-reproductive-system';
@@ -100,6 +101,11 @@ function getChatData() {
         if (data[k].eggIncubationTotal === undefined) data[k].eggIncubationTotal = 0;
         if (data[k].eggsHatched === undefined) data[k].eggsHatched = 0;
         if (data[k].isNestActive === undefined) data[k].isNestActive = false;
+
+        // Миграция: старые значения инкубации (60-119) → новые 120
+        if (data[k].isNestActive && data[k].eggIncubationTotal && data[k].eggIncubationTotal !== EGG_INCUBATION_DISPLAY_MAX) {
+            data[k].eggIncubationTotal = EGG_INCUBATION_DISPLAY_MAX;
+        }
     });
 
     return data;
@@ -541,7 +547,6 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    // Кнопка "ВЫЛУПИТЬ ЯЙЦА" — форсированно вылупляет ВСЕ оставшиеся
     $(document).off('click', '#repro-btn-hatch-eggs').on('click', '#repro-btn-hatch-eggs', function() {
         const entity = getChatData()[getActiveEntityKey()];
         if (!entity.isNestActive) return;
