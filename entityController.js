@@ -149,13 +149,11 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
         if (day >= ovulStart && day <= ovulEnd) return getText('ovulation', l);
         return getText('luteal', l);
     } else {
-        // omegaverse AND oviposition: heat at beginning
         if (day > baseLength) {
             const delay = day - baseLength;
             return `${getText('delayedHeat', l)} (${formatDelayDays(delay, l)})`;
         }
         if (day <= periodDays) return getText('heat', l);
-        // oviposition non-fertile → quiescence
         if (entity.mode === 'oviposition') {
             return l === 'en' ? 'Quiescence (Rest Period) 🌿' : 'Период покоя 🌿';
         }
@@ -164,14 +162,12 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
 }
 
 export function updateEntitySymptoms(entity) {
-    // Фаза внешней инкубации — симптомов тела нет
     if (entity.isNestActive) {
         entity.symptomPhaseKey = null;
         entity.symptomIndices = [];
         return;
     }
 
-    // Фаза восстановления после кладки (яйцекладка)
     if (entity.postpartumDays > 0) {
         if (entity.mode === 'oviposition') {
             if (entity.symptomPhaseKey !== 'egg_recovery' || !entity.symptomIndices?.length) {
@@ -189,7 +185,6 @@ export function updateEntitySymptoms(entity) {
     let phaseKey = null;
 
     if (isRevealedPregnancy && entity.mode === 'oviposition') {
-        // Фазы вынашивания яиц
         const days = entity.pregnancyDaysTotal;
         if (days < 8) phaseKey = 'egg_forming';
         else if (days < 29) phaseKey = 'egg_carrying';
@@ -219,7 +214,6 @@ export function updateEntitySymptoms(entity) {
                 phaseKey = (entity.gender === 'male_omega') ? 'heat_male' : 'heat_female';
             }
         } else if (entity.mode === 'oviposition') {
-            // Цикл яйцекладки: течка в начале, покой в остальное время
             if (day <= periodDays) {
                 phaseKey = (entity.gender === 'male') ? 'heat_male' : 'heat_female';
             } else {
@@ -405,7 +399,7 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         return;
     }
 
-    // Фаза 2: Послекладковое восстановление (крайне короткое, обычно уже внутри nest)
+    // Фаза 2: Послекладковое восстановление
     if (entity.postpartumDays > 0) {
         entity.postpartumDays += days;
         if (entity.postpartumDays > 7) {
@@ -425,10 +419,12 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
         entity.cycleDay += days;
 
-        const autoDiscoveryWeek = (aiAwareness === 'hidden') ? 3 : 2;
-        if (!entity.isDiscovered && entity.pregnancyWeeks >= autoDiscoveryWeek) {
+        // Автообнаружение по ДНЯМ (яйца быстро набирают размер)
+        // dynamic (Современность): 5 дней; hidden (Средневековье): 14 дней
+        const autoDiscoveryDays = (aiAwareness === 'hidden') ? 14 : 5;
+        if (!entity.isDiscovered && entity.pregnancyDaysTotal >= autoDiscoveryDays) {
             entity.isDiscovered = true;
-            logFn?.(`[EGG CARRYING DISCOVERED] [${entity.key.toUpperCase()}] Confirmed at week ${entity.pregnancyWeeks}.`);
+            logFn?.(`[EGG CARRYING DISCOVERED] [${entity.key.toUpperCase()}] Confirmed at day ${entity.pregnancyDaysTotal}.`);
             notifyFn?.(lang === 'en' 
                 ? `🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Egg carrying confirmed (~${entity.pregnancyWeeks} wks)!`
                 : `🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Вынашивание яиц подтверждено (~${entity.pregnancyWeeks} нед.)!`, 'success');
