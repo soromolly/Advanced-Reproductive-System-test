@@ -742,3 +742,21 @@ export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {
 
     notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastAbort', lang)}`, 'info');
 }
+// ============================================================
+// Реэкспорт из eggSystem.js для удобства
+// ============================================================
+export {
+    getEggCarryingData,
+    getEggPostLayData,
+    getEggIncubationData,
+    getEggSymptomList,
+    getRandomEggSymptomIndices,
+    getEggShellDefect,
+    getEggEmbryoDisease,
+    EGG_SHELL_DEFECTS,
+    EGG_EMBRYO_DISEASES,
+    EGG_SYMPTOMS,
+    EGG_CARRYING_STAGES,
+    EGG_POSTLAY_STAGES,
+    EGG_INCUBATION_STAGES
+} from './eggSystem.js';
