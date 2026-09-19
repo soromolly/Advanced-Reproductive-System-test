@@ -47,7 +47,6 @@ function getSystemAndPhysiologyLabels(entity, isEn) {
     return { system: mode, physiology: gender };
 }
 
-// Общий блок семьи для яйцекладки
 function buildFamilyBlock(entity, macroName) {
     if (!entity.childrenList?.length) return '';
     const kidsInfo = entity.childrenList.map((c, i) => {
@@ -76,21 +75,17 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
-    // ===== Фаза внешней инкубации (кладка уже случилась) =====
-    // Количество отложенных яиц известно ВСЕМ (физически пересчитывается).
-    // Пол и патологии эмбрионов — по режиму осведомлённости.
+    // ===== Фаза внешней инкубации =====
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
         p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}\n`;
         p += `Stage: ${incub.name}. ${incub.desc}\n`;
-        p += `Laid eggs: ${entity.eggsLaid}. ${macroName} is highly protective of the nest and its partner, dislikes strangers near it.\n`;
+        p += `Laid eggs: ${entity.eggsLaid}. Hatched so far: ${entity.eggsHatched || 0}. ${macroName} is highly protective of the nest and its partner, dislikes strangers near it.\n`;
 
         if (aiAwareness === 'full' && entity.laidEggs?.length > 0) {
-            // Всеведение — всё известно сразу
-            const known = entity.laidEggs.map((e, i) => `#${i+1}: ${translateGender(e.gender, 'en')}${e.diseaseId ? ` (${getEggEmbryoDisease(e.diseaseId, 'en')?.name})` : ''}`).join('; ');
+            const known = entity.laidEggs.map((e, i) => `#${i+1}: ${translateGender(e.gender, 'en')}${e.hatched ? ' [hatched]' : ''}${e.diseaseId ? ` (${getEggEmbryoDisease(e.diseaseId, 'en')?.name})` : ''}`).join('; ');
             p += `[OMNISCIENCE] Known contents: ${known}.\n`;
         } else if (aiAwareness === 'dynamic') {
-            // Современность — осмотр яиц: пол и патологии видны
             if (entity.laidEggs?.length > 0) {
                 const lines = entity.laidEggs.map((e, i) => {
                     const genderStr = translateGender(e.gender, 'en');
@@ -104,13 +99,37 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
                         const sd = getEggShellDefect(e.shellDefect, 'en');
                         if (sd) defectStr = ` [shell: ${sd.name}]`;
                     }
-                    return `Egg #${i+1}: ${genderStr}${diseaseStr}${defectStr}`;
+                    const hatchStr = e.hatched ? ' [ALREADY HATCHED]' : '';
+                    return `Egg #${i+1}: ${genderStr}${diseaseStr}${defectStr}${hatchStr}`;
                 }).join('\n');
                 p += `[POST-LAY EXAMINATION] Inspected eggs:\n${lines}\n`;
             }
         } else {
-            // Средневековье — количество видно, но содержимое скрыто
-            p += `[SECRET DATA] Count of laid eggs (${entity.eggsLaid}) is physically visible. Egg genders and pathologies remain hidden until hatching.\n`;
+            p += `[SECRET DATA] Count of laid eggs (${entity.eggsLaid}) is physically visible. Egg genders and pathologies remain hidden until hatching. Hatched so far: ${entity.eggsHatched || 0}.\n`;
+        }
+
+        // ===== Инструкция по вылуплению — только в конце инкубации =====
+        const remaining = (entity.laidEggs || []).filter(e => !e.hatched).length;
+        const hatchingThreshold = Math.max(1, entity.eggIncubationTotal - 20);
+        if (entity.eggIncubationDays >= hatchingThreshold && remaining > 0) {
+            const tagSuffix = entity.key.toUpperCase();
+            p += `\n🚨 CRITICAL HATCHING TAG DIRECTIVE FOR ${macroName}:
+Incubation is near its completion (Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}). Unhatched eggs remaining: ${remaining}.
+Hatching is NOW biologically possible. ${macroName} may begin hatching eggs in this response IF the narrative supports it.
+
+🚫 STRICT RULES:
+- Hatch AT MOST 2–3 eggs per response. NEVER the whole clutch at once.
+- Hatchings should feel progressive — over hours or even days, not instant.
+- Describe each egg individually (shell cracking, membrane tearing, the hatchling emerging, wet and disoriented).
+
+✅ TAG FORMAT — append ONE tag per hatched egg, numbered sequentially WITHIN THIS RESPONSE (starting from 1):
+  <!--HATCH_EGG_${tagSuffix}_1-->
+  <!--HATCH_EGG_${tagSuffix}_2-->
+  <!--HATCH_EGG_${tagSuffix}_3-->
+
+Example (2 eggs hatching now): <!--HATCH_EGG_${tagSuffix}_1--><!--HATCH_EGG_${tagSuffix}_2-->
+If no hatching occurs this response — just don't add any tags.
+`;
         }
 
         p += buildFamilyBlock(entity, macroName);
@@ -131,11 +150,10 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
 
     const isRevealed = entity.isDiscovered || !entity.isSecretConception;
 
-    // ===== Фаза вынашивания — ТОЛЬКО если раскрыто =====
+    // ===== Фаза вынашивания =====
     if (entity.isPregnant && isRevealed) {
         const carrying = getEggCarryingData(entity.pregnancyDaysTotal, 'en');
 
-        // Раскрытие количества яиц: Всеведение — сразу, Современность — с 3 недели (УЗИ), Средневековье — НИКОГДА до кладки
         const revealCount = (aiAwareness === 'full') 
             || (aiAwareness === 'dynamic' && entity.pregnancyWeeks >= 3);
 
@@ -167,7 +185,6 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             p += `[SECRET DATA] Egg count, sexes, and pathologies are hidden until laying. Only symptoms and belly size are observable.\n`;
         }
 
-        // Инструкция с тегами поштучной кладки — с 30-го дня
         const remainingEggs = entity.eggCount - entity.eggsLaid;
         if (entity.pregnancyDaysTotal >= 30 && remainingEggs > 0) {
             const tagSuffix = entity.key.toUpperCase();
@@ -191,7 +208,6 @@ Tag format (use the correct sequential number for each egg):
 Example (if laying ${exampleEnd - startNum + 1} egg(s) in one response): ${exampleTags}
 `;
             } else {
-                // Средневековье — количество скрыто, теги ставим по факту кладки
                 p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
 When laying occurs in this response, append ONE tag PER EGG laid, at the very end of the response.
 Use this exact format for each egg, incrementing N starting from 1: <!--LAY_EGG_${tagSuffix}_N-->
@@ -210,7 +226,7 @@ Do NOT state or assume a specific total egg count — it remains unknown to ever
         return p;
     }
 
-    // ===== Обычный цикл (в т.ч. СКРЫТОЕ вынашивание) =====
+    // ===== Обычный цикл =====
     const baseCycle = entity.cycleLength || 28;
     const target = entity.currentCycleTargetLength || baseCycle;
     const periodDays = entity.periodDuration || 5;
@@ -237,7 +253,7 @@ Do NOT state or assume a specific total egg count — it remains unknown to ever
 }
 
 // ============================================================
-// Обычная ветка промпта (реализм / омегаверс)
+// Обычная ветка (реализм / омегаверс)
 // ============================================================
 function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
     if (entity.mode === 'oviposition') {
