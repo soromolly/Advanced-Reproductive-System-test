@@ -31,8 +31,8 @@ export const TRANSLATIONS = {
         tabChar: '🤖 Профиль {{char}}',
         secretConceptionLabel: 'Реалистичное зачатие',
         irregularCycleLabel: 'Нерегулярный цикл',
-        system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс',
-        physiology: 'Физиология:', female: 'Женщина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омегa',
+        system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс', oviposition: 'Яйцекладка',
+        physiology: 'Физиология:', female: 'Женщина', male: 'Мужчина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омега',
         aiLogic: 'Знания ИИ:', ultrasound: 'Современность', medieval: 'Средневековье', knowsAll: 'Всеведение',
         phaseRealism: 'Текущая фаза:', phaseOmega: 'Текущее состояние омеги:',
         termInRp: 'Акушерский срок в RP:', weeksShort: 'нед.', daysShort: 'дн.',
@@ -89,7 +89,54 @@ export const TRANSLATIONS = {
         fetalPathologySub: '(патологии и замирание)',
         globalRollsLabel: 'Всего скрытых проверок на зачатие:',
         eddLabel: '📅 ПДР (Дата родов):',
-        maxWeeksLabel: 'Срок беременности (нед):'
+        maxWeeksLabel: 'Срок беременности (нед):',
+
+        // ===== Яйцекладка =====
+        modeRealism: 'Реализм',
+        modeOmega: 'ОмегаВерс',
+        modeOviposition: 'Яйцекладка',
+
+        eggCarryingTitle: '🥚 Вынашивание яиц:',
+        eggIncubationTitle: '🥚 Инкубация кладки:',
+        eggCountLabel: 'Яиц в кладке:',
+        eggCountUnknown: 'Неизвестно',
+        eggsLaidLabel: 'Отложено яиц:',
+        eggsHatchedLabel: 'Вылупилось:',
+        eggIncubationProgress: 'Инкубация:',
+        eggIncubationDayUnit: 'дн.',
+        eggNestStatusWarm: 'Гнездо тёплое',
+        eggNestStatusCold: 'Гнездо холодное (риск!)',
+
+        eggShellDefectTitle: '🧬 Дефекты скорлупы (УЗИ):',
+        eggEmbryoDiseaseTitle: '🧬 Патологии эмбрионов (после кладки):',
+        eggNoDefects: 'Дефектов не выявлено',
+
+        eggCarryingLabel: 'Срок вынашивания:',
+        eggIncubationLabel: 'Инкубация (дней):',
+
+        layEggsBtn: '🥚 ОТЛОЖИТЬ ЯЙЦА',
+        hatchEggsBtn: '🐣 ВЫЛУПИТЬ ЯЙЦА',
+        manualEggsBtn: '🥚 Начать кладку вручную',
+        manualEggCount: 'Кол-во яиц:',
+
+        resetEggCarryingBtn: '🥚 Сбросить вынашивание яиц',
+
+        toastEggConception: '🥚 ЗАЧАТИЕ ПРОИЗОШЛО! Идёт формирование яиц.',
+        toastEggLaid: '🥚 Яйца отложены! Началась инкубация.',
+        toastEggHatched: '🐣 Яйца вылупились!',
+        toastEggCarryingDiscovered: '🥚 Вынашивание яиц подтверждено!',
+        toastEggIncubationStart: '🪺 Началась инкубация кладки.',
+        toastEggReadyToLay: '🥚 Пора откладывать яйца!',
+
+        eggPostLayHeader: 'Состояние после кладки (День ',
+
+        eggPhaseForming: 'Формирование яиц 🥚',
+        eggPhaseCarrying: 'Вынашивание яиц 🥚',
+        eggPhaseCarryingLate: 'Перед кладкой 🥚',
+        eggPhaseLaying: 'Кладка 🥚',
+        eggPhaseRecovery: 'Восстановление после кладки 🪺',
+        eggPhaseIncubation: 'Инкубация кладки 🪺',
+        eggPhaseQuiescence: 'Период покоя (кладка не активна)'
     },
     en: {
         title: '🧬 Reproductive System',
@@ -103,8 +150,8 @@ export const TRANSLATIONS = {
         tabChar: '🤖 {{char}} Profile',
         secretConceptionLabel: 'Realistic Conception',
         irregularCycleLabel: 'Irregular Cycle',
-        system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse',
-        physiology: 'Physiology:', female: 'Female', female_omega: 'F-Omega', male_omega: 'M-Omega',
+        system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse', oviposition: 'Oviposition',
+        physiology: 'Physiology:', female: 'Female', male: 'Male', female_omega: 'F-Omega', male_omega: 'M-Omega',
         aiLogic: 'AI Awareness:', ultrasound: 'Modernity', medieval: 'Medieval (Blind)', knowsAll: 'Omniscience',
         phaseRealism: 'Current Phase:', phaseOmega: 'Current Omega Status:',
         termInRp: 'Obstetric Term in RP:', weeksShort: 'wks', daysShort: 'days',
@@ -156,12 +203,59 @@ export const TRANSLATIONS = {
         healthyFetusLabel: 'No anatomical anomalies detected (Healthy)',
         giveBirthBtn: '🔔 DELIVER ALL BABIES MANUALLY',
         protectionLabel: 'Contraception:', protectionNone: 'No Protection', protectionCondom: 'Condom (Barrier)',
-        protectionPills: 'Oral Extraconceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
+        protectionPills: 'Oral Contraceptives (Pills)', protectionIud: 'Intrauterine Device (IUD)',
         fetalPathologyLabel: '🧬 Congenital Anomalies & Risks',
         fetalPathologySub: '(anomalies & missed demise)',
         globalRollsLabel: 'Total hidden conception checks:',
         eddLabel: '📅 EDD (Due Date):',
-        maxWeeksLabel: 'Pregnancy Term (wks):'
+        maxWeeksLabel: 'Pregnancy Term (wks):',
+
+        // ===== Oviposition =====
+        modeRealism: 'Realism',
+        modeOmega: 'OmegaVerse',
+        modeOviposition: 'Oviposition',
+
+        eggCarryingTitle: '🥚 Egg Carrying:',
+        eggIncubationTitle: '🥚 Clutch Incubation:',
+        eggCountLabel: 'Eggs in clutch:',
+        eggCountUnknown: 'Unknown',
+        eggsLaidLabel: 'Eggs laid:',
+        eggsHatchedLabel: 'Hatched:',
+        eggIncubationProgress: 'Incubation:',
+        eggIncubationDayUnit: 'days',
+        eggNestStatusWarm: 'Nest warm',
+        eggNestStatusCold: 'Nest cold (risk!)',
+
+        eggShellDefectTitle: '🧬 Shell defects (ultrasound):',
+        eggEmbryoDiseaseTitle: '🧬 Embryo pathologies (post-lay):',
+        eggNoDefects: 'No defects detected',
+
+        eggCarryingLabel: 'Carrying term:',
+        eggIncubationLabel: 'Incubation (days):',
+
+        layEggsBtn: '🥚 LAY EGGS',
+        hatchEggsBtn: '🐣 HATCH EGGS',
+        manualEggsBtn: '🥚 Start carrying manually',
+        manualEggCount: 'Egg count:',
+
+        resetEggCarryingBtn: '🥚 Reset egg carrying',
+
+        toastEggConception: '🥚 CONCEPTION OCCURRED! Eggs are forming.',
+        toastEggLaid: '🥚 Eggs laid! Incubation begun.',
+        toastEggHatched: '🐣 Eggs hatched!',
+        toastEggCarryingDiscovered: '🥚 Egg carrying confirmed!',
+        toastEggIncubationStart: '🪺 Clutch incubation has begun.',
+        toastEggReadyToLay: '🥚 Time to lay eggs!',
+
+        eggPostLayHeader: 'Post-lay state (Day ',
+
+        eggPhaseForming: 'Egg formation 🥚',
+        eggPhaseCarrying: 'Egg carrying 🥚',
+        eggPhaseCarryingLate: 'Pre-laying 🥚',
+        eggPhaseLaying: 'Laying 🥚',
+        eggPhaseRecovery: 'Post-lay recovery 🪺',
+        eggPhaseIncubation: 'Clutch incubation 🪺',
+        eggPhaseQuiescence: 'Rest period (no clutch)'
     }
 };
 
@@ -194,97 +288,3 @@ export function translateGender(genderStr, targetLang = 'en') {
     };
     return map[clean] || clean;
 }
-// ===== Яйцекладка =====
-oviposition: 'Яйцекладка',
-modeRealism: 'Реализм',
-modeOmega: 'ОмегаВерс',
-modeOviposition: 'Яйцекладка',
-
-eggCarryingTitle: '🥚 Вынашивание яиц:',
-eggIncubationTitle: '🥚 Инкубация кладки:',
-eggCountLabel: 'Яиц в кладке:',
-eggCountUnknown: 'Неизвестно',
-eggsLaidLabel: 'Отложено яиц:',
-eggsHatchedLabel: 'Вылупилось:',
-eggIncubationProgress: 'Инкубация:',
-eggIncubationDayUnit: 'дн.',
-eggNestStatusWarm: 'Гнездо тёплое',
-eggNestStatusCold: 'Гнездо холодное (риск!)',
-
-eggShellDefectTitle: '🧬 Дефекты скорлупы (УЗИ):',
-eggEmbryoDiseaseTitle: '🧬 Патологии эмбрионов (после кладки):',
-eggNoDefects: 'Дефектов не выявлено',
-
-eggCarryingLabel: 'Срок вынашивания:',
-eggIncubationLabel: 'Инкубация (дней):',
-
-layEggsBtn: '🥚 ОТЛОЖИТЬ ЯЙЦА',
-hatchEggsBtn: '🐣 ВЫЛУПИТЬ ЯЙЦА',
-manualEggsBtn: '🥚 Начать кладку вручную',
-manualEggCount: 'Кол-во яиц:',
-
-resetEggCarryingBtn: '🥚 Сбросить вынашивание яиц',
-
-toastEggConception: '🥚 ЗАЧАТИЕ ПРОИЗОШЛО! Идёт формирование яиц.',
-toastEggLaid: '🥚 Яйца отложены! Началась инкубация.',
-toastEggHatched: '🐣 Яйца вылупились!',
-toastEggCarryingDiscovered: '🥚 Вынашивание яиц подтверждено!',
-toastEggIncubationStart: '🪺 Началась инкубация кладки.',
-toastEggReadyToLay: '🥚 Пора откладывать яйца!',
-
-eggPostLayHeader: 'Состояние после кладки (День ',
-
-eggPhaseForming: 'Формирование яиц 🥚',
-eggPhaseCarrying: 'Вынашивание яиц 🥚',
-eggPhaseCarryingLate: 'Перед кладкой 🥚',
-eggPhaseLaying: 'Кладка 🥚',
-eggPhaseRecovery: 'Восстановление после кладки 🪺',
-eggPhaseIncubation: 'Инкубация кладки 🪺',
-eggPhaseQuiescence: 'Период покоя (кладка не активна)',
-    // ===== Oviposition =====
-oviposition: 'Oviposition',
-modeRealism: 'Realism',
-modeOmega: 'OmegaVerse',
-modeOviposition: 'Oviposition',
-
-eggCarryingTitle: '🥚 Egg Carrying:',
-eggIncubationTitle: '🥚 Clutch Incubation:',
-eggCountLabel: 'Eggs in clutch:',
-eggCountUnknown: 'Unknown',
-eggsLaidLabel: 'Eggs laid:',
-eggsHatchedLabel: 'Hatched:',
-eggIncubationProgress: 'Incubation:',
-eggIncubationDayUnit: 'days',
-eggNestStatusWarm: 'Nest warm',
-eggNestStatusCold: 'Nest cold (risk!)',
-
-eggShellDefectTitle: '🧬 Shell defects (ultrasound):',
-eggEmbryoDiseaseTitle: '🧬 Embryo pathologies (post-lay):',
-eggNoDefects: 'No defects detected',
-
-eggCarryingLabel: 'Carrying term:',
-eggIncubationLabel: 'Incubation (days):',
-
-layEggsBtn: '🥚 LAY EGGS',
-hatchEggsBtn: '🐣 HATCH EGGS',
-manualEggsBtn: '🥚 Start carrying manually',
-manualEggCount: 'Egg count:',
-
-resetEggCarryingBtn: '🥚 Reset egg carrying',
-
-toastEggConception: '🥚 CONCEPTION OCCURRED! Eggs are forming.',
-toastEggLaid: '🥚 Eggs laid! Incubation begun.',
-toastEggHatched: '🐣 Eggs hatched!',
-toastEggCarryingDiscovered: '🥚 Egg carrying confirmed!',
-toastEggIncubationStart: '🪺 Clutch incubation has begun.',
-toastEggReadyToLay: '🥚 Time to lay eggs!',
-
-eggPostLayHeader: 'Post-lay state (Day ',
-
-eggPhaseForming: 'Egg formation 🥚',
-eggPhaseCarrying: 'Egg carrying 🥚',
-eggPhaseCarryingLate: 'Pre-laying 🥚',
-eggPhaseLaying: 'Laying 🥚',
-eggPhaseRecovery: 'Post-lay recovery 🪺',
-eggPhaseIncubation: 'Clutch incubation 🪺',
-eggPhaseQuiescence: 'Rest period (no clutch)',
