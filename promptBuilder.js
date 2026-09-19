@@ -9,7 +9,9 @@ import {
     getEggIncubationData,
     getEggSymptomList,
     getEggShellDefect,
-    getEggEmbryoDisease
+    getEggEmbryoDisease,
+    EGG_INCUBATION_DISPLAY_MAX,
+    EGG_INCUBATION_HATCHING_PROMPT_DAY
 } from './symptoms.js';
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase } from './entityController.js';
@@ -78,7 +80,7 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     // ===== Фаза внешней инкубации =====
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
-        p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}\n`;
+        p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${EGG_INCUBATION_DISPLAY_MAX}\n`;
         p += `Stage: ${incub.name}. ${incub.desc}\n`;
         p += `Laid eggs: ${entity.eggsLaid}. Hatched so far: ${entity.eggsHatched || 0}. ${macroName} is highly protective of the nest and its partner, dislikes strangers near it.\n`;
 
@@ -108,14 +110,13 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             p += `[SECRET DATA] Count of laid eggs (${entity.eggsLaid}) is physically visible. Egg genders and pathologies remain hidden until hatching. Hatched so far: ${entity.eggsHatched || 0}.\n`;
         }
 
-        // ===== Инструкция по вылуплению — только в конце инкубации =====
+        // ===== Инструкция по вылуплению — с 90-го дня =====
         const remaining = (entity.laidEggs || []).filter(e => !e.hatched).length;
-        const hatchingThreshold = Math.max(1, entity.eggIncubationTotal - 20);
-        if (entity.eggIncubationDays >= hatchingThreshold && remaining > 0) {
+        if (entity.eggIncubationDays >= EGG_INCUBATION_HATCHING_PROMPT_DAY && remaining > 0) {
             const tagSuffix = entity.key.toUpperCase();
             p += `\n🚨 CRITICAL HATCHING TAG DIRECTIVE FOR ${macroName}:
-Incubation is near its completion (Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}). Unhatched eggs remaining: ${remaining}.
-Hatching is NOW biologically possible. ${macroName} may begin hatching eggs in this response IF the narrative supports it.
+Incubation is advanced (Day ${entity.eggIncubationDays}/${EGG_INCUBATION_DISPLAY_MAX}). Unhatched eggs remaining: ${remaining}.
+Hatching may begin ANY DAY now — the exact timing depends on the warmth of the nest and the narrative pace.
 
 🚫 STRICT RULES:
 - Hatch AT MOST 2–3 eggs per response. NEVER the whole clutch at once.
