@@ -385,7 +385,6 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
 
 // =============== Логика вынашивания/кладки яиц ===============
 function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notifyFn) {
-    // Фаза 1: Внешняя инкубация (гнездо)
     if (entity.isNestActive) {
         entity.eggIncubationDays += days;
         if (entity.postpartumDays > 0) {
@@ -399,7 +398,6 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         return;
     }
 
-    // Фаза 2: Послекладковое восстановление
     if (entity.postpartumDays > 0) {
         entity.postpartumDays += days;
         if (entity.postpartumDays > 7) {
@@ -412,15 +410,12 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         return;
     }
 
-    // Фаза 3: Вынашивание яиц
     if (entity.isPregnant) {
         entity.pregnancyDaysTotal += days;
         entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
         entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
         entity.cycleDay += days;
 
-        // Автообнаружение по ДНЯМ (яйца быстро набирают размер)
-        // dynamic (Современность): 5 дней; hidden (Средневековье): 14 дней
         const autoDiscoveryDays = (aiAwareness === 'hidden') ? 14 : 5;
         if (!entity.isDiscovered && entity.pregnancyDaysTotal >= autoDiscoveryDays) {
             entity.isDiscovered = true;
@@ -438,7 +433,6 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
         return;
     }
 
-    // Фаза 4: Обычный цикл (течка / покой)
     const target = entity.currentCycleTargetLength || entity.cycleLength || 28;
     entity.cycleDay += days;
     if (entity.cycleDay > target) {
@@ -541,22 +535,48 @@ function triggerEggGravid(entity, lang = 'ru', logFn, notifyFn) {
     }
 }
 
-export function layEggs(entity, lang = 'ru', logFn, notifyFn) {
-    if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
+// =============== Кладка по одному яйцу ===============
+export function laySingleEgg(entity, lang = 'ru', logFn, notifyFn) {
+    if (entity.mode !== 'oviposition' || !entity.isPregnant) return false;
+    if (entity.eggsLaid >= entity.eggCount) return false;
 
-    const totalLaid = entity.eggCount;
-    entity.laidEggs = [];
-    for (let i = 0; i < totalLaid; i++) {
-        entity.laidEggs.push({
-            id: Date.now() + i,
-            gender: entity.eggGenders[i] || null,
-            diseaseId: entity.eggDiseases[i] || null,
-            shellDefect: entity.eggShellDefects[i] || null,
-            hatched: false
-        });
+    const idx = entity.eggsLaid;
+
+    entity.laidEggs.push({
+        id: Date.now() + idx + Math.floor(Math.random() * 1000),
+        gender: entity.eggGenders[idx] || null,
+        diseaseId: entity.eggDiseases[idx] || null,
+        shellDefect: entity.eggShellDefects[idx] || null,
+        hatched: false
+    });
+    entity.eggsLaid++;
+
+    logFn?.(`[EGG LAID] [${entity.key.toUpperCase()}] Egg ${entity.eggsLaid}/${entity.eggCount}`);
+
+    if (entity.eggsLaid >= entity.eggCount) {
+        finishLaying(entity, lang, logFn, notifyFn);
+    } else {
+        notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `Egg laid ${entity.eggsLaid}/${entity.eggCount}` : `Отложено яйцо ${entity.eggsLaid}/${entity.eggCount}`}`, 'info');
     }
-    entity.eggsLaid = totalLaid;
 
+    updateEntitySymptoms(entity);
+    return true;
+}
+
+export function layAllEggs(entity, lang = 'ru', logFn, notifyFn) {
+    if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
+    let guard = 20;
+    while (entity.eggsLaid < entity.eggCount && guard-- > 0) {
+        if (!laySingleEgg(entity, lang, logFn, notifyFn)) break;
+    }
+}
+
+// Совместимость со старым названием
+export function layEggs(entity, lang = 'ru', logFn, notifyFn) {
+    layAllEggs(entity, lang, logFn, notifyFn);
+}
+
+function finishLaying(entity, lang = 'ru', logFn, notifyFn) {
     entity.isPregnant = false;
     entity.isDiscovered = false;
     entity.pregnancyDaysTotal = 0;
@@ -569,10 +589,8 @@ export function layEggs(entity, lang = 'ru', logFn, notifyFn) {
     entity.eggIncubationDays = 0;
     entity.eggIncubationTotal = rollEggIncubationDays();
 
-    logFn?.(`[EGG LAYING] [${entity.key.toUpperCase()}] Laid ${totalLaid} eggs. Incubation: ${entity.eggIncubationTotal} days.`);
-    notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Eggs laid!' : 'Яйца отложены!'} (${totalLaid})`, 'success');
-
-    updateEntitySymptoms(entity);
+    logFn?.(`[EGG LAYING COMPLETE] [${entity.key.toUpperCase()}] All ${entity.eggCount} eggs laid. Incubation: ${entity.eggIncubationTotal} days.`);
+    notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'All eggs laid!' : 'Все яйца отложены!'} (${entity.eggCount})`, 'success');
 }
 
 export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
