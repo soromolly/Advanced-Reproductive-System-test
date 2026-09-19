@@ -187,25 +187,21 @@ export const EGG_SHELL_DEFECTS = {
     ]
 };
 
-// Патологии эмбриона — видны после кладки в Современности, после вылупления в Средневековье
+// Патологии, специфичные для яйца (не генетические аномалии плода, а именно «яйцевые» состояния).
+// Генетические/анатомические аномалии берутся из FETAL_DISEASES (symptoms.js).
+// Альбинизм, гетерохромия и редкий цвет глаз убраны — они теперь в основном списке FETAL_DISEASES (postnatal).
 export const EGG_EMBRYO_DISEASES = {
     ru: [
         { id: 'embryo_weak', name: "Слабый эмбрион", desc: "Эмбрион развивается медленнее нормы. Возможна слабость после вылупления." },
         { id: 'embryo_dead', name: "Погибший эмбрион", desc: "Развитие остановилось. Яйцо не вылупится." },
         { id: 'embryo_genetic', name: "Генетическая аномалия", desc: "Выраженные наследственные отклонения в развитии." },
-        { id: 'embryo_twins', name: "Близнецы в одном яйце", desc: "В одном яйце развиваются два эмбриона." },
-        { id: 'embryo_albino', name: "Альбинизм", desc: "Особенность окраски: полное отсутствие пигмента. Безвредная черта." },
-        { id: 'embryo_heterochromia', name: "Гетерохромия", desc: "Разный цвет глаз. Безвредная эстетическая особенность." },
-        { id: 'embryo_rare_eyes', name: "Редкий цвет глаз", desc: "Необычный оттенок радужки — редкая, но безопасная особенность." }
+        { id: 'embryo_twins', name: "Близнецы в одном яйце", desc: "В одном яйце развиваются два эмбриона." }
     ],
     en: [
         { id: 'embryo_weak', name: "Weak embryo", desc: "Embryo develops slower than normal. Possible weakness after hatching." },
         { id: 'embryo_dead', name: "Dead embryo", desc: "Development has stopped. Egg will not hatch." },
         { id: 'embryo_genetic', name: "Genetic anomaly", desc: "Pronounced hereditary developmental deviations." },
-        { id: 'embryo_twins', name: "Twins in one egg", desc: "Two embryos develop inside one egg." },
-        { id: 'embryo_albino', name: "Albinism", desc: "Pigmentation feature: complete absence of pigment. Harmless trait." },
-        { id: 'embryo_heterochromia', name: "Heterochromia", desc: "Different eye colors. Harmless aesthetic feature." },
-        { id: 'embryo_rare_eyes', name: "Rare eye color", desc: "Unusual iris shade — rare but safe feature." }
+        { id: 'embryo_twins', name: "Twins in one egg", desc: "Two embryos develop inside one egg." }
     ]
 };
 
@@ -228,8 +224,8 @@ export const EGG_INCUBATION_STAGES = {
 };
 
 // ================== Константы ==================
-export const EGG_INCUBATION_DISPLAY_MAX = 120;      // Максимум для UI (дней)
-export const EGG_INCUBATION_HATCHING_PROMPT_DAY = 90; // С этого дня ИИ получает инструкцию о вылуплении
+export const EGG_INCUBATION_DISPLAY_MAX = 120;
+export const EGG_INCUBATION_HATCHING_PROMPT_DAY = 90;
 
 // ================== Хелперы ==================
 
@@ -271,13 +267,6 @@ export function getEggShellDefect(id, lang = 'ru') {
     return pool.find(d => d.id === id) || null;
 }
 
-export function getEggEmbryoDisease(id, lang = 'ru') {
-    if (!id) return null;
-    const l = (lang === 'en') ? 'en' : 'ru';
-    const pool = EGG_EMBRYO_DISEASES[l] || EGG_EMBRYO_DISEASES['ru'];
-    return pool.find(d => d.id === id) || null;
-}
-
 export function getEggSymptomList(phaseKey, indices, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const list = EGG_SYMPTOMS[l]?.[phaseKey] || EGG_SYMPTOMS['ru']?.[phaseKey] || [];
@@ -297,7 +286,6 @@ export function rollEggCount() {
     return Math.floor(Math.random() * 6) + 2; // 2-7 яиц
 }
 
-// Возвращает фиксированное значение для UI — 120 дней.
 export function rollEggIncubationDays() {
     return EGG_INCUBATION_DISPLAY_MAX;
 }
@@ -307,15 +295,9 @@ export function getRandomEggShellDefectId() {
     return pool[Math.floor(Math.random() * pool.length)].id;
 }
 
-export function getRandomEggEmbryoDiseaseId() {
-    const pool = EGG_EMBRYO_DISEASES['ru'];
-    return pool[Math.floor(Math.random() * pool.length)].id;
-}
-
 export function rollEggShellDefect() {
     return Math.random() * 100 < 15 ? getRandomEggShellDefectId() : null;
 }
 
-export function rollEggEmbryoDisease() {
-    return Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null;
-}
+// ВНИМАНИЕ: getEggEmbryoDisease, getRandomEggEmbryoDiseaseId, rollEggEmbryoDisease
+// теперь живут в symptoms.js — там объединённый пул (FETAL_DISEASES + EGG_EMBRYO_DISEASES).
