@@ -118,20 +118,26 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             ${hatchedProgressHtml}
         </div>`;
 
-        // ===== Осмотр яиц — показываем ТОЛЬКО невылупившиеся =====
+        // ===== Осмотр яиц — только невылупившиеся. Патологии типа postnatal скрыты до вылупления. =====
         const showInspection = (settings.aiAwareness === 'dynamic' || settings.aiAwareness === 'full');
         const unhatchedEggs = (currentEntity.laidEggs || []).filter(e => !e.hatched);
 
         if (showInspection && unhatchedEggs.length > 0) {
             const lines = unhatchedEggs.map((e) => {
-                // Индекс в исходной кладке (для нумерации "Яйцо #N")
                 const originalIndex = (currentEntity.laidEggs || []).indexOf(e);
                 const genderStr = translateGender(e.gender, lang) || '?';
 
                 let diseaseHtml = '';
                 if (e.diseaseId) {
                     const d = getEggEmbryoDisease(e.diseaseId, lang);
-                    if (d) diseaseHtml = ` — <span style="color: #fcd34d;">${d.name}</span>`;
+                    if (d) {
+                        // postnatal-патологии скрыты до вылупления (кроме режима Всеведение)
+                        if (d.type === 'postnatal' && settings.aiAwareness !== 'full') {
+                            diseaseHtml = ` — <span style="color: #94a3b8; font-style: italic;">${lang === 'en' ? 'hidden until hatching' : 'скрыто до вылупления'}</span>`;
+                        } else {
+                            diseaseHtml = ` — <span style="color: #fcd34d;">${d.name}</span>`;
+                        }
+                    }
                 }
 
                 let defectHtml = '';
