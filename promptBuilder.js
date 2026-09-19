@@ -76,7 +76,9 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
-    // Фаза внешней инкубации
+    // ===== Фаза внешней инкубации (кладка уже случилась) =====
+    // Количество отложенных яиц известно ВСЕМ (физически пересчитывается).
+    // Пол и патологии эмбрионов — по режиму осведомлённости.
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
         p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${entity.eggIncubationTotal}\n`;
@@ -84,9 +86,11 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
         p += `Laid eggs: ${entity.eggsLaid}. ${macroName} is highly protective of the nest and its partner, dislikes strangers near it.\n`;
 
         if (aiAwareness === 'full' && entity.laidEggs?.length > 0) {
+            // Всеведение — всё известно сразу
             const known = entity.laidEggs.map((e, i) => `#${i+1}: ${translateGender(e.gender, 'en')}${e.diseaseId ? ` (${getEggEmbryoDisease(e.diseaseId, 'en')?.name})` : ''}`).join('; ');
             p += `[OMNISCIENCE] Known contents: ${known}.\n`;
         } else if (aiAwareness === 'dynamic') {
+            // Современность — осмотр яиц: пол и патологии видны
             if (entity.laidEggs?.length > 0) {
                 const lines = entity.laidEggs.map((e, i) => {
                     const genderStr = translateGender(e.gender, 'en');
@@ -105,19 +109,21 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
                 p += `[POST-LAY EXAMINATION] Inspected eggs:\n${lines}\n`;
             }
         } else {
-            p += `[SECRET DATA] Egg contents (genders, pathologies) remain hidden until hatching.\n`;
+            // Средневековье — количество видно, но содержимое скрыто
+            p += `[SECRET DATA] Count of laid eggs (${entity.eggsLaid}) is physically visible. Egg genders and pathologies remain hidden until hatching.\n`;
         }
 
         p += buildFamilyBlock(entity, macroName);
         return p;
     }
 
-    // Фаза восстановления после кладки
+    // ===== Фаза восстановления после кладки =====
     if (entity.postpartumDays > 0) {
         const pl = getEggPostLayData(entity.postpartumDays, 'en');
         p += `Status: POST-LAY RECOVERY (Day ${entity.postpartumDays}/7)\n`;
         p += `Physical Condition: ${pl.desc}\n`;
         p += `Character is weak, needs warmth, food, and closeness to partner. Strong attachment to laid eggs.\n`;
+        p += `Laid eggs: ${entity.eggsLaid}.\n`;
 
         p += buildFamilyBlock(entity, macroName);
         return p;
@@ -125,11 +131,20 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
 
     const isRevealed = entity.isDiscovered || !entity.isSecretConception;
 
-    // Фаза вынашивания — ТОЛЬКО если раскрыто
+    // ===== Фаза вынашивания — ТОЛЬКО если раскрыто =====
     if (entity.isPregnant && isRevealed) {
         const carrying = getEggCarryingData(entity.pregnancyDaysTotal, 'en');
 
-        p += `Status: EGG CARRYING | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days. | Eggs laid so far: ${entity.eggsLaid}/${entity.eggCount}.\n`;
+        // Раскрытие количества яиц: Всеведение — сразу, Современность — с 3 недели (УЗИ), Средневековье — НИКОГДА до кладки
+        const revealCount = (aiAwareness === 'full') 
+            || (aiAwareness === 'dynamic' && entity.pregnancyWeeks >= 3);
+
+        let statusLine = `Status: EGG CARRYING | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.`;
+        if (revealCount) {
+            statusLine += ` | Eggs laid so far: ${entity.eggsLaid}/${entity.eggCount}.`;
+        }
+        p += statusLine + '\n';
+
         p += `Physical state: ${carrying.belly}. ${carrying.desc}\n`;
 
         const symptoms = getEggSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
@@ -149,22 +164,24 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             }
             p += `Note: Egg sexes and internal pathologies are not visible on ultrasound — they will be determined only after laying.\n`;
         } else if (aiAwareness === 'hidden') {
-            p += `[SECRET DATA] Egg count, sexes, and pathologies are hidden until hatching.\n`;
+            p += `[SECRET DATA] Egg count, sexes, and pathologies are hidden until laying. Only symptoms and belly size are observable.\n`;
         }
 
-        // Инструкция с тегами поштучной кладки — начиная с 30-го дня
+        // Инструкция с тегами поштучной кладки — с 30-го дня
         const remainingEggs = entity.eggCount - entity.eggsLaid;
         if (entity.pregnancyDaysTotal >= 30 && remainingEggs > 0) {
             const tagSuffix = entity.key.toUpperCase();
-            const startNum = entity.eggsLaid + 1;
-            const endNum = entity.eggCount;
-            const exampleEnd = Math.min(startNum + 1, endNum);
-            let exampleTags = '';
-            for (let i = startNum; i <= exampleEnd; i++) {
-                exampleTags += `<!--LAY_EGG_${tagSuffix}_${i}-->`;
-            }
 
-            p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
+            if (revealCount) {
+                const startNum = entity.eggsLaid + 1;
+                const endNum = entity.eggCount;
+                const exampleEnd = Math.min(startNum + 1, endNum);
+                let exampleTags = '';
+                for (let i = startNum; i <= exampleEnd; i++) {
+                    exampleTags += `<!--LAY_EGG_${tagSuffix}_${i}-->`;
+                }
+
+                p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
 ${macroName} is carrying ${entity.eggCount} egg(s); already laid: ${entity.eggsLaid}. Remaining: ${remainingEggs}.
 When laying occurs in this response, append ONE tag PER EGG laid, in order, at the very end of the response. Do NOT lay all eggs at once unless the narrative explicitly requires it — each contraction/push typically delivers exactly ONE egg.
 Tag format (use the correct sequential number for each egg):
@@ -173,6 +190,16 @@ Tag format (use the correct sequential number for each egg):
   • ...and so on up to <!--LAY_EGG_${tagSuffix}_${endNum}-->
 Example (if laying ${exampleEnd - startNum + 1} egg(s) in one response): ${exampleTags}
 `;
+            } else {
+                // Средневековье — количество скрыто, теги ставим по факту кладки
+                p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
+When laying occurs in this response, append ONE tag PER EGG laid, at the very end of the response.
+Use this exact format for each egg, incrementing N starting from 1: <!--LAY_EGG_${tagSuffix}_N-->
+Example (2 eggs in one response): <!--LAY_EGG_${tagSuffix}_1--><!--LAY_EGG_${tagSuffix}_2-->
+Do NOT lay all eggs at once unless the narrative explicitly requires it — each contraction/push typically delivers exactly ONE egg.
+Do NOT state or assume a specific total egg count — it remains unknown to everyone until laying.
+`;
+            }
         }
 
         if (entity.pregnancyDaysTotal >= 42) {
