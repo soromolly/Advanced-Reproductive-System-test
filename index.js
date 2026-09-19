@@ -19,6 +19,7 @@ import {
     generateBabyGender,
     laySingleEgg,
     layAllEggs,
+    hatchSingleEgg,
     hatchEggs
 } from './entityController.js';
 import { getText } from './translations.js';
@@ -57,6 +58,7 @@ let activeChatId = null;
 let pendingUserTimeskipDays = 0;
 const processedBirthMessages = new Set();
 const processedLayMessages = new Set();
+const processedHatchMessages = new Set();
 let lastProcessedMessageUid = null;
 
 function getCurrentChatId() {
@@ -197,6 +199,7 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
     const chatId = getCurrentChatId();
     const msgKey = `${chatId}_${messageIndex}_birth`;
     const layMsgKey = `${chatId}_${messageIndex}_lay`;
+    const hatchMsgKey = `${chatId}_${messageIndex}_hatch`;
 
     const text = (rawText || '')
         .replace(/<think[\s\S]*?<\/think>/gi, ' ')
@@ -224,11 +227,10 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
         if (data.char.isPregnant && data.char.mode !== 'oviposition') processEntityAbortion(data.char, settings.language, logReproEvent, notify);
     }
 
-    // Кладка яиц — ПОШТУЧНО, по одному тегу = одно яйцо
+    // Кладка яиц — поштучно
     if (!processedLayMessages.has(layMsgKey)) {
         const checkLayFor = (entity, tagKey) => {
             if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
-            // Поддерживаем форматы: LAY_EGG_USER, LAY_EGG_USER_1, LAY_EGGS_USER, LAY_EGGS_USER_1
             const regex = new RegExp(`<!--\\s*LAY_EGG(?:S)?_${tagKey}(?:_(\\d+))?\\s*-->`, 'gi');
             let match;
             while ((match = regex.exec(text)) !== null) {
@@ -241,7 +243,23 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
         processedLayMessages.add(layMsgKey);
     }
 
-    // Роды через тег (для обычной беременности)
+    // Вылупление яиц — поштучно
+    if (!processedHatchMessages.has(hatchMsgKey)) {
+        const checkHatchFor = (entity, tagKey) => {
+            if (entity.mode !== 'oviposition' || !entity.isNestActive) return;
+            const regex = new RegExp(`<!--\\s*HATCH_EGG_${tagKey}(?:_(\\d+))?\\s*-->`, 'gi');
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                if (!entity.isNestActive) break;
+                hatchSingleEgg(entity, settings.language, logReproEvent, notify);
+            }
+        };
+        checkHatchFor(data.user, 'USER');
+        checkHatchFor(data.char, 'CHAR');
+        processedHatchMessages.add(hatchMsgKey);
+    }
+
+    // Роды через тег (обычная беременность)
     if (!processedBirthMessages.has(msgKey)) {
         const checkBirthFor = (entity, tagKey) => {
             if (!entity.isPregnant || !entity.babiesGenders || entity.babiesGenders.length === 0) return;
@@ -514,7 +532,6 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    // Кнопка "ОТЛОЖИТЬ ЯЙЦА" — откладывает ВСЕ оставшиеся яйца сразу (ручное управление)
     $(document).off('click', '#repro-btn-lay-eggs').on('click', '#repro-btn-lay-eggs', function() {
         const entity = getChatData()[getActiveEntityKey()];
         if (entity.mode !== 'oviposition' || !entity.isPregnant) return;
@@ -524,10 +541,11 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
+    // Кнопка "ВЫЛУПИТЬ ЯЙЦА" — форсированно вылупляет ВСЕ оставшиеся
     $(document).off('click', '#repro-btn-hatch-eggs').on('click', '#repro-btn-hatch-eggs', function() {
         const entity = getChatData()[getActiveEntityKey()];
         if (!entity.isNestActive) return;
-        if (!confirm(settings.language === 'en' ? 'Force hatching all eggs now?' : 'Форсировать вылупление всех яиц сейчас?')) return;
+        if (!confirm(settings.language === 'en' ? 'Force hatching ALL remaining eggs now?' : 'Форсировать вылупление ВСЕХ оставшихся яиц сейчас?')) return;
         hatchEggs(entity, settings.language, logReproEvent, notify);
         saveSettingsDebounced();
         refreshUI();
@@ -715,6 +733,7 @@ jQuery(async () => {
             eventSource.on(event_types.CHAT_CHANGED, () => { 
                 processedBirthMessages.clear();
                 processedLayMessages.clear();
+                processedHatchMessages.clear();
                 lastProcessedMessageUid = null;
                 pendingUserTimeskipDays = 0;
                 loadSettings(); 
