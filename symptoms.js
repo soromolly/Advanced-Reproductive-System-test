@@ -1,4 +1,6 @@
 // База данных симптомов цикла и беременности (RU / EN)
+import { EGG_EMBRYO_DISEASES } from './eggSystem.js';
+
 export const SYMPTOMS = {
     ru: {
         menstruation: [
@@ -415,6 +417,36 @@ export const FETAL_DISEASES = {
     ]
 };
 
+// ============================================================
+// Объединённый пул патологий эмбриона внутри яйца:
+// генетические/анатомические (FETAL_DISEASES) + специфичные для яйца (EGG_EMBRYO_DISEASES).
+// ============================================================
+function getAllEggEmbryoDiseases(lang = 'ru') {
+    const l = (lang === 'en') ? 'en' : 'ru';
+    const fetalPool = FETAL_DISEASES[l] || FETAL_DISEASES['ru'];
+    const eggPool = EGG_EMBRYO_DISEASES[l] || EGG_EMBRYO_DISEASES['ru'];
+    return [...fetalPool, ...eggPool];
+}
+
+export function getEggEmbryoDisease(id, lang = 'ru') {
+    if (!id) return null;
+    const pool = getAllEggEmbryoDiseases(lang);
+    return pool.find(d => d.id === id) || null;
+}
+
+export function getRandomEggEmbryoDiseaseId() {
+    const pool = getAllEggEmbryoDiseases('ru');
+    return pool[Math.floor(Math.random() * pool.length)].id;
+}
+
+export function rollEggEmbryoDisease() {
+    return Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null;
+}
+
+// ============================================================
+// Прочие хелперы (геттеры по неделям для обычной беременности)
+// ============================================================
+
 export function getFetusData(weeks, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const pool = PREGNANCY_STAGES[l] || PREGNANCY_STAGES['ru'];
@@ -486,6 +518,8 @@ export function getFetalDisease(id, lang = 'ru') {
 
 // ============================================================
 // Реэкспорт из eggSystem.js — для удобства (ui.js, promptBuilder.js)
+// getEggEmbryoDisease, getRandomEggEmbryoDiseaseId, rollEggEmbryoDisease
+// определены локально выше и НЕ реэкспортируются.
 // ============================================================
 export {
     getEggCarryingData,
@@ -494,7 +528,6 @@ export {
     getEggSymptomList,
     getRandomEggSymptomIndices,
     getEggShellDefect,
-    getEggEmbryoDisease,
     EGG_SHELL_DEFECTS,
     EGG_EMBRYO_DISEASES,
     EGG_SYMPTOMS,
