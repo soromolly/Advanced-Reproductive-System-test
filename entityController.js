@@ -212,6 +212,8 @@ export function updateEntitySymptoms(entity) {
         } else if (entity.mode === 'omegaverse') {
             if (day <= periodDays) {
                 phaseKey = (entity.gender === 'male_omega') ? 'heat_male' : 'heat_female';
+            } else {
+                phaseKey = 'quiescence';  // ← НОВОЕ: период покоя между течками
             }
         } else if (entity.mode === 'oviposition') {
             if (day <= periodDays) {
