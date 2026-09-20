@@ -665,7 +665,7 @@ function bindGlobalEvents() {
             for (let i = 0; i < entity.eggCount; i++) {
                 entity.eggShellDefects.push(Math.random() * 100 < 15 ? getRandomEggShellDefectId() : null);
                 entity.eggGenders.push(generateBabyGender('realism', 'en'));
-                entity.eggDiseases.push(entity.isFetalPathologyEnabled ? (Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null) : null);
+                entity.eggDiseases.push(entity.isFetalPathologyEnabled ? (Math.random() * 100 < 3 ? getRandomEggEmbryoDiseaseId() : null) : null);
             }
             notify(`${lang === 'en' ? 'Egg carrying started: ' : 'Вынашивание яиц установлено: '}${weeks}w ${days}d, ${entity.eggCount} eggs`, 'success');
         } else {
