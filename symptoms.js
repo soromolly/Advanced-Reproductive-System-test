@@ -53,6 +53,14 @@ export const SYMPTOMS = {
             "Приливы жара и повышенная чувствительность кожи",
             "Сильное, непреодолимое желание телесного контакта"
         ],
+        quiescence: [
+            "Спокойное, стабильное состояние между течками",
+            "Отсутствие жара и тяги к близости",
+            "Обычная температура тела и нормальный аппетит",
+            "Никаких признаков фертильности",
+            "Ровное настроение, тяга к привычному распорядку",
+            "Тело восстанавливается после цикла"
+        ],
         preg_trimester_1: [
             "Утренняя тошнота (ранний токсикоз)",
             "Повышенная сонливость и быстрая утомляемость",
@@ -129,6 +137,14 @@ export const SYMPTOMS = {
             "Hyper-sensitive scent perception (seeking Alpha pheromones)",
             "Hot flashes and hyper-sensitive skin",
             "Intense, overwhelming craving for physical intimacy"
+        ],
+        quiescence: [
+            "Calm, stable state between heats",
+            "No heat flashes or urge for intimacy",
+            "Normal body temperature and ordinary appetite",
+            "No signs of fertility",
+            "Steady mood, preference for familiar routines",
+            "Body recovering from the cycle"
         ],
         preg_trimester_1: [
             "Morning sickness (early nausea)",
@@ -440,11 +456,11 @@ export function getRandomEggEmbryoDiseaseId() {
 }
 
 export function rollEggEmbryoDisease() {
-    return Math.random() * 100 < 3 ? getRandomEggEmbryoDiseaseId() : null;
+    return Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null;
 }
 
 // ============================================================
-// Прочие хелперы (геттеры по неделям для обычной беременности)
+// Прочие хелперы
 // ============================================================
 
 export function getFetusData(weeks, lang = 'ru') {
