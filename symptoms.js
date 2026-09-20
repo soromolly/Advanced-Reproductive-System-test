@@ -440,7 +440,7 @@ export function getRandomEggEmbryoDiseaseId() {
 }
 
 export function rollEggEmbryoDisease() {
-    return Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null;
+    return Math.random() * 100 < 3 ? getRandomEggEmbryoDiseaseId() : null;
 }
 
 // ============================================================
