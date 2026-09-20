@@ -118,7 +118,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             ${hatchedProgressHtml}
         </div>`;
 
-        // ===== Осмотр яиц — только невылупившиеся. Патологии типа postnatal скрыты до вылупления. =====
+        // ===== Осмотр яиц — только невылупившиеся =====
         const showInspection = (settings.aiAwareness === 'dynamic' || settings.aiAwareness === 'full');
         const unhatchedEggs = (currentEntity.laidEggs || []).filter(e => !e.hatched);
 
@@ -131,7 +131,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 if (e.diseaseId) {
                     const d = getEggEmbryoDisease(e.diseaseId, lang);
                     if (d) {
-                        // postnatal-патологии скрыты до вылупления (кроме режима Всеведение)
                         if (d.type === 'postnatal' && settings.aiAwareness !== 'full') {
                             diseaseHtml = ` — <span style="color: #94a3b8; font-style: italic;">${lang === 'en' ? 'hidden until hatching' : 'скрыто до вылупления'}</span>`;
                         } else {
@@ -427,6 +426,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     ${isOviposition ? `
                         ${isEggGravid ? `<div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>` : ''}
                         ${isNestActive ? `<div style="margin-bottom: 4px;"><strong>${getText('eggIncubationLabel', lang)}</strong> ${currentEntity.eggIncubationDays} / ${currentEntity.eggIncubationTotal}</div>` : ''}
+                        ${(!isEggGravid && !isNestActive && currentEntity.postpartumDays === 0) ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
                     ` : `
                         ${isCurrentlyPregnantDiscovered ? `
                             <div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>
