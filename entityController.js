@@ -537,7 +537,6 @@ function triggerEggGravid(entity, lang = 'ru', logFn, notifyFn) {
     }
 }
 
-// =============== Кладка по одному яйцу ===============
 export function laySingleEgg(entity, lang = 'ru', logFn, notifyFn) {
     if (entity.mode !== 'oviposition' || !entity.isPregnant) return false;
     if (entity.eggsLaid >= entity.eggCount) return false;
@@ -594,7 +593,6 @@ function finishLaying(entity, lang = 'ru', logFn, notifyFn) {
     notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'All eggs laid!' : 'Все яйца отложены!'} (${entity.eggCount})`, 'success');
 }
 
-// =============== Вылупление по одному яйцу ===============
 export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn) {
     if (entity.mode !== 'oviposition' || !entity.isNestActive) return false;
     if (!entity.laidEggs || entity.laidEggs.length === 0) return false;
