@@ -433,10 +433,6 @@ export const FETAL_DISEASES = {
     ]
 };
 
-// ============================================================
-// Объединённый пул патологий эмбриона внутри яйца:
-// генетические/анатомические (FETAL_DISEASES) + специфичные для яйца (EGG_EMBRYO_DISEASES).
-// ============================================================
 function getAllEggEmbryoDiseases(lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const fetalPool = FETAL_DISEASES[l] || FETAL_DISEASES['ru'];
@@ -459,9 +455,6 @@ export function rollEggEmbryoDisease() {
     return Math.random() * 100 < 10 ? getRandomEggEmbryoDiseaseId() : null;
 }
 
-// ============================================================
-// Прочие хелперы
-// ============================================================
 
 export function getFetusData(weeks, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
@@ -532,11 +525,6 @@ export function getFetalDisease(id, lang = 'ru') {
     return pool.find(d => d.id === id) || pool[0];
 }
 
-// ============================================================
-// Реэкспорт из eggSystem.js — для удобства (ui.js, promptBuilder.js)
-// getEggEmbryoDisease, getRandomEggEmbryoDiseaseId, rollEggEmbryoDisease
-// определены локально выше и НЕ реэкспортируются.
-// ============================================================
 export {
     getEggCarryingData,
     getEggPostLayData,
