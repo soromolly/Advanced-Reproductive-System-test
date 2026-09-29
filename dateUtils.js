@@ -23,7 +23,6 @@ export function daysToDateString(days) {
 export function cleanHtmlFromText(text) {
     if (!text) return '';
     return text
-        // Вырезаем блок размышлений ИИ целиком с содержимым
         .replace(/<think[\s\S]*?<\/think>/gi, ' ')
         .replace(/<thought[\s\S]*?<\/thought>/gi, ' ')
         .replace(/```[\s\S]*?```/gi, ' ')
@@ -64,7 +63,6 @@ export function parseRpDateFromText(rawText) {
     // 1. Поиск численного формата даты ДД.ММ.ГГГГ (07.11.2024, 07/11/2024, 07-11-2024)
     const numMatches = [...text.matchAll(/(?:\b|\D|^)(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{2,4})(?:\b|\D|$)/g)];
     if (numMatches.length > 0) {
-        // Берем последнюю дату из сообщения (актуальную для поста)
         const match = numMatches[numMatches.length - 1];
         const day = parseInt(match[1], 10);
         const month = parseInt(match[2], 10) - 1;
