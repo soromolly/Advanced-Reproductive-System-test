@@ -1,7 +1,3 @@
-// ============================================================
-// eggSystem.js — данные и хелперы для режима "Яйцекладка"
-// ============================================================
-
 export const EGG_SYMPTOMS = {
     ru: {
         egg_heat_female: [
@@ -187,9 +183,8 @@ export const EGG_SHELL_DEFECTS = {
     ]
 };
 
-// Патологии, специфичные для яйца (не генетические аномалии плода, а именно «яйцевые» состояния).
-// Генетические/анатомические аномалии берутся из FETAL_DISEASES (symptoms.js).
-// Альбинизм, гетерохромия и редкий цвет глаз убраны — они теперь в основном списке FETAL_DISEASES (postnatal).
+// Патологии, специфичные для яйца
+// Генетические/анатомические аномалии берутся из symptoms.js
 export const EGG_EMBRYO_DISEASES = {
     ru: [
         { id: 'embryo_weak', name: "Слабый эмбрион", desc: "Эмбрион развивается медленнее нормы. Возможна слабость после вылупления." },
@@ -223,11 +218,9 @@ export const EGG_INCUBATION_STAGES = {
     }
 };
 
-// ================== Константы ==================
 export const EGG_INCUBATION_DISPLAY_MAX = 120;
 export const EGG_INCUBATION_HATCHING_PROMPT_DAY = 90;
 
-// ================== Хелперы ==================
 
 export function getEggCarryingData(days, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
@@ -298,6 +291,3 @@ export function getRandomEggShellDefectId() {
 export function rollEggShellDefect() {
     return Math.random() * 100 < 15 ? getRandomEggShellDefectId() : null;
 }
-
-// ВНИМАНИЕ: getEggEmbryoDisease, getRandomEggEmbryoDiseaseId, rollEggEmbryoDisease
-// теперь живут в symptoms.js — там объединённый пул (FETAL_DISEASES + EGG_EMBRYO_DISEASES).
