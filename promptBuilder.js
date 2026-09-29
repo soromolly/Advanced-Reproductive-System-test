@@ -70,16 +70,12 @@ ${kidsInfo}
 Direct Canon Instruction: Always remember these children in family interactions.\n`;
 }
 
-// ============================================================
-// Ветка промпта для режима ЯЙЦЕКЛАДКА
-// ============================================================
 function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     const labels = getSystemAndPhysiologyLabels(entity, true);
 
     let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
-    // ===== Фаза внешней инкубации =====
     if (entity.isNestActive) {
         const incub = getEggIncubationData(entity.eggIncubationDays, 'en');
         p += `Status: CLUTCH INCUBATION (external nest) | Day ${entity.eggIncubationDays}/${EGG_INCUBATION_DISPLAY_MAX}\n`;
@@ -87,7 +83,6 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
         p += `Laid eggs: ${entity.eggsLaid}. Hatched so far: ${entity.eggsHatched || 0}. ${macroName} is highly protective of the nest and its partner, dislikes strangers near it.\n`;
 
         if (aiAwareness === 'full' && entity.laidEggs?.length > 0) {
-            // Всеведение — показываем всё, включая postnatal.
             const known = entity.laidEggs.map((e, i) => {
                 let diseaseStr = '';
                 if (e.diseaseId) {
@@ -126,7 +121,6 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
             p += `[SECRET DATA] Count of laid eggs (${entity.eggsLaid}) is physically visible. Egg genders and pathologies remain hidden until hatching. Hatched so far: ${entity.eggsHatched || 0}.\n`;
         }
 
-        // ===== Инструкция по вылуплению — с 90-го дня =====
         const remaining = (entity.laidEggs || []).filter(e => !e.hatched).length;
         if (entity.eggIncubationDays >= EGG_INCUBATION_HATCHING_PROMPT_DAY && remaining > 0) {
             const tagSuffix = entity.key.toUpperCase();
@@ -153,7 +147,6 @@ If no hatching occurs this response — just don't add any tags.
         return p;
     }
 
-    // ===== Фаза восстановления после кладки =====
     if (entity.postpartumDays > 0) {
         const pl = getEggPostLayData(entity.postpartumDays, 'en');
         p += `Status: POST-LAY RECOVERY (Day ${entity.postpartumDays}/7)\n`;
@@ -167,7 +160,6 @@ If no hatching occurs this response — just don't add any tags.
 
     const isRevealed = entity.isDiscovered || !entity.isSecretConception;
 
-    // ===== Фаза вынашивания =====
     if (entity.isPregnant && isRevealed) {
         const carrying = getEggCarryingData(entity.pregnancyDaysTotal, 'en');
 
@@ -243,7 +235,6 @@ Do NOT state or assume a specific total egg count — it remains unknown to ever
         return p;
     }
 
-    // ===== Обычный цикл =====
     const baseCycle = entity.cycleLength || 28;
     const target = entity.currentCycleTargetLength || baseCycle;
     const periodDays = entity.periodDuration || 5;
@@ -269,9 +260,6 @@ Do NOT state or assume a specific total egg count — it remains unknown to ever
     return p;
 }
 
-// ============================================================
-// Обычная ветка (реализм / омегаверс)
-// ============================================================
 function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
     if (entity.mode === 'oviposition') {
         return buildEggEntityPrompt(entity, macroName, aiAwareness);
