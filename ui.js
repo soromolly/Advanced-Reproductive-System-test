@@ -289,11 +289,16 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     }
 
     let genderOptionsHtml = '';
-    if (currentEntity.mode === 'realism' || currentEntity.mode === 'oviposition') {
+    if (currentEntity.mode === 'realism') {
+        // В реализме только женщина — у мужчины нет ни цикла, ни беременности.
+        genderOptionsHtml = `
+            <option value="female" selected>${getText('female', lang)}</option>`;
+    } else if (currentEntity.mode === 'oviposition') {
         genderOptionsHtml = `
             <option value="female" ${currentEntity.gender === 'female' ? 'selected' : ''}>${getText('female', lang)}</option>
             <option value="male" ${currentEntity.gender === 'male' ? 'selected' : ''}>${getText('male', lang)}</option>`;
     } else {
+        // omegaverse
         genderOptionsHtml = `
             <option value="female_omega" ${currentEntity.gender === 'female_omega' ? 'selected' : ''}>${getText('female_omega', lang)}</option>
             <option value="male_omega" ${currentEntity.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega', lang)}</option>`;
