@@ -17,7 +17,7 @@ import {
 } from './eggSystem.js';
 import { getPrematurityPrompt } from './prematurity.js';
 import { translateGender } from './translations.js';
-import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
+import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline } from './entityController.js';
 
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
@@ -227,13 +227,13 @@ Example (2 eggs in one response): <!--LAY_EGG_${tagSuffix}_1--><!--LAY_EGG_${tag
     }
 
     const baseCycle = entity.cycleLength || 28;
-    const target = entity.currentCycleTargetLength || baseCycle;
+    const delayBaseline = getCycleDelayBaseline(entity);
     const periodDays = entity.periodDuration || 5;
 
     if (entity.cycleDay <= periodDays) {
         p += `Current Status: HEAT / FERTILITY WINDOW ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Peak conception window.\n`;
-    } else if (entity.cycleDay > target) {
-        p += `Current Status: CYCLE DELAY (Late by ${entity.cycleDay - target} days). Menstruation/Heat has not arrived yet.\n`;
+    } else if (entity.cycleDay > delayBaseline) {
+        p += `Current Status: CYCLE DELAY (Late by ${entity.cycleDay - delayBaseline} days). Menstruation/Heat has not arrived yet.\n`;
     } else {
         p += `Current Status: QUIESCENCE / REST PERIOD (Day ${entity.cycleDay}/${baseCycle}). Not fertile.\n`;
     }
@@ -346,6 +346,7 @@ Add one tag per baby, in order.
         } else {
             const baseCycle = entity.cycleLength || 28;
             const target = entity.currentCycleTargetLength || baseCycle;
+            const delayBaseline = getCycleDelayBaseline(entity);
             const periodDays = entity.periodDuration || 5;
             const ovulPeak = Math.max(periodDays + 2, target - 14);
             const ovulStart = Math.max(periodDays + 1, ovulPeak - 3);
@@ -354,8 +355,8 @@ Add one tag per baby, in order.
             if (entity.mode === 'realism') {
                 if (entity.cycleDay <= periodDays) {
                     p += `Current Status: MENSTRUATION / NATURAL PERIOD ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Cycle Duration: ${baseCycle} days. Pregnancy: none.\n`;
-                } else if (entity.cycleDay > target) {
-                    p += `Current Status: MENSTRUAL CYCLE DELAY (Late by ${entity.cycleDay - target} days). Menstruation has not arrived yet.\n`;
+                } else if (entity.cycleDay > delayBaseline) {
+                    p += `Current Status: MENSTRUAL CYCLE DELAY (Late by ${entity.cycleDay - delayBaseline} days). Menstruation has not arrived yet.\n`;
                 } else if (entity.cycleDay < ovulStart) {
                     p += `Current Status: FOLLICULAR PHASE (Cycle Day ${entity.cycleDay}/${baseCycle}). Not pregnant.\n`;
                 } else if (entity.cycleDay >= ovulStart && entity.cycleDay <= ovulEnd) {
@@ -366,8 +367,8 @@ Add one tag per baby, in order.
             } else {
                 if (entity.cycleDay <= periodDays) {
                     p += `Current Status: IN HEAT (Day ${entity.cycleDay}/${periodDays}) | Peak Fertility Window.\n`;
-                } else if (entity.cycleDay > target) {
-                    p += `Current Status: HEAT DELAYED (Late by ${entity.cycleDay - target} days).\n`;
+                } else if (entity.cycleDay > delayBaseline) {
+                    p += `Current Status: HEAT DELAYED (Late by ${entity.cycleDay - delayBaseline} days).\n`;
                 } else {
                     p += `Current Status: QUIESCENCE / REST PHASE (Day ${entity.cycleDay}/${baseCycle}). Not pregnant.\n`;
                 }

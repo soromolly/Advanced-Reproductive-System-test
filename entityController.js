@@ -114,6 +114,14 @@ function formatDelayDays(days, lang = 'ru') {
     return `${days} дней`;
 }
 
+// Задержка всегда считается от номинальной длины цикла (настроенной в UI).
+// Персонаж не знает фактическую длину текущего цикла — овуляция могла
+// сдвинуться раньше или позже, — поэтому субъективная «задержка»
+// отсчитывается только от номинала, одинаково в UI и в промпте.
+export function getCycleDelayBaseline(entity) {
+    return entity.cycleLength || 28;
+}
+
 export function getEntityBodyPhase(entity, lang = 'ru') {
     const l = (lang === 'en') ? 'en' : 'ru';
     const isRevealedPregnancy = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
@@ -133,11 +141,12 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
     const day = entity.cycleDay;
     const baseLength = entity.cycleLength || 28;
     const targetLength = entity.currentCycleTargetLength || baseLength;
+    const delayBaseline = getCycleDelayBaseline(entity);
     const periodDays = entity.periodDuration || 5;
 
     if (entity.mode === 'realism') {
-        if (day > baseLength) {
-            const delay = day - baseLength;
+        if (day > delayBaseline) {
+            const delay = day - delayBaseline;
             return `${getText('delayed', l)} (${formatDelayDays(delay, l)})`;
         }
         if (day <= periodDays) return getText('menstruation', l);
@@ -150,8 +159,8 @@ export function getEntityBodyPhase(entity, lang = 'ru') {
         if (day >= ovulStart && day <= ovulEnd) return getText('ovulation', l);
         return getText('luteal', l);
     } else {
-        if (day > baseLength) {
-            const delay = day - baseLength;
+        if (day > delayBaseline) {
+            const delay = day - delayBaseline;
             return `${getText('delayedHeat', l)} (${formatDelayDays(delay, l)})`;
         }
         if (day <= periodDays) return getText('heat', l);
