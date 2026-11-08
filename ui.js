@@ -15,6 +15,7 @@ import {
 } from './symptoms.js';
 import { dateToDays, daysToDateString } from './dateUtils.js';
 import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
+import { getPrematurityDisplay } from './prematurity.js';
 
 export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const lang = settings.language || 'ru';
@@ -271,6 +272,17 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     feat = isOviposition ? getEggEmbryoDisease(c.diseaseId, lang) : getFetalDisease(c.diseaseId, lang);
                     if (feat) featureHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fcd34d;">• ${getText('congenitalFeatureLabel', lang)} <b>${feat.name}</b></div>`;
                 }
+                let prematurityHtml = '';
+                if (c.prematurityId) {
+                    const prem = getPrematurityDisplay(c.prematurityId, lang, settings.aiAwareness);
+                    if (prem) {
+                        prematurityHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #f87171; line-height: 1.4;">
+                            • ${getText('prematureLabel', lang)} (~${c.birthWeek} ${getText('weeksShort', lang)}): <b>${prem.label}</b> (${prem.band})
+                            <div style="margin-top: 2px; color: rgba(255,255,255,0.75);">${prem.facts}</div>
+                            <div style="margin-top: 2px; color: #fbbf24;">${getText('prognosisLabel', lang)}: ${prem.prognosis}</div>
+                        </div>`;
+                    }
+                }
                 const nameDisplay = (c.name && c.name.trim()) 
                     ? `<span style="color: #38bdf8; font-weight: 700;">«${c.name.trim()}»</span>` 
                     : `<span style="opacity: 0.55; font-style: italic;">(${getText('noName', lang)})</span>`;
@@ -279,6 +291,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <div style="flex: 1; padding-right: 8px;">
                         ${isOviposition ? '🐣' : '👶'} ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}
                         ${featureHtml}
+                        ${prematurityHtml}
                     </div>
                     <button class="repro-edit-child-name-btn menu_button" data-child-id="${c.id}" title="${lang === 'en' ? 'Edit name' : 'Изменить имя'}" style="padding: 2px 7px; font-size: 11px; height: 24px; min-width: 26px; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: var(--text-color);">
                         <i class="fa-solid fa-pen" style="pointer-events: none;"></i>
