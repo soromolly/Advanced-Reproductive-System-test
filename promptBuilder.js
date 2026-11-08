@@ -17,7 +17,7 @@ import {
 } from './eggSystem.js';
 import { getPrematurityPrompt } from './prematurity.js';
 import { translateGender } from './translations.js';
-import { getEntityBodyPhase } from './entityController.js';
+import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
 
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
@@ -67,14 +67,13 @@ function buildFamilyBlock(entity, macroName) {
 
     return `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
 ${macroName} has ${entity.childrenList.length} born child(ren):
-${kidsInfo}
-Direct Canon Instruction: Always remember these children in family interactions.\n`;
+${kidsInfo}\n`;
 }
 
 function buildEggEntityPrompt(entity, macroName, aiAwareness) {
     const labels = getSystemAndPhysiologyLabels(entity, true);
 
-    let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
+    let p = `\n[CANON STATUS — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
     if (entity.isNestActive) {
@@ -125,22 +124,15 @@ function buildEggEntityPrompt(entity, macroName, aiAwareness) {
         const remaining = (entity.laidEggs || []).filter(e => !e.hatched).length;
         if (entity.eggIncubationDays >= EGG_INCUBATION_HATCHING_PROMPT_DAY && remaining > 0) {
             const tagSuffix = entity.key.toUpperCase();
-            p += `\n🚨 CRITICAL HATCHING TAG DIRECTIVE FOR ${macroName}:
-Incubation is advanced (Day ${entity.eggIncubationDays}/${EGG_INCUBATION_DISPLAY_MAX}). Unhatched eggs remaining: ${remaining}.
-Hatching may begin ANY DAY now — the exact timing depends on the warmth of the nest and the narrative pace.
+            p += `\nIncubation is advanced (Day ${entity.eggIncubationDays}/${EGG_INCUBATION_DISPLAY_MAX}). Unhatched eggs remaining: ${remaining}.
+Hatching may begin any day — timing depends on the warmth of the nest and the narrative pace. Each egg hatches individually: the shell cracks, the membrane tears, and the hatchling emerges wet and disoriented.
 
-🚫 STRICT RULES:
-- Hatch AT MOST 2–3 eggs per response. NEVER the whole clutch at once.
-- Hatchings should feel progressive — over hours or even days, not instant.
-- Describe each egg individually (shell cracking, membrane tearing, the hatchling emerging, wet and disoriented).
-
-✅ TAG FORMAT — append ONE tag per hatched egg, numbered sequentially WITHIN THIS RESPONSE (starting from 1):
+[IMPORTANT — EVENT REPORTING] When an egg hatches in this response, add a tag for each hatched egg at the very end of your reply (required, so the hatching is recorded), numbered from 1 within this response:
   <!--HATCH_EGG_${tagSuffix}_1-->
   <!--HATCH_EGG_${tagSuffix}_2-->
   <!--HATCH_EGG_${tagSuffix}_3-->
 
 Example (2 eggs hatching now): <!--HATCH_EGG_${tagSuffix}_1--><!--HATCH_EGG_${tagSuffix}_2-->
-If no hatching occurs this response — just don't add any tags.
 `;
         }
 
@@ -208,28 +200,26 @@ If no hatching occurs this response — just don't add any tags.
                     exampleTags += `<!--LAY_EGG_${tagSuffix}_${i}-->`;
                 }
 
-                p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
-${macroName} is carrying ${entity.eggCount} egg(s); already laid: ${entity.eggsLaid}. Remaining: ${remainingEggs}.
-When laying occurs in this response, append ONE tag PER EGG laid, in order, at the very end of the response. Do NOT lay all eggs at once unless the narrative explicitly requires it — each contraction/push typically delivers exactly ONE egg.
-Tag format (use the correct sequential number for each egg):
+                p += `\n${macroName} is carrying ${entity.eggCount} egg(s); already laid: ${entity.eggsLaid}. Remaining: ${remainingEggs}. Each contraction/push typically delivers one egg.
+
+[IMPORTANT — EVENT REPORTING] When an egg is laid in this response, add its tag at the very end of your reply (required, so the laying is recorded), in order:
   • 1st egg laid this scene: <!--LAY_EGG_${tagSuffix}_${startNum}-->
   • 2nd egg laid this scene: <!--LAY_EGG_${tagSuffix}_${startNum + 1}-->
   • ...and so on up to <!--LAY_EGG_${tagSuffix}_${endNum}-->
 Example (if laying ${exampleEnd - startNum + 1} egg(s) in one response): ${exampleTags}
 `;
             } else {
-                p += `\n🚨 CRITICAL LAYING TAG DIRECTIVE FOR ${macroName}:
-When laying occurs in this response, append ONE tag PER EGG laid, at the very end of the response.
-Use this exact format for each egg, incrementing N starting from 1: <!--LAY_EGG_${tagSuffix}_N-->
+                p += `\nEach contraction/push typically delivers one egg. The total egg count is unknown until laying.
+
+[IMPORTANT — EVENT REPORTING] When an egg is laid in this response, add its tag at the very end of your reply (required, so the laying is recorded), incrementing N from 1:
+  <!--LAY_EGG_${tagSuffix}_N-->
 Example (2 eggs in one response): <!--LAY_EGG_${tagSuffix}_1--><!--LAY_EGG_${tagSuffix}_2-->
-Do NOT lay all eggs at once unless the narrative explicitly requires it — each contraction/push typically delivers exactly ONE egg.
-Do NOT state or assume a specific total egg count — it remains unknown to everyone until laying.
 `;
             }
         }
 
         if (entity.pregnancyDaysTotal >= 42) {
-            p += `\n⏰ ${macroName} has reached the full term (42 days). Laying is biologically due — narrate it soon.\n`;
+            p += `\n⏰ ${macroName} has reached the full term (42 days). Laying is biologically due.\n`;
         }
 
         p += buildFamilyBlock(entity, macroName);
@@ -244,7 +234,6 @@ Do NOT state or assume a specific total egg count — it remains unknown to ever
         p += `Current Status: HEAT / FERTILITY WINDOW ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Peak conception window.\n`;
     } else if (entity.cycleDay > target) {
         p += `Current Status: CYCLE DELAY (Late by ${entity.cycleDay - target} days). Menstruation/Heat has not arrived yet.\n`;
-        p += `Note: Pregnancy/carrying has NOT been verified or confirmed. No visible signs of gravidity.\n`;
     } else {
         p += `Current Status: QUIESCENCE / REST PERIOD (Day ${entity.cycleDay}/${baseCycle}). Not fertile.\n`;
     }
@@ -268,7 +257,7 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
 
     const labels = getSystemAndPhysiologyLabels(entity, true);
 
-    let p = `\n[CRITICAL CANON DIRECTIVE — ${macroName} Physiological & Reproductive Status]\n`;
+    let p = `\n[CANON STATUS — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
     if (entity.postpartumDays > 0) {
@@ -303,10 +292,10 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
                     : (dDays <= 21 ? `Stage 2 (Expulsion onset, Day ${dDays}/21): Spontaneous spotting, cramping.` : `Stage 3: Active expulsion.`);
                 if (entity.fetalDemise.hasInfection) stageDesc += ` [CRITICAL INFECTION PROCESS DETECTED]`;
 
-                p += `\n[SECRET MEDICAL EVENT — MISSED MISCARRIAGE]:
+                p += `\n[IMPORTANT — SECRET MEDICAL EVENT (MISSED MISCARRIAGE)]:
 - Secret Status for ${macroName}: ${stageDesc}
-- Roleplay subtle symptoms. IF medical check/scan occurs, confirm non-viable pregnancy.
-- IF abortion/D&C performed on ${macroName}, append hidden tag: <!--ABORTION_${entity.key.toUpperCase()}-->\n`;
+- If a medical check or scan happens, it shows a non-viable pregnancy.
+- If an abortion or D&C is performed on ${macroName}, add this tag at the very end of your reply (required): <!--ABORTION_${entity.key.toUpperCase()}-->\n`;
             }
 
             let revealCount = (aiAwareness === 'full') || (aiAwareness === 'dynamic' && entity.pregnancyWeeks >= 12);
@@ -339,14 +328,19 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
                 }
             }
 
+            if (isAbortionAllowed(entity, aiAwareness) && !(entity.fetalDemise && entity.fetalDemise.isDead)) {
+                p += `\n[IMPORTANT — EVENT REPORTING]
+If an abortion is performed on ${macroName} in this response, add this tag at the very end of your reply (required, so the event is recorded): <!--ABORTION_${entity.key.toUpperCase()}-->\n`;
+            }
+
             if (entity.pregnancyWeeks >= 20) {
                 const nextNum = (entity.currentDeliveredCount || 0) + 1;
                 const tagSuffix = entity.key.toUpperCase();
-                p += `\n🚨 CRITICAL BIRTH TAG DIRECTIVE FOR ${macroName}:
-If ${macroName} gives birth in this response, append tag at the very end:
+                p += `\n[IMPORTANT — EVENT REPORTING]
+If ${macroName} gives birth in this response, add the matching tag at the very end of your reply (required, so the birth is recorded):
 - Natural birth: <!--BIRTH_NATURAL_${tagSuffix}_${nextNum}--> (or <!--BIRTH_NATURAL_${tagSuffix}-->)
 - C-Section: <!--BIRTH_C_SECTION_${tagSuffix}_${nextNum}--> (or <!--BIRTH_C_SECTION_${tagSuffix}-->)
-One tag per baby, sequentially.
+Add one tag per baby, in order.
 `;
             }
         } else {
@@ -359,14 +353,9 @@ One tag per baby, sequentially.
 
             if (entity.mode === 'realism') {
                 if (entity.cycleDay <= periodDays) {
-                    p += `Current Status: MENSTRUATION / NATURAL PERIOD ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Cycle Duration: ${baseCycle} days.
-🛑 ABSOLUTE CANON FACT: ${macroName} is 100% NOT PREGNANT. Conception failed/did not happen. 
-⚠️ STRICT FORBIDDEN ACTIONS FOR {{char}}:
-- DO NOT roleplay pregnancy, missed periods, late periods, toxicosis, morning sickness, or sudden realization of being pregnant.
-- ${macroName} is actively experiencing her normal monthly menstrual bleeding right now. Treat all physical sensations (cramps, breast tenderness) strictly as menstrual symptoms, NOT pregnancy.\n`;
+                    p += `Current Status: MENSTRUATION / NATURAL PERIOD ACTIVE (Day ${entity.cycleDay} of ${periodDays}) | Cycle Duration: ${baseCycle} days. Pregnancy: none.\n`;
                 } else if (entity.cycleDay > target) {
-                    p += `Current Status: MENSTRUAL CYCLE DELAY (Late by ${entity.cycleDay - target} days). Menstruation has not arrived yet.
-Note: Pregnancy has NOT been verified or confirmed yet.\n`;
+                    p += `Current Status: MENSTRUAL CYCLE DELAY (Late by ${entity.cycleDay - target} days). Menstruation has not arrived yet.\n`;
                 } else if (entity.cycleDay < ovulStart) {
                     p += `Current Status: FOLLICULAR PHASE (Cycle Day ${entity.cycleDay}/${baseCycle}). Not pregnant.\n`;
                 } else if (entity.cycleDay >= ovulStart && entity.cycleDay <= ovulEnd) {
@@ -411,8 +400,7 @@ Note: Pregnancy has NOT been verified or confirmed yet.\n`;
 
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
 ${macroName} has ${entity.childrenList.length} born child(ren) in the family:
-${kidsInfo}
-Direct Canon Instruction: Always remember and acknowledge these existing children in family interactions, daily life, dialogue, and roleplay context.\n`;
+${kidsInfo}\n`;
     }
 
     return p;
@@ -428,10 +416,16 @@ export function buildMultiEntityPrompt({ targetMode, userEntity, charEntity, aiA
         fullPrompt += buildSingleEntityPrompt(charEntity, '{{char}}', aiAwareness);
     }
 
-    fullPrompt += `\n🚨 EJACULATION / CLIMAX LOGGING DIRECTIVE FOR {{char}}:
-At the absolute end of the response, append exactly one tag IF climax occurred inside someone:
-- Inside {{user}} vagina: <!--CUM_VAGINAL_USER--> | anus: <!--CUM_ANAL_USER-->
-- Inside {{char}} vagina: <!--CUM_VAGINAL_CHAR--> | anus: <!--CUM_ANAL_CHAR-->\n`;
+    const climaxLines = [];
+    if (targetMode === 'user' || targetMode === 'both') {
+        climaxLines.push(`- Inside {{user}} vagina: <!--CUM_VAGINAL_USER--> | anus: <!--CUM_ANAL_USER-->`);
+    }
+    if (targetMode === 'char' || targetMode === 'both') {
+        climaxLines.push(`- Inside {{char}} vagina: <!--CUM_VAGINAL_CHAR--> | anus: <!--CUM_ANAL_CHAR-->`);
+    }
+    if (climaxLines.length > 0) {
+        fullPrompt += `\n[IMPORTANT — EVENT REPORTING]\nIf a climax happens inside someone in this response, add the matching tag at the very end of your reply (required, so the event is recorded):\n${climaxLines.join('\n')}\n`;
+    }
 
     return fullPrompt;
 }

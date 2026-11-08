@@ -756,6 +756,22 @@ export function processEntityStillbirth(entity, lang = 'ru', logFn, notifyFn) {
     notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Premature stillbirth (late miscarriage). Pregnancy ended.' : 'Преждевременные роды: мертворождение (поздний выкидыш). Беременность завершена.'}`, 'error');
 }
 
+export function isAbortionAllowed(entity, aiAwareness) {
+    if (!entity || entity.mode === 'oviposition') return false;
+    if (!entity.isPregnant || (!entity.isDiscovered && entity.isSecretConception)) return false;
+
+    const isUnder12Weeks = (entity.pregnancyWeeks < 12) || (entity.pregnancyWeeks === 12 && (entity.pregnancyDays || 0) === 0);
+    if (isUnder12Weeks) return true;
+
+    if (aiAwareness === 'hidden') return false;
+    if (!entity.babiesDiseases || entity.babiesDiseases.length === 0) return false;
+    return entity.babiesDiseases.some(dId => {
+        if (!dId) return false;
+        const d = getFetalDisease(dId, 'en');
+        return d?.type === 'prenatal' && d.abortionIndicated && ((aiAwareness === 'full') || (entity.pregnancyWeeks >= (d.discoveryWeek || 20)));
+    });
+}
+
 export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {
     logFn?.(`[ABORTION] [${entity.key.toUpperCase()}] Terminated at ${entity.pregnancyWeeks} weeks.`);
     entity.isPregnant = false;

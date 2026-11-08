@@ -14,7 +14,7 @@ import {
     getEggEmbryoDisease
 } from './symptoms.js';
 import { dateToDays, daysToDateString } from './dateUtils.js';
-import { getEntityBodyPhase } from './entityController.js';
+import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
 
 export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const lang = settings.language || 'ru';
@@ -304,18 +304,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             <option value="male_omega" ${currentEntity.gender === 'male_omega' ? 'selected' : ''}>${getText('male_omega', lang)}</option>`;
     }
 
-    let canAbort = false;
-    if (!isOviposition && isCurrentlyPregnantDiscovered) {
-        const isUnder12Weeks = (currentEntity.pregnancyWeeks < 12) || (currentEntity.pregnancyWeeks === 12 && (currentEntity.pregnancyDays || 0) === 0);
-        if (isUnder12Weeks) canAbort = true;
-        else if (settings.aiAwareness !== 'hidden' && currentEntity.babiesDiseases?.length > 0) {
-            canAbort = currentEntity.babiesDiseases.some(dId => {
-                if (!dId) return false;
-                const d = getFetalDisease(dId, 'en');
-                return d?.type === 'prenatal' && d.abortionIndicated && ((settings.aiAwareness === 'full') || (currentEntity.pregnancyWeeks >= (d.discoveryWeek || 20)));
-            });
-        }
-    }
+    const canAbort = isAbortionAllowed(currentEntity, settings.aiAwareness);
 
     const checkBtnLabel = (settings.aiAwareness === 'hidden') ? getText('checkPregnancyBtn', lang) : getText('takeTestBtn', lang);
 
