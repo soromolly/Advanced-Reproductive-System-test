@@ -20,6 +20,79 @@ export function daysToDateString(days) {
     return `${year}-${month}-${day}`;
 }
 
+export function dateStringToDays(dateStr) {
+    if (!dateStr) return null;
+    const parts = String(dateStr).split('-').map(Number);
+    if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+    return dateToDays(parts[0], parts[1] - 1, parts[2]);
+}
+
+function ruPlural(n, one, few, many) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs >= 11 && abs <= 19) return many;
+    if (last === 1) return one;
+    if (last >= 2 && last <= 4) return few;
+    return many;
+}
+
+export function formatAgeFromDays(totalDays, lang = 'ru') {
+    const d = Math.max(0, Math.floor(totalDays));
+    const isRu = lang === 'ru';
+
+    if (d < 30) {
+        const weeks = Math.floor(d / 7);
+        const days = d % 7;
+        if (weeks === 0) {
+            return isRu ? `${days} ${ruPlural(days, 'день', 'дня', 'дней')}` : `${days} day${days === 1 ? '' : 's'}`;
+        }
+        if (days === 0) {
+            return isRu ? `${weeks} ${ruPlural(weeks, 'неделя', 'недели', 'недель')}` : `${weeks} week${weeks === 1 ? '' : 's'}`;
+        }
+        if (isRu) {
+            return `${weeks} ${ruPlural(weeks, 'неделя', 'недели', 'недель')} ${days} ${ruPlural(days, 'день', 'дня', 'дней')}`;
+        }
+        return `${weeks} week${weeks === 1 ? '' : 's'} ${days} day${days === 1 ? '' : 's'}`;
+    }
+
+    if (d < 365) {
+        const months = Math.floor(d / 30);
+        const weeks = Math.floor((d % 30) / 7);
+        if (isRu) {
+            const m = `${months} ${ruPlural(months, 'месяц', 'месяца', 'месяцев')}`;
+            if (weeks === 0) return m;
+            return `${m} ${weeks} ${ruPlural(weeks, 'неделя', 'недели', 'недель')}`;
+        }
+        const m = `${months} month${months === 1 ? '' : 's'}`;
+        if (weeks === 0) return m;
+        return `${m} ${weeks} week${weeks === 1 ? '' : 's'}`;
+    }
+
+    if (d < 1095) {
+        const years = Math.floor(d / 365);
+        const weeks = Math.floor((d % 365) / 7);
+        if (isRu) {
+            const y = `${years} ${ruPlural(years, 'год', 'года', 'лет')}`;
+            if (weeks === 0) return y;
+            return `${y} ${weeks} ${ruPlural(weeks, 'неделя', 'недели', 'недель')}`;
+        }
+        const y = `${years} year${years === 1 ? '' : 's'}`;
+        if (weeks === 0) return y;
+        return `${y} ${weeks} week${weeks === 1 ? '' : 's'}`;
+    }
+
+    const years = Math.floor(d / 365);
+    if (isRu) return `${years} ${ruPlural(years, 'год', 'года', 'лет')}`;
+    return `${years} year${years === 1 ? '' : 's'}`;
+}
+
+export function formatChildAge(birthDateStr, currentDateStr, lang = 'ru') {
+    const birth = dateStringToDays(birthDateStr);
+    const current = dateStringToDays(currentDateStr);
+    if (birth === null || current === null || current < birth) return '';
+    return formatAgeFromDays(current - birth, lang);
+}
+
 export function cleanHtmlFromText(text) {
     if (!text) return '';
     return text

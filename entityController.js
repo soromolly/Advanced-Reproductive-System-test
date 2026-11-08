@@ -603,7 +603,7 @@ function finishLaying(entity, lang = 'ru', logFn, notifyFn) {
     notifyFn?.(`🥚 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'All eggs laid!' : 'Все яйца отложены!'} (${entity.eggCount})`, 'success');
 }
 
-export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn) {
+export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn, rpDate = null) {
     if (entity.mode !== 'oviposition' || !entity.isNestActive) return false;
     if (!entity.laidEggs || entity.laidEggs.length === 0) return false;
 
@@ -620,7 +620,8 @@ export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn) {
             id: egg.id,
             gender: egg.gender || generateBabyGender('realism', 'en'),
             name: '',
-            diseaseId: egg.diseaseId || null
+            diseaseId: egg.diseaseId || null,
+            birthDate: rpDate || null
         };
         entity.childrenList.push(child);
         entity.eggsHatched = (entity.eggsHatched || 0) + 1;
@@ -661,15 +662,15 @@ function finishIncubation(entity, lang = 'ru', logFn, notifyFn) {
     entity.eggDiseases = [];
 }
 
-export function hatchEggs(entity, lang = 'ru', logFn, notifyFn) {
+export function hatchEggs(entity, lang = 'ru', logFn, notifyFn, rpDate = null) {
     if (!entity.isNestActive) return;
     let guard = 20;
     while (entity.isNestActive && guard-- > 0) {
-        if (!hatchSingleEgg(entity, lang, logFn, notifyFn)) break;
+        if (!hatchSingleEgg(entity, lang, logFn, notifyFn, rpDate)) break;
     }
 }
 
-export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn) {
+export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn, rpDate = null) {
     if (entity.mode === 'oviposition') return;
 
     if (!entity.isPregnant && (!entity.babiesGenders || entity.babiesGenders.length === 0)) return;
@@ -698,7 +699,8 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         name: '',
         diseaseId: babyDiseaseId,
         birthWeek,
-        prematurityId
+        prematurityId,
+        birthDate: rpDate || null
     });
     
     entity.babiesCount = entity.babiesGenders.length;

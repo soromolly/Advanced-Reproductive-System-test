@@ -13,7 +13,7 @@ import {
     getEggShellDefect,
     getEggEmbryoDisease
 } from './symptoms.js';
-import { dateToDays, daysToDateString } from './dateUtils.js';
+import { dateToDays, daysToDateString, formatChildAge } from './dateUtils.js';
 import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
 import { getPrematurityDisplay } from './prematurity.js';
 
@@ -287,9 +287,24 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     ? `<span style="color: #38bdf8; font-weight: 700;">«${c.name.trim()}»</span>` 
                     : `<span style="opacity: 0.55; font-style: italic;">(${getText('noName', lang)})</span>`;
 
+                let birthInfoHtml = '';
+                if (c.birthDate) {
+                    const bp = String(c.birthDate).split('-');
+                    const ageStr = formatChildAge(c.birthDate, chatData.lastRpDate, lang);
+                    const agePart = ageStr ? ` — ${getText('ageLabel', lang)} <b style="color: #38bdf8;">${ageStr}</b>` : '';
+                    birthInfoHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #94a3b8;">
+                        • ${getText('birthDateLabel', lang)} <b>${bp[2]}.${bp[1]}.${bp[0]}</b>${agePart}
+                    </div>`;
+                } else {
+                    birthInfoHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #64748b; font-style: italic;">
+                        • ${getText('ageLabel', lang)} ${getText('ageUnknown', lang)}
+                    </div>`;
+                }
+
                 return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px dashed rgba(255,255,255,0.08);">
                     <div style="flex: 1; padding-right: 8px;">
                         ${isOviposition ? '🐣' : '👶'} ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}
+                        ${birthInfoHtml}
                         ${featureHtml}
                         ${prematurityHtml}
                     </div>

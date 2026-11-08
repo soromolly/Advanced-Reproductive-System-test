@@ -301,7 +301,7 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
             let match;
             while ((match = regex.exec(text)) !== null) {
                 if (!entity.isNestActive) break;
-                hatchSingleEgg(entity, settings.language, logReproEvent, notify);
+                hatchSingleEgg(entity, settings.language, logReproEvent, notify, data.lastRpDate);
             }
         };
         checkHatchFor(data.user, 'USER');
@@ -318,7 +318,7 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
             while ((match = regex.exec(text)) !== null) {
                 if (!entity.isPregnant) break;
                 const method = match[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural';
-                deliverEntitySingleBaby(entity, method, settings.language, logReproEvent, notify);
+                deliverEntitySingleBaby(entity, method, settings.language, logReproEvent, notify, data.lastRpDate);
             }
         };
 
@@ -531,11 +531,24 @@ function bindGlobalEvents() {
 
         if (newName !== null) {
             child.name = newName.trim();
-            logReproEvent(`[CHILD RENAMED] [${entity.key.toUpperCase()}] Child ID ${child.id} named: "${child.name || 'unnamed'}"`);
+
+            if (!child.birthDate) {
+                const dateVal = window.prompt(getText('editChildBirthDatePrompt', lang), '');
+                if (dateVal !== null && dateVal.trim() !== '') {
+                    const normalizedDate = normalizeInputDate(dateVal);
+                    if (normalizedDate) {
+                        child.birthDate = normalizedDate;
+                    } else {
+                        notify(lang === 'en' ? 'Invalid date format. Use DD.MM.YYYY.' : 'Неверный формат даты. Используйте ДД.ММ.ГГГГ.', 'warning');
+                    }
+                }
+            }
+
+            logReproEvent(`[CHILD RENAMED] [${entity.key.toUpperCase()}] Child ID ${child.id} named: "${child.name || 'unnamed'}" | Birth date: ${child.birthDate || 'not set'}`);
             saveSettingsDebounced();
             refreshUI();
             updatePrompt();
-            notify(lang === 'en' ? 'Child name updated!' : 'Имя ребенка обновлено!', 'success');
+            notify(lang === 'en' ? 'Child info updated!' : 'Данные ребенка обновлены!', 'success');
         }
     });
 
@@ -567,7 +580,7 @@ function bindGlobalEvents() {
         const entity = getChatData()[getActiveEntityKey()];
         if (entity.mode === 'oviposition') return;
         while (entity.babiesCount > 0) {
-            deliverEntitySingleBaby(entity, 'natural', settings.language, logReproEvent, notify);
+            deliverEntitySingleBaby(entity, 'natural', settings.language, logReproEvent, notify, getChatData().lastRpDate);
         }
         saveSettingsDebounced();
         refreshUI();
@@ -587,7 +600,7 @@ function bindGlobalEvents() {
         const entity = getChatData()[getActiveEntityKey()];
         if (!entity.isNestActive) return;
         if (!confirm(settings.language === 'en' ? 'Force hatching ALL remaining eggs now?' : 'Форсировать вылупление ВСЕХ оставшихся яиц сейчас?')) return;
-        hatchEggs(entity, settings.language, logReproEvent, notify);
+        hatchEggs(entity, settings.language, logReproEvent, notify, getChatData().lastRpDate);
         saveSettingsDebounced();
         refreshUI();
         updatePrompt();
