@@ -69,16 +69,17 @@ export function formatAgeFromDays(totalDays, lang = 'ru') {
     }
 
     if (d < 1095) {
-        const years = Math.floor(d / 365);
-        const weeks = Math.floor((d % 365) / 7);
+        let years = Math.floor(d / 365);
+        let months = Math.floor((d % 365) / 30);
+        if (months >= 12) { years += 1; months -= 12; }
         if (isRu) {
             const y = `${years} ${ruPlural(years, 'год', 'года', 'лет')}`;
-            if (weeks === 0) return y;
-            return `${y} ${weeks} ${ruPlural(weeks, 'неделя', 'недели', 'недель')}`;
+            if (months === 0) return y;
+            return `${y} ${months} ${ruPlural(months, 'месяц', 'месяца', 'месяцев')}`;
         }
         const y = `${years} year${years === 1 ? '' : 's'}`;
-        if (weeks === 0) return y;
-        return `${y} ${weeks} week${weeks === 1 ? '' : 's'}`;
+        if (months === 0) return y;
+        return `${y} ${months} month${months === 1 ? '' : 's'}`;
     }
 
     const years = Math.floor(d / 365);
