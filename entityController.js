@@ -21,6 +21,7 @@ import {
     rollEggIncubationDays,
     rollEggShellDefect
 } from './eggSystem.js';
+import { getPrematurityCategory } from './prematurity.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
     return {
@@ -664,6 +665,14 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
 
     if (!entity.isPregnant && (!entity.babiesGenders || entity.babiesGenders.length === 0)) return;
 
+    const birthWeek = entity.pregnancyWeeks;
+    const prematurityId = getPrematurityCategory(birthWeek, entity.mode);
+
+    if (prematurityId === 'stillbirth') {
+        processEntityStillbirth(entity, lang, logFn, notifyFn);
+        return;
+    }
+
     const rawGender = entity.babiesGenders.shift();
     if (!rawGender) {
         entity.isPregnant = false;
@@ -678,14 +687,19 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         id: Date.now() + Math.floor(Math.random() * 1000),
         gender: rawGender,
         name: '',
-        diseaseId: babyDiseaseId
+        diseaseId: babyDiseaseId,
+        birthWeek,
+        prematurityId
     });
     
     entity.babiesCount = entity.babiesGenders.length;
     const displayGender = translateGender(rawGender, lang);
     const disease = babyDiseaseId ? getFetalDisease(babyDiseaseId, lang) : null;
+    const prematurityNote = prematurityId
+        ? (lang === 'en' ? ` Premature (~${birthWeek} wks).` : ` Преждевременные роды (~${birthWeek} нед.).`)
+        : '';
 
-    logFn?.(`[BIRTH] [${entity.key.toUpperCase()}] Delivered: ${rawGender} | Method: ${method} | Remaining: ${entity.babiesCount}`);
+    logFn?.(`[BIRTH] [${entity.key.toUpperCase()}] Delivered: ${rawGender} | Method: ${method} | Prematurity: ${prematurityId || 'none'} | Remaining: ${entity.babiesCount}`);
 
     if (entity.babiesCount === 0) {
         entity.isPregnant = false;
@@ -704,15 +718,14 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
 
         const methodText = method === 'c_section' ? (lang === 'en' ? 'C-Section' : 'Кесарево сечение') : (lang === 'en' ? 'Natural' : 'Естественные роды');
         const extraNote = disease ? ` (${disease.name})` : '';
-        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Delivery complete!' : 'Роды завершены!'} (${displayGender})${extraNote} [${methodText}]`, 'success');
+        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Delivery complete!' : 'Роды завершены!'} (${displayGender})${extraNote}${prematurityNote} [${methodText}]`, 'success');
     } else {
         const extraNote = disease ? ` (${disease.name})` : '';
-        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Baby born' : 'Родился ребёнок'} (${displayGender})${extraNote}. ${lang === 'en' ? 'Remaining:' : 'Осталось:'} ${entity.babiesCount}`, 'info');
+        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Baby born' : 'Родился ребёнок'} (${displayGender})${extraNote}${prematurityNote}. ${lang === 'en' ? 'Remaining:' : 'Осталось:'} ${entity.babiesCount}`, 'info');
     }
 }
 
-export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
-    logFn?.(`[MISCARRIAGE] [${entity.key.toUpperCase()}] Spontaneous miscarriage.`);
+function resetEntityAfterLoss(entity) {
     entity.isPregnant = false;
     entity.isDiscovered = false;
     entity.pregnancyDaysTotal = 0;
@@ -727,9 +740,20 @@ export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
     entity.fetalDemise = null;
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     entity.postpartumDays = 1;
-    entity.deliveryMethod = 'miscarriage'; 
+    entity.deliveryMethod = 'miscarriage';
+}
 
+export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
+    logFn?.(`[MISCARRIAGE] [${entity.key.toUpperCase()}] Spontaneous miscarriage.`);
+    resetEntityAfterLoss(entity);
     notifyFn?.(`🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Miscarriage occurred. Pregnancy terminated.' : 'Произошел самопроизвольный выкидыш. Беременность прервана.'}`, 'error');
+}
+
+export function processEntityStillbirth(entity, lang = 'ru', logFn, notifyFn) {
+    const week = entity.pregnancyWeeks;
+    logFn?.(`[STILLBIRTH] [${entity.key.toUpperCase()}] Premature stillbirth (late miscarriage) at ${week} weeks.`);
+    resetEntityAfterLoss(entity);
+    notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Premature stillbirth (late miscarriage). Pregnancy ended.' : 'Преждевременные роды: мертворождение (поздний выкидыш). Беременность завершена.'}`, 'error');
 }
 
 export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {

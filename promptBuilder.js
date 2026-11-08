@@ -15,6 +15,7 @@ import {
     EGG_INCUBATION_DISPLAY_MAX, 
     EGG_INCUBATION_HATCHING_PROMPT_DAY 
 } from './eggSystem.js';
+import { getPrematurityPrompt } from './prematurity.js';
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase } from './entityController.js';
 
@@ -400,7 +401,12 @@ Note: Pregnancy has NOT been verified or confirmed yet.\n`;
                 const d = getFetalDisease(c.diseaseId, 'en');
                 if (d) diseaseStr = `, Congenital Condition: ${d.name}`;
             }
-            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})`;
+            let prematurityStr = '';
+            if (c.prematurityId) {
+                const prem = getPrematurityPrompt(c.prematurityId, c.birthWeek, aiAwareness);
+                if (prem) prematurityStr = ` — ${prem}`;
+            }
+            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})${prematurityStr}`;
         }).join('\n');
 
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
