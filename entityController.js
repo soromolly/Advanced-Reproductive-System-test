@@ -752,6 +752,39 @@ function resetEntityAfterLoss(entity) {
     entity.deliveryMethod = 'miscarriage';
 }
 
+// Полная очистка беременности (и вынашивания яиц) без послеродового периода.
+// Используется при смене режима, чтобы нерождённый плод не переезжал в другую систему.
+export function resetEntityPregnancy(entity) {
+    entity.isPregnant = false;
+    entity.isDiscovered = false;
+    entity.pregnancyDaysTotal = 0;
+    entity.pregnancyWeeks = 0;
+    entity.pregnancyDays = 0;
+    entity.babiesCount = 0;
+    entity.babiesGenders = [];
+    entity.babiesDiseases = [];
+    entity.currentDeliveredCount = 0;
+    entity.rolledTrimesters = { 1: false, 2: false, 3: false };
+    entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+    entity.fetalDemise = null;
+    entity.activeComplication = null;
+    entity.fetalDiseaseId = null;
+    entity.eggCount = 0;
+    entity.eggShellDefects = [];
+    entity.eggGenders = [];
+    entity.eggDiseases = [];
+    entity.eggsLaid = 0;
+    entity.laidEggs = [];
+    entity.eggIncubationDays = 0;
+    entity.eggIncubationTotal = 0;
+    entity.eggsHatched = 0;
+    entity.isNestActive = false;
+    entity.postpartumDays = 0;
+    entity.deliveryMethod = 'none';
+    entity.symptomPhaseKey = null;
+    entity.symptomIndices = [];
+}
+
 export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
     logFn?.(`[MISCARRIAGE] [${entity.key.toUpperCase()}] Spontaneous miscarriage.`);
     resetEntityAfterLoss(entity);

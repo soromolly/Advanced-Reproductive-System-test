@@ -20,7 +20,9 @@ import {
     laySingleEgg,
     layAllEggs,
     hatchSingleEgg,
-    hatchEggs
+    hatchEggs,
+    rollNewCycleTarget,
+    resetEntityPregnancy
 } from './entityController.js';
 import { getText } from './translations.js';
 import { 
@@ -454,9 +456,27 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
-    $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() { 
+    $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() {
         const entity = getChatData()[getActiveEntityKey()];
-        entity.mode = $(this).val(); 
+        const newMode = $(this).val();
+        const oldMode = entity.mode;
+        if (newMode === oldMode) return;
+
+        if (entity.isPregnant) {
+            const lang = settings.language || 'ru';
+            const oldName = getText(oldMode, lang);
+            const newName = getText(newMode, lang);
+            const msg = lang === 'en'
+                ? `Switch mode from ${oldName} to ${newName}? The current pregnancy will be reset.`
+                : `Сменить режим с «${oldName}» на «${newName}»? Текущая беременность будет сброшена.`;
+            if (!confirm(msg)) {
+                $(this).val(oldMode);
+                return;
+            }
+            resetEntityPregnancy(entity);
+        }
+
+        entity.mode = newMode;
         if (entity.mode === 'realism') entity.gender = 'female';
         else if (entity.mode === 'omegaverse' && (entity.gender === 'female' || entity.gender === 'male')) entity.gender = 'female_omega';
         else if (entity.mode === 'oviposition' && entity.gender !== 'male' && entity.gender !== 'female') entity.gender = 'female';
@@ -466,9 +486,9 @@ function bindGlobalEvents() {
             entity.eggIncubationDays = 0;
             entity.eggIncubationTotal = 0;
         }
-        saveSettingsDebounced(); 
-        refreshUI(); 
-        updatePrompt(); 
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
     });
 
     $(document).off('change', '#repro-gender').on('change', '#repro-gender', function() { 
@@ -608,8 +628,12 @@ function bindGlobalEvents() {
         const data = getChatData();
         const entity = data[getActiveEntityKey()];
         
-        entity.cycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || 28;
+        const newCycleLength = parseInt(root.find('#repro-input-cycle').val(), 10) || 28;
         entity.periodDuration = parseInt(root.find('#repro-input-period').val(), 10) || 5;
+        if (newCycleLength !== entity.cycleLength) {
+            entity.cycleLength = newCycleLength;
+            entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+        }
         
         const maxWeeksInput = root.find('#repro-input-maxweeks');
         if (maxWeeksInput.length) entity.maxPregnancyWeeks = parseInt(maxWeeksInput.val(), 10) || 40;
