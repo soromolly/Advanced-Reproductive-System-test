@@ -251,6 +251,7 @@ export function updateEntitySymptoms(entity) {
 
 export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
     if (entity.mode === 'oviposition') return;
+    if (!entity.isFetalPathologyEnabled) return;
 
     const isRevealed = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
     if (!isRevealed) return;
@@ -741,7 +742,7 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
     if (!entity.isPregnant && (!entity.babiesGenders || entity.babiesGenders.length === 0)) return;
 
     const birthWeek = entity.pregnancyWeeks;
-    const prematurityId = getPrematurityCategory(birthWeek, entity.mode);
+    const prematurityId = entity.isFetalPathologyEnabled ? getPrematurityCategory(birthWeek, entity.mode) : null;
 
     if (prematurityId === 'stillbirth') {
         processEntityStillbirth(entity, lang, logFn, notifyFn);

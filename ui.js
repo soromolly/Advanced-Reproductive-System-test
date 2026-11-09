@@ -419,6 +419,11 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer;">${getText('irregularCycleLabel', lang)}</label>
                         ${getTooltipHtml('irregularCycle', lang)}
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                        <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('fetalPathologyLabel', lang)}</label>
+                        ${getTooltipHtml('fetalPathology', lang)}
+                    </div>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -555,11 +560,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <label style="font-size: 0.9em; opacity: 0.85;">${isOviposition ? getText('manualEggCount', lang) : getText('manualCount', lang)} </label>
                             <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${isOviposition ? 4 : 1}" min="1" max="${isOviposition ? 7 : 12}"/>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 14px; height: 14px; margin: 0;"/>
-                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer; color: var(--text-color, #f8fafc); line-height: 1.3;">${getText('fetalPathologyLabel', lang)}</label>
-                            ${getTooltipHtml('fetalPathology', lang)}
                         </div>
                         <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${isOviposition ? getText('manualEggsBtn', lang) : getText('startPregnancyBtn', lang)}</button>
                     </div>

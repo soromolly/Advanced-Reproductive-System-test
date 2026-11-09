@@ -513,8 +513,20 @@ function bindGlobalEvents() {
     });
 
     $(document).off('change', '#repro-fetal-pathology-enabled').on('change', '#repro-fetal-pathology-enabled', function() {
-        getChatData()[getActiveEntityKey()].isFetalPathologyEnabled = $(this).is(':checked');
+        const entity = getChatData()[getActiveEntityKey()];
+        entity.isFetalPathologyEnabled = $(this).is(':checked');
+        if (!entity.isFetalPathologyEnabled) {
+            entity.activeComplication = null;
+            entity.fetalDemise = null;
+            entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+            entity.rolledTrimesters = { 1: false, 2: false, 3: false };
+            entity.fetalDiseaseId = null;
+            if (Array.isArray(entity.babiesDiseases)) entity.babiesDiseases = entity.babiesDiseases.map(() => null);
+            if (Array.isArray(entity.eggDiseases)) entity.eggDiseases = entity.eggDiseases.map(() => null);
+        }
         saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
     });
 
     $(document).off('click', '.repro-edit-child-name-btn').on('click', '.repro-edit-child-name-btn', function(e) {
