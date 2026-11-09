@@ -106,6 +106,9 @@ function getChatData() {
         if (data[k].eggIncubationTotal === undefined) data[k].eggIncubationTotal = 0;
         if (data[k].eggsHatched === undefined) data[k].eggsHatched = 0;
         if (data[k].isNestActive === undefined) data[k].isNestActive = false;
+        if (data[k].isBreastfeeding === undefined) data[k].isBreastfeeding = true;
+        if (data[k].lactationDays === undefined) data[k].lactationDays = null;
+        if (data[k].daysNotBreastfeeding === undefined) data[k].daysNotBreastfeeding = 0;
 
         if (data[k].isNestActive && data[k].eggIncubationTotal && data[k].eggIncubationTotal !== EGG_INCUBATION_DISPLAY_MAX) {
             data[k].eggIncubationTotal = EGG_INCUBATION_DISPLAY_MAX;
@@ -524,6 +527,13 @@ function bindGlobalEvents() {
             if (Array.isArray(entity.babiesDiseases)) entity.babiesDiseases = entity.babiesDiseases.map(() => null);
             if (Array.isArray(entity.eggDiseases)) entity.eggDiseases = entity.eggDiseases.map(() => null);
         }
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    $(document).off('change', '#repro-is-breastfeeding').on('change', '#repro-is-breastfeeding', function() {
+        getChatData()[getActiveEntityKey()].isBreastfeeding = $(this).is(':checked');
         saveSettingsDebounced();
         refreshUI();
         updatePrompt();

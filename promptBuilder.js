@@ -9,7 +9,8 @@ import {
     getEggIncubationData,
     getEggSymptomList,
     getEggShellDefect,
-    getEggEmbryoDisease
+    getEggEmbryoDisease,
+    getAmenorrheaWindow
 } from './symptoms.js';
 import { 
     EGG_INCUBATION_DISPLAY_MAX, 
@@ -261,10 +262,20 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
     let p = `\n[CANON STATUS — ${macroName} Physiological & Reproductive Status]\n`;
     p += `[ACTIVE SYSTEM: ${labels.system} | PHYSIOLOGY: ${labels.physiology} | TRACKING: ${macroName}]\n`;
 
+    if (entity.lactationDays !== null && entity.lactationDays !== undefined) {
+        p += entity.isBreastfeeding
+            ? `Lactation: Breastfeeding (milk production active).\n`
+            : `Lactation: Not breastfeeding (milk drying up).\n`;
+    }
+
     if (entity.postpartumDays > 0) {
         const pData = getPostpartumData(entity.postpartumDays, entity.deliveryMethod, 'en');
-        const maxRecDays = (entity.deliveryMethod === 'miscarriage') ? 14 : 40;
-        p += `Status: RECOVERY PHASE (Day ${entity.postpartumDays}/${maxRecDays}) | Event Outcome: ${entity.deliveryMethod.toUpperCase()}\n`;
+        const w = getAmenorrheaWindow(entity.deliveryMethod, entity.isBreastfeeding);
+        const amenorrhea = entity.postpartumDays > w.minDay
+            ? `daily roll underway (~${w.dailyChance}% per day)`
+            : `not expected before day ${w.minDay + 1}`;
+        p += `Status: POSTPARTUM RECOVERY (Day ${entity.postpartumDays}) | Event Outcome: ${entity.deliveryMethod.toUpperCase()}\n`;
+        p += `Menstruation Return: ${amenorrhea}\n`;
         p += `Physical Condition & Limitations: ${pData.desc}\n`;
     } else {
         const isRevealedPregnancy = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);

@@ -477,6 +477,24 @@ export function getPostpartumData(days, method = 'natural', lang = 'ru') {
     return pool[40] || pool[Object.keys(pool)[Object.keys(pool).length - 1]];
 }
 
+export function getAmenorrheaWindow(deliveryMethod, isBreastfeeding) {
+    if (deliveryMethod === 'miscarriage') return { minDay: 21, maxDay: 45, dailyChance: 8, kind: 'miscarriage' };
+    if (isBreastfeeding) return { minDay: 90, maxDay: 180, dailyChance: 2, kind: 'birth_bf' };
+    return { minDay: 40, maxDay: 70, dailyChance: 6, kind: 'birth' };
+}
+
+export function getAmenorrheaStatus(days, method, isBreastfeeding, lang) {
+    const w = getAmenorrheaWindow(method, isBreastfeeding);
+    if (days > w.minDay) {
+        return (lang === 'en')
+            ? `daily roll (~${w.dailyChance}%/day)`
+            : `ежедневный бросок (~${w.dailyChance}% в день)`;
+    }
+    return (lang === 'en')
+        ? `not before day ${w.minDay + 1}`
+        : `не ранее ${w.minDay + 1} дня`;
+}
+
 export function getRandomSymptomIndices(phase, maxCount = 3) {
     const list = SYMPTOMS['en'][phase] || SYMPTOMS['ru'][phase];
     if (!list || list.length === 0) return [];

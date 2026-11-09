@@ -11,7 +11,8 @@ import {
     getEggIncubationData,
     getEggSymptomList,
     getEggShellDefect,
-    getEggEmbryoDisease
+    getEggEmbryoDisease,
+    getAmenorrheaStatus
 } from './symptoms.js';
 import { dateToDays, daysToDateString, formatChildAge, getChildAgeDays } from './dateUtils.js';
 import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
@@ -28,6 +29,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const isOviposition = currentEntity.mode === 'oviposition';
     const isEggGravid = isOviposition && isCurrentlyPregnantDiscovered;
     const isNestActive = isOviposition && currentEntity.isNestActive;
+    const showBreastfeeding = !currentEntity.isPregnant && currentEntity.lactationDays !== null && currentEntity.lactationDays !== undefined;
 
     let displayDate = getText('waitingDate', lang);
     let inputDateValue = '';
@@ -234,15 +236,22 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             const pData = getPostpartumData(currentEntity.postpartumDays, currentEntity.deliveryMethod, lang);
             const isCS = currentEntity.deliveryMethod === 'c_section';
             const isMiscarriage = currentEntity.deliveryMethod === 'miscarriage';
-            const maxRecovery = isMiscarriage ? 14 : 40;
+            const amenorrheaStatus = getAmenorrheaStatus(currentEntity.postpartumDays, currentEntity.deliveryMethod, currentEntity.isBreastfeeding, lang);
             
             let outcomeText = lang === 'en' ? 'Natural Delivery (Vaginal)' : 'Естественные роды (ЕР)';
             if (isCS) outcomeText = lang === 'en' ? 'Cesarean Section (C-Section)' : 'Кесарево сечение (КС)';
             if (isMiscarriage) outcomeText = lang === 'en' ? 'Postgravid Restoration / Loss' : 'Постгравидарное восстановление / Прерывание';
 
+            const bfLine = !isMiscarriage
+                ? `<b>${getText('breastfeedingLabel', lang)}</b> ${currentEntity.isBreastfeeding ? getText('yesLabel', lang) : getText('noLabel', lang)}<br>`
+                : '';
+            const amenorrheaLine = `<b>${getText('amenorrheaLabel', lang)}</b> <span>${amenorrheaStatus}</span><br>`;
+
             postpartumHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: ${isMiscarriage ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border: 1px solid ${isMiscarriage ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}; border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
-                <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader', lang)}${currentEntity.postpartumDays}/${maxRecovery})</strong>
+                <strong style="font-size: 1.05em; color: ${isMiscarriage ? '#ef4444' : '#10b981'}; display: block; margin-bottom: 4px;">${getText('postpartumHeader', lang)}${currentEntity.postpartumDays})</strong>
                 <b>${getText('outcomeType', lang)}</b> <span style="color: ${isMiscarriage ? '#ef4444' : '#10b981'}; font-weight: bold;">${outcomeText}</span><br>
+                ${bfLine}
+                ${amenorrheaLine}
                 <b>${getText('stageLabel', lang)}</b> <span>${pData.name}</span><br>
                 <span style="opacity: 0.85; display: block; margin-top: 4px; font-style: italic;">${pData.desc}</span>
             </div>`;
@@ -424,6 +433,13 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('fetalPathologyLabel', lang)}</label>
                         ${getTooltipHtml('fetalPathology', lang)}
                     </div>
+                    ${showBreastfeeding ? `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="repro-is-breastfeeding" ${currentEntity.isBreastfeeding ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                        <label for="repro-is-breastfeeding" style="font-size: 0.85em; cursor: pointer;">${getText('breastfeedingLabel', lang)}</label>
+                        ${getTooltipHtml('breastfeeding', lang)}
+                    </div>
+                    ` : ''}
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">

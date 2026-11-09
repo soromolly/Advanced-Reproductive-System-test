@@ -6,7 +6,8 @@ import {
     getFetalDisease,
     getEggEmbryoDisease,
     getRandomEggEmbryoDiseaseId,
-    rollEggEmbryoDisease
+    rollEggEmbryoDisease,
+    getAmenorrheaWindow
 } from './symptoms.js';
 import { getText, translateGender } from './translations.js';
 import {
@@ -32,6 +33,9 @@ export function createDefaultEntityState(entityKey = 'user') {
         isSecretConception: true,
         isIrregularCycle: true,
         isFetalPathologyEnabled: true,
+        isBreastfeeding: true,
+        lactationDays: null,
+        daysNotBreastfeeding: 0,
         cycleLength: 28,
         periodDuration: 5,
         maxPregnancyWeeks: 40,
@@ -308,20 +312,12 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
     }
 
     advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn, rpDate);
+    advanceLactation(entity, days, lang, logFn, notifyFn);
 
     if (entity.postpartumDays > 0) {
-        entity.postpartumDays += days;
-        const maxRecoveryDays = (entity.deliveryMethod === 'miscarriage') ? 14 : 40;
-        if (entity.postpartumDays > maxRecoveryDays) {
-            entity.postpartumDays = 0;
-            entity.deliveryMethod = 'none';
-            entity.cycleDay = 1; 
-            entity.currentCycleTargetLength = rollNewCycleTarget(entity);
-            logFn?.(`[POSTPARTUM] [${entity.key.toUpperCase()}] Recovery completed. New cycle started.`);
-            notifyFn?.(lang === 'en' 
-                ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Postpartum recovery complete. Cycle restarted.`
-                : `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Восстановление завершено. Цикл запущен.`, 'success');
-        }
+        const pp = advancePostpartumDays(entity, days, lang, logFn, notifyFn);
+        if (!pp.returned) return;
+        advanceCycleDays(entity, pp.surplusDays, lang, logFn, notifyFn);
         return;
     }
 
@@ -385,6 +381,52 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
             notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastPregEnd', lang)}`, 'warning');
         }
     } else {
+        advanceCycleDays(entity, days, lang, logFn, notifyFn);
+    }
+}
+
+// Послеродовой период: после минимального срока аменореи ежедневно бросается
+// кубик на возврат менструации. При возврате в середине скачка времени
+// «съеденные» лишние дни не теряются, а переносятся в новый цикл.
+function advancePostpartumDays(entity, days, lang, logFn, notifyFn) {
+    const w = getAmenorrheaWindow(entity.deliveryMethod, entity.isBreastfeeding);
+    let remaining = days;
+    let returned = false;
+    let returnDay = 0;
+
+    for (let i = 0; i < days; i++) {
+        entity.postpartumDays += 1;
+        remaining -= 1;
+        const ppDay = entity.postpartumDays;
+        if (ppDay >= w.maxDay) {
+            returned = true;
+            returnDay = ppDay;
+            break;
+        }
+        if (ppDay > w.minDay && Math.random() * 100 < w.dailyChance) {
+            returned = true;
+            returnDay = ppDay;
+            break;
+        }
+    }
+
+    if (!returned) return { returned: false, surplusDays: 0 };
+
+    entity.postpartumDays = 0;
+    entity.deliveryMethod = 'none';
+    entity.cycleDay = 1;
+    entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+
+    logFn?.(`[POSTPARTUM] [${entity.key.toUpperCase()}] Menstruation returned on postpartum day ${returnDay}. New cycle started.`);
+    notifyFn?.(lang === 'en'
+        ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Postpartum recovery complete. Menstruation has returned — new cycle started.`
+        : `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Восстановление завершено. Месячные вернулись — начался новый цикл.`, 'success');
+
+    return { returned: true, surplusDays: remaining };
+}
+
+function advanceCycleDays(entity, days, lang, logFn, notifyFn) {
+    if (days > 0) {
         const target = entity.currentCycleTargetLength || entity.cycleLength || 28;
         entity.cycleDay += days;
 
@@ -395,7 +437,49 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
             logFn?.(`[CYCLE RESET] [${entity.key.toUpperCase()}] New cycle started after ${target} days.`);
             notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${entity.mode === 'omegaverse' ? getText('toastNewHeat', lang) : getText('toastNewCycle', lang)}`, 'info');
         }
-        updateEntitySymptoms(entity);
+    }
+    updateEntitySymptoms(entity);
+}
+
+// Лактация после родов: пока кормление идёт — молоко есть; если кормление
+// выключено дольше 7 дней — молоко высыхает и окно закрывается. После возврата
+// месячных ежедневно бросается редкий кубик на «пропало молоко» (максимум 2 года).
+const LACTATION_GRACE_DAYS = 7;
+const LACTATION_MAX_DAYS = 730;
+const LACTATION_DAILY_CHANCE = 0.3;
+
+function advanceLactation(entity, days, lang, logFn, notifyFn) {
+    if (entity.lactationDays === null || entity.lactationDays === undefined) return;
+
+    entity.lactationDays += days;
+
+    if (!entity.isBreastfeeding) {
+        entity.daysNotBreastfeeding = (entity.daysNotBreastfeeding || 0) + days;
+        if (entity.daysNotBreastfeeding > LACTATION_GRACE_DAYS) {
+            entity.lactationDays = null;
+            entity.daysNotBreastfeeding = 0;
+            logFn?.(`[LACTATION] [${entity.key.toUpperCase()}] Milk dried up (not breastfeeding for over ${LACTATION_GRACE_DAYS} days).`);
+        }
+        return;
+    }
+
+    entity.daysNotBreastfeeding = 0;
+
+    if (entity.postpartumDays === 0) {
+        for (let i = 0; i < days; i++) {
+            if (Math.random() * 100 < LACTATION_DAILY_CHANCE) {
+                logFn?.(`[LACTATION] [${entity.key.toUpperCase()}] Milk dried up (daily roll) on lactation day ${entity.lactationDays}.`);
+                entity.lactationDays = null;
+                notifyFn?.(lang === 'en'
+                    ? `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Milk supply has dried up.`
+                    : `[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Молоко пропало.`, 'info');
+                break;
+            }
+        }
+        if (entity.lactationDays !== null && entity.lactationDays >= LACTATION_MAX_DAYS) {
+            logFn?.(`[LACTATION] [${entity.key.toUpperCase()}] Milk dried up (reached 2-year limit).`);
+            entity.lactationDays = null;
+        }
     }
 }
 
@@ -477,12 +561,28 @@ function advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notify
     }
 
     if (entity.postpartumDays > 0) {
-        entity.postpartumDays += days;
-        if (entity.postpartumDays > 7) {
-            entity.postpartumDays = 0;
-            entity.deliveryMethod = 'none';
-            entity.cycleDay = 1;
-            entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+        let remaining = days;
+        for (let i = 0; i < days; i++) {
+            entity.postpartumDays += 1;
+            remaining -= 1;
+            if (entity.postpartumDays > 7) {
+                entity.postpartumDays = 0;
+                entity.deliveryMethod = 'none';
+                entity.cycleDay = 1;
+                entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+                break;
+            }
+        }
+        if (entity.postpartumDays === 0 && remaining > 0) {
+            const target = entity.currentCycleTargetLength || entity.cycleLength || 28;
+            entity.cycleDay += remaining;
+            if (entity.cycleDay > target) {
+                entity.cycleDay = ((entity.cycleDay - 1) % target) + 1;
+                entity.currentCycleTargetLength = rollNewCycleTarget(entity);
+                entity.symptomPhaseKey = null;
+                logFn?.(`[CYCLE RESET] [${entity.key.toUpperCase()}] New cycle after ${target} days.`);
+                notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastNewHeat', lang)}`, 'info');
+            }
         }
         updateEntitySymptoms(entity);
         return;
@@ -796,6 +896,8 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
         entity.postpartumDays = 1;
         entity.deliveryMethod = method;
+        entity.lactationDays = 0;
+        entity.daysNotBreastfeeding = 0;
 
         const methodText = method === 'c_section' ? (lang === 'en' ? 'C-Section' : 'Кесарево сечение') : (lang === 'en' ? 'Natural' : 'Естественные роды');
         const extraNote = disease ? ` (${disease.name})` : '';
@@ -853,6 +955,8 @@ export function resetEntityPregnancy(entity) {
     entity.isNestActive = false;
     entity.postpartumDays = 0;
     entity.deliveryMethod = 'none';
+    entity.lactationDays = null;
+    entity.daysNotBreastfeeding = 0;
     entity.symptomPhaseKey = null;
     entity.symptomIndices = [];
 }
