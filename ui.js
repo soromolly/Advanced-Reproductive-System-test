@@ -13,9 +13,9 @@ import {
     getEggShellDefect,
     getEggEmbryoDisease
 } from './symptoms.js';
-import { dateToDays, daysToDateString, formatChildAge } from './dateUtils.js';
+import { dateToDays, daysToDateString, formatChildAge, getChildAgeDays } from './dateUtils.js';
 import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
-import { getPrematurityDisplay, getOutcomeName, getNeonatalWindowDays } from './prematurity.js';
+import { getPrematurityDisplay, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS } from './prematurity.js';
 
 export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const lang = settings.language || 'ru';
@@ -272,8 +272,14 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     feat = isOviposition ? getEggEmbryoDisease(c.diseaseId, lang) : getFetalDisease(c.diseaseId, lang);
                     if (feat) featureHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fcd34d;">• ${getText('congenitalFeatureLabel', lang)} <b>${feat.name}</b></div>`;
                 }
+                const isDeceased = c.alive === false;
+                const era = settings.aiAwareness === 'hidden' ? 'medieval' : 'modern';
+                const windowDays = getNeonatalWindowDays(c.prematurityId);
+                const realAgeDays = getChildAgeDays(c.birthDate, chatData.lastRpDate);
+                const effectiveAge = (realAgeDays !== null) ? realAgeDays : (c.ageDays || 0);
+
                 let prematurityHtml = '';
-                if (c.prematurityId) {
+                if (c.prematurityId && !isDeceased && (realAgeDays === null || realAgeDays < PREMATURITY_DETAIL_DAYS)) {
                     const prem = getPrematurityDisplay(c.prematurityId, lang, settings.aiAwareness);
                     if (prem) {
                         prematurityHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #f87171; line-height: 1.4;">
@@ -285,12 +291,10 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 }
                 let survivalHtml = '';
                 if (c.prematurityId && !isOviposition) {
-                    const era = settings.aiAwareness === 'hidden' ? 'medieval' : 'modern';
-                    if (c.alive === false) {
+                    if (isDeceased) {
                         survivalHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #94a3b8; font-style: italic;">• 💀 ${getText('childDeceased', lang)} (${getText('dayUnit', lang)} ${c.ageDays || '?'})</div>`;
-                    } else if (!c.survivalResolved) {
-                        const w = getNeonatalWindowDays(c.prematurityId);
-                        survivalHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fca5a5;">• ${getText('criticalPeriod', lang)}: ${getText('dayUnit', lang)} ${c.ageDays || 0}${w ? ' / ' + w : ''}</div>`;
+                    } else if (!c.survivalResolved && effectiveAge < windowDays) {
+                        survivalHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fca5a5;">• ${getText('criticalPeriod', lang)}: ${getText('dayUnit', lang)} ${effectiveAge} / ${windowDays}</div>`;
                     }
                     if (c.consequences?.length) {
                         const cons = c.consequences.map(id => getOutcomeName(id, era, lang)).join('; ');

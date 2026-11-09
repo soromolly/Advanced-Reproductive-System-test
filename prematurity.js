@@ -220,6 +220,10 @@ const POSTNATAL_OUTCOMES = {
     ]
 };
 
+// Возраст (дней), до которого в UI/промпте показываем детали недоношенности (факты + прогноз).
+// После — ребёнок уже не «недоношенный младенец», остаются только стойкие последствия (если выпали).
+export const PREMATURITY_DETAIL_DAYS = 180;
+
 export function getDailySurvivalHazard(categoryId, ageDays, era) {
     const brackets = NEONATAL_SURVIVAL[categoryId];
     if (!brackets) return 0;

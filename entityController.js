@@ -21,7 +21,8 @@ import {
     rollEggIncubationDays,
     rollEggShellDefect
 } from './eggSystem.js';
-import { getPrematurityCategory, getDailySurvivalHazard, getOutcomeDefs, getOutcomeName } from './prematurity.js';
+import { getPrematurityCategory, getDailySurvivalHazard, getNeonatalWindowDays, getOutcomeDefs, getOutcomeName } from './prematurity.js';
+import { getChildAgeDays } from './dateUtils.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
     return {
@@ -299,13 +300,13 @@ export function checkEntityFetalDemise(entity, logFn) {
     }
 }
 
-export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notifyFn) {
+export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notifyFn, rpDate) {
     if (entity.mode === 'oviposition') {
         advanceOvipositionEntity(entity, days, aiAwareness, lang, logFn, notifyFn);
         return;
     }
 
-    advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn);
+    advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn, rpDate);
 
     if (entity.postpartumDays > 0) {
         entity.postpartumDays += days;
@@ -397,13 +398,24 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
     }
 }
 
-function advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn) {
+function advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn, rpDate) {
     if (!entity.childrenList || entity.childrenList.length === 0) return;
     const era = aiAwareness === 'hidden' ? 'medieval' : 'modern';
 
     for (let idx = 0; idx < entity.childrenList.length; idx++) {
         const child = entity.childrenList[idx];
         if (!child.prematurityId || child.alive === false || child.survivalResolved) continue;
+
+        // Дети, рождённые до появления механики (или после ручного скачка даты),
+        // уже миновали критический период — не бросаем ретроспективно.
+        const windowDays = getNeonatalWindowDays(child.prematurityId);
+        const realAgeDays = getChildAgeDays(child.birthDate, rpDate);
+        if (realAgeDays !== null && realAgeDays >= windowDays) {
+            child.survivalResolved = true;
+            child.consequences = child.consequences || [];
+            logFn?.(`[NEONATAL RESOLVED] [${entity.key.toUpperCase()}] Child #${idx + 1} already past critical period (age ${realAgeDays}d).`);
+            continue;
+        }
 
         child.ageDays = child.ageDays || 0;
         for (let d = 0; d < days; d++) {

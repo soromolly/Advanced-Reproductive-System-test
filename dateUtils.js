@@ -94,6 +94,13 @@ export function formatChildAge(birthDateStr, currentDateStr, lang = 'ru') {
     return formatAgeFromDays(current - birth, lang);
 }
 
+export function getChildAgeDays(birthDateStr, currentDateStr) {
+    const birth = dateStringToDays(birthDateStr);
+    const current = dateStringToDays(currentDateStr);
+    if (birth === null || current === null || current < birth) return null;
+    return current - birth;
+}
+
 export function cleanHtmlFromText(text) {
     if (!text) return '';
     return text

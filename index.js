@@ -145,7 +145,8 @@ function updatePrompt() {
         targetMode: data.targetMode,
         userEntity: data.user,
         charEntity: data.char,
-        aiAwareness: settings.aiAwareness
+        aiAwareness: settings.aiAwareness,
+        rpDate: data.lastRpDate
     });
     setExtensionPrompt(EXTENSION_NAME, prompt, extension_prompt_types.IN_CHAT, 0);
 }
@@ -167,10 +168,10 @@ function advanceTimeAll(days) {
     const data = getChatData();
     const lang = settings.language || 'ru';
     if (data.targetMode === 'user' || data.targetMode === 'both') {
-        advanceEntityDays(data.user, days, settings.aiAwareness, lang, logReproEvent, notify);
+        advanceEntityDays(data.user, days, settings.aiAwareness, lang, logReproEvent, notify, data.lastRpDate);
     }
     if (data.targetMode === 'char' || data.targetMode === 'both') {
-        advanceEntityDays(data.char, days, settings.aiAwareness, lang, logReproEvent, notify);
+        advanceEntityDays(data.char, days, settings.aiAwareness, lang, logReproEvent, notify, data.lastRpDate);
     }
 }
 

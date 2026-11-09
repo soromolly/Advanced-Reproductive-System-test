@@ -15,9 +15,10 @@ import {
     EGG_INCUBATION_DISPLAY_MAX, 
     EGG_INCUBATION_HATCHING_PROMPT_DAY 
 } from './eggSystem.js';
-import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays } from './prematurity.js';
+import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS } from './prematurity.js';
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline } from './entityController.js';
+import { getChildAgeDays } from './dateUtils.js';
 
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
@@ -250,7 +251,7 @@ Example (2 eggs in one response): <!--LAY_EGG_${tagSuffix}_1--><!--LAY_EGG_${tag
     return p;
 }
 
-function buildSingleEntityPrompt(entity, macroName, aiAwareness) {
+function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
     if (entity.mode === 'oviposition') {
         return buildEggEntityPrompt(entity, macroName, aiAwareness);
     }
@@ -396,14 +397,19 @@ Add one tag per baby, in order.
             let statusStr = '';
             let consequencesStr = '';
             if (c.prematurityId) {
-                if (c.alive === false) {
+                const isDeceased = c.alive === false;
+                const windowDays = getNeonatalWindowDays(c.prematurityId);
+                const realAgeDays = getChildAgeDays(c.birthDate, rpDate);
+                const effectiveAge = (realAgeDays !== null) ? realAgeDays : (c.ageDays || 0);
+                if (isDeceased) {
                     statusStr = ` — DECEASED at ${c.ageDays ?? '?'} days of age.`;
                 } else {
-                    const prem = getPrematurityPrompt(c.prematurityId, c.birthWeek, aiAwareness);
-                    if (prem) prematurityStr = ` — ${prem}`;
-                    if (!c.survivalResolved) {
-                        const w = getNeonatalWindowDays(c.prematurityId);
-                        statusStr = ` — fragile newborn, day ${c.ageDays || 0}${w ? ` of the critical ${w}-day period` : ''}.`;
+                    if (realAgeDays === null || realAgeDays < PREMATURITY_DETAIL_DAYS) {
+                        const prem = getPrematurityPrompt(c.prematurityId, c.birthWeek, aiAwareness);
+                        if (prem) prematurityStr = ` — ${prem}`;
+                    }
+                    if (!c.survivalResolved && effectiveAge < windowDays) {
+                        statusStr = ` — fragile newborn, day ${effectiveAge} of the critical ${windowDays}-day period.`;
                     }
                     if (c.consequences?.length) {
                         const cons = c.consequences.map(id => getOutcomeName(id, era, 'en')).join('; ');
@@ -422,14 +428,14 @@ ${kidsInfo}\n`;
     return p;
 }
 
-export function buildMultiEntityPrompt({ targetMode, userEntity, charEntity, aiAwareness }) {
+export function buildMultiEntityPrompt({ targetMode, userEntity, charEntity, aiAwareness, rpDate }) {
     let fullPrompt = '';
 
     if (targetMode === 'user' || targetMode === 'both') {
-        fullPrompt += buildSingleEntityPrompt(userEntity, '{{user}}', aiAwareness);
+        fullPrompt += buildSingleEntityPrompt(userEntity, '{{user}}', aiAwareness, rpDate);
     }
     if (targetMode === 'char' || targetMode === 'both') {
-        fullPrompt += buildSingleEntityPrompt(charEntity, '{{char}}', aiAwareness);
+        fullPrompt += buildSingleEntityPrompt(charEntity, '{{char}}', aiAwareness, rpDate);
     }
 
     const climaxLines = [];
