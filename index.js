@@ -701,8 +701,13 @@ function bindGlobalEvents() {
                 parseInt(normalized.split('-')[2], 10)
             );
             
-            if (data.lastRpDate !== normalized) {
-                skipNextDateSync = true;
+            if (data.lastRpDate && data.lastRpDate !== normalized) {
+                const parts = data.lastRpDate.split('-').map(Number);
+                const prevTotalDays = dateToDays(parts[0], parts[1] - 1, parts[2]);
+                const diff = manualDays - prevTotalDays;
+                if (diff > 0) {
+                    advanceTimeAll(diff);
+                }
             }
             
             data.lastRpDate = normalized;
