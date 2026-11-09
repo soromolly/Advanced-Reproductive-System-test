@@ -15,7 +15,7 @@ import {
 } from './symptoms.js';
 import { dateToDays, daysToDateString, formatChildAge } from './dateUtils.js';
 import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
-import { getPrematurityDisplay } from './prematurity.js';
+import { getPrematurityDisplay, getOutcomeName, getNeonatalWindowDays } from './prematurity.js';
 
 export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const lang = settings.language || 'ru';
@@ -283,6 +283,20 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         </div>`;
                     }
                 }
+                let survivalHtml = '';
+                if (c.prematurityId && !isOviposition) {
+                    const era = settings.aiAwareness === 'hidden' ? 'medieval' : 'modern';
+                    if (c.alive === false) {
+                        survivalHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #94a3b8; font-style: italic;">• 💀 ${getText('childDeceased', lang)} (${getText('dayUnit', lang)} ${c.ageDays || '?'})</div>`;
+                    } else if (!c.survivalResolved) {
+                        const w = getNeonatalWindowDays(c.prematurityId);
+                        survivalHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fca5a5;">• ${getText('criticalPeriod', lang)}: ${getText('dayUnit', lang)} ${c.ageDays || 0}${w ? ' / ' + w : ''}</div>`;
+                    }
+                    if (c.consequences?.length) {
+                        const cons = c.consequences.map(id => getOutcomeName(id, era, lang)).join('; ');
+                        if (cons) survivalHtml += `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fbbf24;">• ${getText('lastingConsequences', lang)}: ${cons}</div>`;
+                    }
+                }
                 const nameDisplay = (c.name && c.name.trim()) 
                     ? `<span style="color: #38bdf8; font-weight: 700;">«${c.name.trim()}»</span>` 
                     : `<span style="opacity: 0.55; font-style: italic;">(${getText('noName', lang)})</span>`;
@@ -307,10 +321,16 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         ${birthInfoHtml}
                         ${featureHtml}
                         ${prematurityHtml}
+                        ${survivalHtml}
                     </div>
-                    <button class="repro-edit-child-name-btn menu_button" data-child-id="${c.id}" title="${lang === 'en' ? 'Edit name' : 'Изменить имя'}" style="padding: 2px 7px; font-size: 11px; height: 24px; min-width: 26px; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: var(--text-color);">
-                        <i class="fa-solid fa-pen" style="pointer-events: none;"></i>
-                    </button>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <button class="repro-edit-child-name-btn menu_button" data-child-id="${c.id}" title="${lang === 'en' ? 'Edit name' : 'Изменить имя'}" style="padding: 2px 7px; font-size: 11px; height: 24px; min-width: 26px; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: var(--text-color);">
+                            <i class="fa-solid fa-pen" style="pointer-events: none;"></i>
+                        </button>
+                        <button class="repro-delete-child-btn menu_button" data-child-id="${c.id}" title="${getText('deleteChildTitle', lang)}" style="padding: 2px 7px; font-size: 11px; height: 24px; min-width: 26px; justify-content: center; cursor: pointer; background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.35); border-radius: 4px; color: #f87171;">
+                            <i class="fa-solid fa-xmark" style="pointer-events: none;"></i>
+                        </button>
+                    </div>
                 </div>`;
             }).join('')}
         </div>`;

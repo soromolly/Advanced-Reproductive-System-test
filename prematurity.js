@@ -137,3 +137,116 @@ export function getPrematurityDisplay(categoryId, lang, aiAwareness) {
         prognosis: cat.prognosis[era][isRu ? 'ru' : 'en']
     };
 }
+
+// =============== Постнатальный риск и последствия недоношенности ===============
+// Ежедневный риск гибели (% в день) в зависимости от дня жизни ребёнка.
+// Брекеты идут по возрастанию: until — последний день действия брекета.
+// Когда ageDays > последний until (или брекет даёт 0%) — ребёнок считается выжившим.
+const NEONATAL_SURVIVAL = {
+    extreme: [
+        { until: 3,  modern: 15, medieval: 50 },
+        { until: 7,  modern: 8,  medieval: 40 },
+        { until: 14, modern: 4,  medieval: 30 },
+        { until: 28, modern: 2,  medieval: 20 },
+        { until: 60, modern: 1,  medieval: 10 }
+    ],
+    very: [
+        { until: 3,  modern: 3,  medieval: 22 },
+        { until: 7,  modern: 1.5, medieval: 20 },
+        { until: 14, modern: 0.7, medieval: 18 },
+        { until: 28, modern: 0.3, medieval: 15 }
+    ],
+    moderate: [
+        { until: 3,  modern: 0.5, medieval: 10 },
+        { until: 7,  modern: 0.2, medieval: 8 },
+        { until: 14, modern: 0.2, medieval: 6 },
+        { until: 28, modern: 0.1, medieval: 4 }
+    ],
+    late: [
+        { until: 3,  modern: 0.1, medieval: 1 },
+        { until: 7,  modern: 0,   medieval: 0.5 },
+        { until: 14, modern: 0,   medieval: 0.3 }
+    ]
+};
+
+// Каталог стойких последствий для выживших крайне/глубоко недоношенных.
+// name — реальное название диагноза (современность; в средневековье выводится в скобках);
+// medieval — средневековая бытовая формулировка.
+const OUTCOME_DEFS = {
+    cp: {
+        name: { ru: 'ДЦП', en: 'Cerebral palsy (CP)' },
+        medieval: { ru: 'расслабленное, скованное дитя', en: 'a limp, stiff child' }
+    },
+    severe_delay: {
+        name: { ru: 'тяжёлая задержка развития', en: 'Severe developmental delay' },
+        medieval: { ru: 'отсталое в разуме дитя', en: 'a slow-minded child' }
+    },
+    retinopathy: {
+        name: { ru: 'ретинопатия недоношенных', en: 'Retinopathy of prematurity (blindness)' },
+        medieval: { ru: 'слепое отроду дитя', en: 'a child born blind' }
+    },
+    deafness: {
+        name: { ru: 'глухота', en: 'Deafness' },
+        medieval: { ru: 'глухое отроду дитя', en: 'a child born deaf' }
+    },
+    bpd: {
+        name: { ru: 'бронхолёгочная дисплазия', en: 'Bronchopulmonary dysplasia' },
+        medieval: { ru: 'одышливое, чахлое дитя', en: 'a wheezing, frail child' }
+    },
+    growth_delay: {
+        name: { ru: 'задержка роста', en: 'Growth delay' },
+        medieval: { ru: 'медленно растущее, мелкое дитя', en: 'a small, slow-growing child' }
+    }
+};
+
+// Какие последствия и с каким шансом (%) бросаются по каждой категории.
+// Бросок независимый по каждому пункту (могут выпасть несколько сразу).
+// Для умеренно/поздне недоношенных стойких последствий не бросаем.
+const POSTNATAL_OUTCOMES = {
+    extreme: [
+        { id: 'bpd', chance: 35 },
+        { id: 'severe_delay', chance: 18 },
+        { id: 'cp', chance: 12 },
+        { id: 'retinopathy', chance: 7 },
+        { id: 'deafness', chance: 4 }
+    ],
+    very: [
+        { id: 'growth_delay', chance: 30 },
+        { id: 'bpd', chance: 15 },
+        { id: 'severe_delay', chance: 8 },
+        { id: 'cp', chance: 6 },
+        { id: 'deafness', chance: 2 },
+        { id: 'retinopathy', chance: 2 }
+    ]
+};
+
+export function getDailySurvivalHazard(categoryId, ageDays, era) {
+    const brackets = NEONATAL_SURVIVAL[categoryId];
+    if (!brackets) return 0;
+    for (const b of brackets) {
+        if (ageDays <= b.until) return b[era] || 0;
+    }
+    return 0;
+}
+
+export function getNeonatalWindowDays(categoryId) {
+    const brackets = NEONATAL_SURVIVAL[categoryId];
+    if (!brackets || !brackets.length) return 0;
+    return brackets[brackets.length - 1].until;
+}
+
+export function getOutcomeDefs(categoryId) {
+    return POSTNATAL_OUTCOMES[categoryId] || [];
+}
+
+export function getOutcomeName(outcomeId, era, lang = 'ru') {
+    const def = OUTCOME_DEFS[outcomeId];
+    if (!def) return '';
+    const isRu = lang === 'ru';
+    const name = def.name[isRu ? 'ru' : 'en'];
+    if (era === 'medieval') {
+        const med = def.medieval[isRu ? 'ru' : 'en'];
+        return `${med} (${name})`;
+    }
+    return name;
+}

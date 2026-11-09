@@ -552,6 +552,24 @@ function bindGlobalEvents() {
         }
     });
 
+    $(document).off('click', '.repro-delete-child-btn').on('click', '.repro-delete-child-btn', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const childId = $(this).attr('data-child-id');
+        const entity = getChatData()[getActiveEntityKey()];
+        if (!entity.childrenList || entity.childrenList.length === 0) return;
+        const idx = entity.childrenList.findIndex(c => String(c.id) === String(childId));
+        if (idx === -1) return;
+        const lang = settings.language || 'ru';
+        if (!window.confirm(lang === 'en' ? 'Remove this child from the family tree?' : 'Удалить этого ребёнка из семейного древа?')) return;
+        entity.childrenList.splice(idx, 1);
+        logReproEvent(`[CHILD DELETED] [${entity.key.toUpperCase()}] Child ID ${childId} removed from family tree.`);
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+        notify(lang === 'en' ? 'Child removed from the family tree.' : 'Ребёнок удалён из семейного древа.', 'info');
+    });
+
     $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
         const entity = getChatData()[getActiveEntityKey()];
         const lang = settings.language || 'ru';

@@ -21,7 +21,7 @@ import {
     rollEggIncubationDays,
     rollEggShellDefect
 } from './eggSystem.js';
-import { getPrematurityCategory } from './prematurity.js';
+import { getPrematurityCategory, getDailySurvivalHazard, getOutcomeDefs, getOutcomeName } from './prematurity.js';
 
 export function createDefaultEntityState(entityKey = 'user') {
     return {
@@ -305,6 +305,8 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         return;
     }
 
+    advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn);
+
     if (entity.postpartumDays > 0) {
         entity.postpartumDays += days;
         const maxRecoveryDays = (entity.deliveryMethod === 'miscarriage') ? 14 : 40;
@@ -392,6 +394,57 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
             notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${entity.mode === 'omegaverse' ? getText('toastNewHeat', lang) : getText('toastNewCycle', lang)}`, 'info');
         }
         updateEntitySymptoms(entity);
+    }
+}
+
+function advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn) {
+    if (!entity.childrenList || entity.childrenList.length === 0) return;
+    const era = aiAwareness === 'hidden' ? 'medieval' : 'modern';
+
+    for (let idx = 0; idx < entity.childrenList.length; idx++) {
+        const child = entity.childrenList[idx];
+        if (!child.prematurityId || child.alive === false || child.survivalResolved) continue;
+
+        child.ageDays = child.ageDays || 0;
+        for (let d = 0; d < days; d++) {
+            child.ageDays += 1;
+            const hazard = getDailySurvivalHazard(child.prematurityId, child.ageDays, era);
+            if (hazard <= 0) {
+                child.survivalResolved = true;
+                rollPostnatalConsequences(entity, child, aiAwareness, lang, logFn, notifyFn);
+                break;
+            }
+            const roll = Math.random() * 100;
+            if (roll < hazard) {
+                child.alive = false;
+                const nameStr = (child.name && child.name.trim()) ? `«${child.name.trim()}»` : `#${idx + 1}`;
+                logFn?.(`[NEONATAL DEATH] [${entity.key.toUpperCase()}] Child #${idx + 1} died on day ${child.ageDays} (Roll ${roll.toFixed(2)}% < ${hazard}%).`);
+                notifyFn?.(`💔 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? `Child ${nameStr} has died` : `Ребёнок ${nameStr} умер(ла)`} (${lang === 'en' ? 'day' : 'день'} ${child.ageDays}).`, 'warning');
+                break;
+            }
+        }
+    }
+}
+
+function rollPostnatalConsequences(entity, child, aiAwareness, lang, logFn, notifyFn) {
+    const era = aiAwareness === 'hidden' ? 'medieval' : 'modern';
+    const defs = getOutcomeDefs(child.prematurityId);
+    if (!defs || defs.length === 0) return;
+
+    const outcomes = [];
+    for (const o of defs) {
+        if (Math.random() * 100 < o.chance) outcomes.push(o.id);
+    }
+
+    const nameStr = (child.name && child.name.trim()) ? `«${child.name.trim()}»` : '';
+    if (outcomes.length > 0) {
+        child.consequences = outcomes;
+        const listStr = outcomes.map(id => getOutcomeName(id, era, lang)).join('; ');
+        logFn?.(`[POSTNATAL OUTCOMES] [${entity.key.toUpperCase()}] Child ${nameStr || '(unnamed)'}: ${outcomes.join(', ')}`);
+        notifyFn?.(`🧬 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Child' : 'Ребёнок'}${nameStr ? ' ' + nameStr : ''} ${lang === 'en' ? 'pulled through. Lasting consequences:' : 'выкарабкался(лась). Последствия:'} ${listStr}`, 'info');
+    } else {
+        logFn?.(`[POSTNATAL OUTCOMES] [${entity.key.toUpperCase()}] Child ${nameStr || '(unnamed)'} survived with no lasting consequences.`);
+        notifyFn?.(`🎉 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'The premature child pulled through healthy.' : 'Недоношенный ребёнок выкарабкался здоровым.'}`, 'success');
     }
 }
 
@@ -700,7 +753,11 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         diseaseId: babyDiseaseId,
         birthWeek,
         prematurityId,
-        birthDate: rpDate || null
+        birthDate: rpDate || null,
+        ageDays: 0,
+        alive: true,
+        survivalResolved: false,
+        consequences: []
     });
     
     entity.babiesCount = entity.babiesGenders.length;

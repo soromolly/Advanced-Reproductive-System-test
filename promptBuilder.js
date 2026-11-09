@@ -15,7 +15,7 @@ import {
     EGG_INCUBATION_DISPLAY_MAX, 
     EGG_INCUBATION_HATCHING_PROMPT_DAY 
 } from './eggSystem.js';
-import { getPrematurityPrompt } from './prematurity.js';
+import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays } from './prematurity.js';
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline } from './entityController.js';
 
@@ -383,6 +383,7 @@ Add one tag per baby, in order.
     }
 
     if (entity.childrenList?.length > 0) {
+        const era = aiAwareness === 'hidden' ? 'medieval' : 'modern';
         const kidsInfo = entity.childrenList.map((c, i) => {
             const gEn = translateGender(c.gender, 'en');
             const nameStr = (c.name && c.name.trim()) ? `Name: "${c.name.trim()}"` : 'Name: Unnamed';
@@ -392,11 +393,25 @@ Add one tag per baby, in order.
                 if (d) diseaseStr = `, Congenital Condition: ${d.name}`;
             }
             let prematurityStr = '';
+            let statusStr = '';
+            let consequencesStr = '';
             if (c.prematurityId) {
-                const prem = getPrematurityPrompt(c.prematurityId, c.birthWeek, aiAwareness);
-                if (prem) prematurityStr = ` — ${prem}`;
+                if (c.alive === false) {
+                    statusStr = ` — DECEASED at ${c.ageDays ?? '?'} days of age.`;
+                } else {
+                    const prem = getPrematurityPrompt(c.prematurityId, c.birthWeek, aiAwareness);
+                    if (prem) prematurityStr = ` — ${prem}`;
+                    if (!c.survivalResolved) {
+                        const w = getNeonatalWindowDays(c.prematurityId);
+                        statusStr = ` — fragile newborn, day ${c.ageDays || 0}${w ? ` of the critical ${w}-day period` : ''}.`;
+                    }
+                    if (c.consequences?.length) {
+                        const cons = c.consequences.map(id => getOutcomeName(id, era, 'en')).join('; ');
+                        if (cons) consequencesStr = ` — Lasting consequences: ${cons}.`;
+                    }
+                }
             }
-            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})${prematurityStr}`;
+            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})${prematurityStr}${statusStr}${consequencesStr}`;
         }).join('\n');
 
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
