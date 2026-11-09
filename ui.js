@@ -30,6 +30,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const isEggGravid = isOviposition && isCurrentlyPregnantDiscovered;
     const isNestActive = isOviposition && currentEntity.isNestActive;
     const showBreastfeeding = !currentEntity.isPregnant && currentEntity.lactationDays !== null && currentEntity.lactationDays !== undefined;
+    const isFullAware = settings.aiAwareness === 'full';
 
     let displayDate = getText('waitingDate', lang);
     let inputDateValue = '';
@@ -418,13 +419,13 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 ${tabsHtml}
 
                 <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="repro-is-secret-conception" ${currentEntity.isSecretConception ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                    <div style="display: flex; align-items: center; gap: 8px; ${isFullAware ? 'opacity: 0.35; pointer-events: none;' : ''}">
+                        <input type="checkbox" id="repro-is-secret-conception" ${isFullAware ? '' : (currentEntity.isSecretConception ? 'checked' : '')} ${isFullAware ? 'disabled' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
                         <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer;">${getText('secretConceptionLabel', lang)}</label>
                         ${getTooltipHtml('secretConception', lang)}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="repro-is-irregular-cycle" ${currentEntity.isIrregularCycle ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                    <div style="display: flex; align-items: center; gap: 8px; ${isFullAware ? 'opacity: 0.35; pointer-events: none;' : ''}">
+                        <input type="checkbox" id="repro-is-irregular-cycle" ${isFullAware ? '' : (currentEntity.isIrregularCycle ? 'checked' : '')} ${isFullAware ? 'disabled' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
                         <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer;">${getText('irregularCycleLabel', lang)}</label>
                         ${getTooltipHtml('irregularCycle', lang)}
                     </div>
@@ -506,7 +507,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync', lang)} ${displayDate}</div>
                 </div>
 
-                ${(!isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0 && !isNestActive) ? `
+                ${(settings.aiAwareness !== 'full' && !isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0 && !isNestActive) ? `
                     <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
                 ` : ''}
 

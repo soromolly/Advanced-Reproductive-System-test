@@ -109,7 +109,7 @@ export function generateBabyGender(mode, lang = 'ru') {
     return isBoy ? 'Boy ♂' : 'Girl ♀';
 }
 
-function formatDelayDays(days, lang = 'ru') {
+export function formatDelayDays(days, lang = 'ru') {
     if (lang === 'en') return `${days} ${days === 1 ? 'day' : 'days'}`;
     const abs = Math.abs(days) % 100;
     const last = abs % 10;
@@ -125,6 +125,26 @@ function formatDelayDays(days, lang = 'ru') {
 // отсчитывается только от номинала, одинаково в UI и в промпте.
 export function getCycleDelayBaseline(entity) {
     return entity.cycleLength || 28;
+}
+
+// Результат «теста / проверки признаков» по дню задержки (детерминированный,
+// без ложноположительных/ложноотрицательных). Во всеведении (full) кнопки нет.
+// delayDays = сколько дней месячные/течка задерживаются от номинальной длины цикла.
+export function getPregnancyCheckResult(entity, aiAwareness) {
+    const delayDays = Math.max(1, entity.cycleDay - getCycleDelayBaseline(entity));
+    if (!entity.isPregnant) {
+        return { status: 'negative', delayDays };
+    }
+    if (entity.mode === 'oviposition') {
+        // Для яйцекладки «теста» нет — вынашивание яиц подтверждается сразу.
+        return { status: 'positive', delayDays };
+    }
+    if (aiAwareness === 'hidden') {
+        // Средневековье: проверка признаков становится явной с 15 дня задержки.
+        return delayDays >= 15 ? { status: 'positive', delayDays } : { status: 'uncertain', delayDays };
+    }
+    // Современность (dynamic): тест на ХГЧ уверенно положителен с 5 дня задержки.
+    return delayDays >= 5 ? { status: 'positive', delayDays } : { status: 'uncertain', delayDays };
 }
 
 export function getEntityBodyPhase(entity, lang = 'ru') {
@@ -253,7 +273,7 @@ export function updateEntitySymptoms(entity) {
     }
 }
 
-export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
+export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn, aiAwareness = 'dynamic') {
     if (entity.mode === 'oviposition') return;
     if (!entity.isFetalPathologyEnabled) return;
 
@@ -275,7 +295,7 @@ export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn) {
     }
 
     if (entity.activeComplication && !entity.activeComplication.isDiscovered) {
-        if (currentWeek >= entity.activeComplication.triggerWeek) {
+        if (aiAwareness === 'full' || currentWeek >= entity.activeComplication.triggerWeek) {
             entity.activeComplication.isDiscovered = true;
             const comp = getComplication(entity.activeComplication.id, lang);
             logFn?.(`[COMPLICATION DISCOVERED] [${entity.key.toUpperCase()}] ${entity.activeComplication.id} diagnosed at week ${currentWeek}`);

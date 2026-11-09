@@ -16,6 +16,8 @@ import {
     deliverEntitySingleBaby, 
     processEntityAbortion, 
     getEntityBodyPhase,
+    getPregnancyCheckResult,
+    formatDelayDays,
     generateBabyGender,
     laySingleEgg,
     layAllEggs,
@@ -115,6 +117,13 @@ function getChatData() {
         }
     });
 
+    if (settings.aiAwareness === 'full') {
+        data.user.isSecretConception = false;
+        data.user.isIrregularCycle = false;
+        data.char.isSecretConception = false;
+        data.char.isIrregularCycle = false;
+    }
+
     return data;
 }
 
@@ -159,8 +168,8 @@ function refreshUI() {
     const lang = settings.language || 'ru';
     updateEntitySymptoms(data.user);
     updateEntitySymptoms(data.char);
-    checkEntityComplications(data.user, lang, logReproEvent, notify);
-    checkEntityComplications(data.char, lang, logReproEvent, notify);
+    checkEntityComplications(data.user, lang, logReproEvent, notify, settings.aiAwareness);
+    checkEntityComplications(data.char, lang, logReproEvent, notify, settings.aiAwareness);
     checkEntityFetalDemise(data.user, logReproEvent);
     checkEntityFetalDemise(data.char, logReproEvent);
     renderUI({ settings, chatData: data, activeTab, isMenuCollapsed });
@@ -504,6 +513,16 @@ function bindGlobalEvents() {
 
     $(document).off('change', '#repro-awareness').on('change', '#repro-awareness', function() { 
         settings.aiAwareness = $(this).val(); 
+        if (settings.aiAwareness === 'full') {
+            const data = getChatData();
+            ['user', 'char'].forEach(k => {
+                const e = data[k];
+                e.isSecretConception = false;
+                e.isIrregularCycle = false;
+                if (e.isPregnant) e.isDiscovered = true;
+                e.currentCycleTargetLength = rollNewCycleTarget(e);
+            });
+        }
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
@@ -596,20 +615,31 @@ function bindGlobalEvents() {
     $(document).off('click', '#repro-btn-take-test').on('click', '#repro-btn-take-test', function() {
         const entity = getChatData()[getActiveEntityKey()];
         const lang = settings.language || 'ru';
-        
-        if (entity.isPregnant) {
+        const aiAwareness = settings.aiAwareness || 'dynamic';
+        const result = getPregnancyCheckResult(entity, aiAwareness);
+        const delayDays = result.delayDays;
+
+        if (result.status === 'positive') {
             entity.isDiscovered = true;
-            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Positive test confirmed.`);
+            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Positive (delay ${delayDays}d).`);
             if (entity.mode === 'oviposition') {
-                notify(lang === 'en' 
+                notify(lang === 'en'
                     ? `🥚 Egg carrying confirmed (${entity.pregnancyWeeks} wks ${entity.pregnancyDays} d)!`
                     : `🥚 Вынашивание яиц подтверждено (${entity.pregnancyWeeks} нед. ${entity.pregnancyDays} дн.)!`, 'success');
+            } else if (aiAwareness === 'hidden') {
+                notify(getText('toastTestPositiveMedieval', lang), 'success');
             } else {
                 notify(`${getText('toastTestPositive', lang)}${entity.pregnancyWeeks} ${getText('weeksShort', lang)} ${entity.pregnancyDays} ${getText('daysShort', lang)}`, 'success');
             }
+        } else if (result.status === 'uncertain') {
+            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Uncertain (delay ${delayDays}d).`);
+            const toastKey = aiAwareness === 'hidden'
+                ? (delayDays <= 3 ? 'toastSignsNone' : (delayDays <= 9 ? 'toastSignsHints' : 'toastSignsLikely'))
+                : (delayDays <= 2 ? 'toastTestUncertain' : 'toastTestUncertainLikely');
+            notify(`${getText(toastKey, lang)} (${lang === 'en' ? 'delay' : 'задержка'} ${formatDelayDays(delayDays, lang)})`, 'info');
         } else {
-            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Negative test (Cycle delay).`);
-            notify(getText('toastTestNegative', lang), 'info');
+            logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Negative (delay ${delayDays}d).`);
+            notify(`${getText(aiAwareness === 'hidden' ? 'toastTestNegativeMedieval' : 'toastTestNegative', lang)} (${lang === 'en' ? 'delay' : 'задержка'} ${formatDelayDays(delayDays, lang)})`, 'info');
         }
 
         saveSettingsDebounced();
