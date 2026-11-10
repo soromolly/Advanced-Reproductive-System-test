@@ -25,6 +25,42 @@ import {
 import { getPrematurityCategory, getDailySurvivalHazard, getNeonatalWindowDays, getOutcomeDefs, getOutcomeName } from './prematurity.js';
 import { getChildAgeDays } from './dateUtils.js';
 
+// Накопительная статистика сущности. Граница выкидыш/мертворождение — 18 недель:
+// до 18 недель — выкидыш, от 18 недель — мертворождение (совпадает с полосой 18–21 нед. в prematurity.js).
+const STATS_STILLBIRTH_WEEKS = 18;
+
+export function createDefaultStats() {
+    return {
+        cyclesCompleted: 0,
+        cycleLengthsSum: 0,
+        maxDelayDays: 0,
+        conceptionChecks: 0,
+        conceptionSuccesses: 0,
+        pregnanciesTotal: 0,
+        births: 0,
+        miscarriages: 0,
+        stillbirths: 0,
+        abortions: 0,
+        clutches: 0,
+        eggsLaid: 0,
+        eggsHatched: 0
+    };
+}
+
+export function ensureStats(entity) {
+    if (!entity.stats) entity.stats = createDefaultStats();
+    return entity.stats;
+}
+
+function recordEntityLoss(entity) {
+    const stats = ensureStats(entity);
+    if ((entity.pregnancyWeeks || 0) >= STATS_STILLBIRTH_WEEKS) {
+        stats.stillbirths += 1;
+    } else {
+        stats.miscarriages += 1;
+    }
+}
+
 export function createDefaultEntityState(entityKey = 'user') {
     return {
         key: entityKey,
@@ -40,6 +76,7 @@ export function createDefaultEntityState(entityKey = 'user') {
         periodDuration: 5,
         maxPregnancyWeeks: 40,
         contraception: 'none',
+        stats: createDefaultStats(),
 
         cycleDay: 1,
         currentCycleTargetLength: 28,
@@ -450,10 +487,16 @@ function advanceCycleDays(entity, days, lang, logFn, notifyFn) {
         const target = entity.currentCycleTargetLength || entity.cycleLength || 28;
         entity.cycleDay += days;
 
+        const stats = ensureStats(entity);
+        const delay = entity.cycleDay - (entity.cycleLength || 28);
+        if (delay > 0 && delay > stats.maxDelayDays) stats.maxDelayDays = delay;
+
         if (entity.cycleDay > target) {
             entity.cycleDay = ((entity.cycleDay - 1) % target) + 1;
             entity.currentCycleTargetLength = rollNewCycleTarget(entity);
             entity.symptomPhaseKey = null;
+            stats.cyclesCompleted += 1;
+            stats.cycleLengthsSum += target;
             logFn?.(`[CYCLE RESET] [${entity.key.toUpperCase()}] New cycle started after ${target} days.`);
             notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${entity.mode === 'omegaverse' ? getText('toastNewHeat', lang) : getText('toastNewCycle', lang)}`, 'info');
         }
@@ -649,6 +692,7 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
         return;
     }
 
+    ensureStats(entity).pregnanciesTotal += 1;
     entity.isPregnant = true;
 
     if (entity.mode === 'omegaverse') {
@@ -698,6 +742,7 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
 }
 
 function triggerEggGravid(entity, lang = 'ru', logFn, notifyFn) {
+    ensureStats(entity).clutches += 1;
     entity.isPregnant = true;
     entity.pregnancyDaysTotal = Math.max(1, entity.cycleDay || 1);
     entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
@@ -747,6 +792,7 @@ export function laySingleEgg(entity, lang = 'ru', logFn, notifyFn) {
         hatched: false
     });
     entity.eggsLaid++;
+    ensureStats(entity).eggsLaid += 1;
 
     logFn?.(`[EGG LAID] [${entity.key.toUpperCase()}] Egg ${entity.eggsLaid}/${entity.eggCount}`);
 
@@ -811,6 +857,7 @@ export function hatchSingleEgg(entity, lang = 'ru', logFn, notifyFn, rpDate = nu
         };
         entity.childrenList.push(child);
         entity.eggsHatched = (entity.eggsHatched || 0) + 1;
+        ensureStats(entity).eggsHatched += 1;
 
         const genderLabel = translateGender(child.gender, lang);
         const disease = egg.diseaseId ? getEggEmbryoDisease(egg.diseaseId, lang) : null;
@@ -918,6 +965,7 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         entity.deliveryMethod = method;
         entity.lactationDays = 0;
         entity.daysNotBreastfeeding = 0;
+        ensureStats(entity).births += 1;
 
         const methodText = method === 'c_section' ? (lang === 'en' ? 'C-Section' : 'Кесарево сечение') : (lang === 'en' ? 'Natural' : 'Естественные роды');
         const extraNote = disease ? ` (${disease.name})` : '';
@@ -983,6 +1031,7 @@ export function resetEntityPregnancy(entity) {
 
 export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
     logFn?.(`[MISCARRIAGE] [${entity.key.toUpperCase()}] Spontaneous miscarriage.`);
+    recordEntityLoss(entity);
     resetEntityAfterLoss(entity);
     notifyFn?.(`🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Miscarriage occurred. Pregnancy terminated.' : 'Произошел самопроизвольный выкидыш. Беременность прервана.'}`, 'error');
 }
@@ -990,6 +1039,7 @@ export function processEntityMiscarriage(entity, lang = 'ru', logFn, notifyFn) {
 export function processEntityStillbirth(entity, lang = 'ru', logFn, notifyFn) {
     const week = entity.pregnancyWeeks;
     logFn?.(`[STILLBIRTH] [${entity.key.toUpperCase()}] Premature stillbirth (late miscarriage) at ${week} weeks.`);
+    recordEntityLoss(entity);
     resetEntityAfterLoss(entity);
     notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Premature stillbirth (late miscarriage). Pregnancy ended.' : 'Преждевременные роды: мертворождение (поздний выкидыш). Беременность завершена.'}`, 'error');
 }
@@ -1012,6 +1062,7 @@ export function isAbortionAllowed(entity, aiAwareness) {
 
 export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {
     logFn?.(`[ABORTION] [${entity.key.toUpperCase()}] Terminated at ${entity.pregnancyWeeks} weeks.`);
+    ensureStats(entity).abortions += 1;
     entity.isPregnant = false;
     entity.isDiscovered = false;
     entity.pregnancyDaysTotal = 0;

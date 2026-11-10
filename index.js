@@ -24,7 +24,8 @@ import {
     hatchSingleEgg,
     hatchEggs,
     rollNewCycleTarget,
-    resetEntityPregnancy
+    resetEntityPregnancy,
+    ensureStats
 } from './entityController.js';
 import { getText } from './translations.js';
 import { 
@@ -35,7 +36,7 @@ import {
     parseRelativeDaysFromText 
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
-import { renderUI, exportReproLogs } from './ui.js';
+import { renderUI, exportReproLogs, renderStatsModal } from './ui.js';
 import { 
     getComplication,
     getRandomEggEmbryoDiseaseId
@@ -98,6 +99,7 @@ function getChatData() {
     if (!data.activityLogs) data.activityLogs = [];
 
     ['user', 'char'].forEach(k => {
+        ensureStats(data[k]);
         if (data[k].eggCount === undefined) data[k].eggCount = 0;
         if (!data[k].eggShellDefects) data[k].eggShellDefects = [];
         if (!data[k].eggGenders) data[k].eggGenders = [];
@@ -234,6 +236,8 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
     if (!isReceivedClimax || entity.isPregnant || entity.postpartumDays > 0 || entity.isNestActive) return;
 
     settings.globalRollsCount = (settings.globalRollsCount || 0) + 1;
+    const stats = ensureStats(entity);
+    stats.conceptionChecks += 1;
     const phase = getEntityBodyPhase(entity, 'en');
     const isFertile = phase.includes('Ovulation') || phase.includes('Heat');
 
@@ -251,6 +255,7 @@ function checkConceptionForEntity(entity, text, isReceivedClimax) {
     logReproEvent(`[CONCEPTION ROLL] [${entity.key.toUpperCase()}] Roll: ${roll.toFixed(2)}% <= ${finalChance}% | Outcome: ${isSuccess ? 'SUCCESS' : 'MISSED'}`);
 
     if (isSuccess) {
+        stats.conceptionSuccesses += 1;
         if (!entity.isSecretConception) {
             notify(`🎲 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Conception Roll SUCCESS!' : 'Кубик на зачатие: УСПЕХ!'} (${roll.toFixed(1)}% <= ${finalChance}%)`, 'success');
         }
@@ -707,6 +712,10 @@ function bindGlobalEvents() {
         });
     });
 
+    $(document).off('click', '#repro-btn-stats').on('click', '#repro-btn-stats', function() {
+        renderStatsModal({ data: getChatData(), lang: settings.language || 'ru' });
+    });
+
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {
         const root = $(this).closest('#repro-content-wrapper');
         const data = getChatData();
@@ -782,6 +791,7 @@ function bindGlobalEvents() {
             entity.isNestActive = false;
             entity.eggIncubationDays = 0;
             entity.eggIncubationTotal = 0;
+            ensureStats(entity).clutches += 1;
             entity.postpartumDays = 0;
             entity.deliveryMethod = 'none';
 
@@ -805,6 +815,7 @@ function bindGlobalEvents() {
             entity.babiesGenders = Array.from({ length: count }, () => generateBabyGender(entity.mode, 'en'));
             entity.babiesDiseases = Array.from({ length: count }, () => null);
             entity.deliveryMethod = 'none';
+            ensureStats(entity).pregnanciesTotal += 1;
             notify(`${getText('toastManualPreg', lang)}${weeks}w ${days}d`, 'success');
         }
 

@@ -593,6 +593,8 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 </div>
 
                 <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('exportLogsBtn', lang)}</button>
+
+                <button id="repro-btn-stats" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('statsBtn', lang)}</button>
             </div>
         </div>
     `;
@@ -665,4 +667,132 @@ export function exportReproLogs({ data, chatId, language, isNotificationsEnabled
             toastr.error('Download failed: ' + err.message);
         }
     }
+}
+
+function aggregateStats(entities) {
+    const sum = {
+        cyclesCompleted: 0,
+        cycleLengthsSum: 0,
+        maxDelayDays: 0,
+        conceptionChecks: 0,
+        conceptionSuccesses: 0,
+        pregnanciesTotal: 0,
+        births: 0,
+        miscarriages: 0,
+        stillbirths: 0,
+        abortions: 0,
+        clutches: 0,
+        eggsLaid: 0,
+        eggsHatched: 0
+    };
+    let children = [];
+    let hasOviposition = false;
+
+    for (const e of entities) {
+        if (!e) continue;
+        const s = e.stats || {};
+        sum.cyclesCompleted += s.cyclesCompleted || 0;
+        sum.cycleLengthsSum += s.cycleLengthsSum || 0;
+        sum.maxDelayDays = Math.max(sum.maxDelayDays, s.maxDelayDays || 0);
+        sum.conceptionChecks += s.conceptionChecks || 0;
+        sum.conceptionSuccesses += s.conceptionSuccesses || 0;
+        sum.pregnanciesTotal += s.pregnanciesTotal || 0;
+        sum.births += s.births || 0;
+        sum.miscarriages += s.miscarriages || 0;
+        sum.stillbirths += s.stillbirths || 0;
+        sum.abortions += s.abortions || 0;
+        sum.clutches += s.clutches || 0;
+        sum.eggsLaid += s.eggsLaid || 0;
+        sum.eggsHatched += s.eggsHatched || 0;
+        if (e.mode === 'oviposition') hasOviposition = true;
+        if (Array.isArray(e.childrenList)) children = children.concat(e.childrenList);
+    }
+
+    return { sum, children, hasOviposition };
+}
+
+export function renderStatsModal({ data, lang = 'ru' }) {
+    const targetMode = data.targetMode || 'user';
+    const entities = targetMode === 'user' ? [data.user]
+        : targetMode === 'char' ? [data.char]
+        : [data.user, data.char];
+    const { sum, children, hasOviposition } = aggregateStats(entities);
+
+    const avgCycle = sum.cyclesCompleted > 0 ? (sum.cycleLengthsSum / sum.cyclesCompleted) : 0;
+    const born = children.filter(c => c.alive !== undefined).length;
+    const alive = children.filter(c => c.alive === true).length;
+    const dead = children.filter(c => c.alive === false).length;
+    const consequences = children.filter(c => Array.isArray(c.consequences) && c.consequences.length > 0).length;
+
+    const scopeKey = targetMode === 'user' ? 'targetUser' : (targetMode === 'char' ? 'targetChar' : 'targetBoth');
+    const daysLabel = lang === 'en' ? 'd' : 'дн.';
+
+    const row = (label, value) => `
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="color: #cbd5e1;">${label}</span>
+            <span style="font-weight: 700; font-family: monospace; color: #f472b6;">${value}</span>
+        </div>`;
+
+    const section = (title, html) => html ? `
+        <div style="margin-top: 10px;">
+            <div style="font-size: 0.8em; font-weight: 700; color: #f472b6; text-transform: uppercase; margin-bottom: 4px;">${title}</div>
+            ${html}
+        </div>` : '';
+
+    const cyclesHtml = row(getText('statsCycles', lang), sum.cyclesCompleted)
+        + row(getText('statsAvgCycle', lang), sum.cyclesCompleted > 0 ? `${avgCycle.toFixed(1)} ${daysLabel}` : '—')
+        + row(getText('statsMaxDelay', lang), `${sum.maxDelayDays} ${daysLabel}`);
+
+    const conceptionHtml = row(getText('statsConceptionChecks', lang), sum.conceptionChecks)
+        + row(getText('statsConceptionSuccesses', lang), sum.conceptionSuccesses);
+
+    const pregnancyHtml = row(getText('statsPregnancies', lang), sum.pregnanciesTotal)
+        + row(getText('statsBirths', lang), sum.births)
+        + row(getText('statsChildrenBorn', lang), born)
+        + row(getText('statsMiscarriages', lang), sum.miscarriages)
+        + row(getText('statsStillbirths', lang), sum.stillbirths)
+        + row(getText('statsAbortions', lang), sum.abortions);
+
+    const childrenHtml = row(getText('statsChildrenAlive', lang), alive)
+        + row(getText('statsChildrenDead', lang), dead)
+        + row(getText('statsChildrenConsequences', lang), consequences);
+
+    const eggHtml = hasOviposition ? (
+        row(getText('statsClutches', lang), sum.clutches)
+        + row(getText('statsEggsLaid', lang), sum.eggsLaid)
+        + row(getText('statsEggsHatched', lang), sum.eggsHatched)
+    ) : '';
+
+    const body = section(getText('statsCyclesHeader', lang), cyclesHtml)
+        + section(getText('statsConceptionHeader', lang), conceptionHtml)
+        + section(getText('statsPregnancyHeader', lang), pregnancyHtml)
+        + section(getText('statsChildrenHeader', lang), childrenHtml)
+        + section(getText('statsEggHeader', lang), eggHtml);
+
+    const modal = $('<div>').css({
+        position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+        background: 'rgba(0,0,0,0.55)', zIndex: '10000',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+    });
+    const card = $('<div>').css({
+        background: 'var(--panel-bg, #1e293b)', color: 'var(--text-color, #f8fafc)',
+        borderRadius: '12px', padding: '20px', width: 'min(420px, 92vw)', maxHeight: '85vh',
+        overflowY: 'auto', border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+    });
+    const close = () => modal.remove();
+    const closeBtn = $('<button>').text(getText('statsClose', lang)).css({
+        display: 'block', width: '100%', marginTop: '14px', padding: '8px',
+        background: '#db2777', color: '#fff', border: 'none', borderRadius: '6px',
+        cursor: 'pointer', fontWeight: '600'
+    }).on('click', close);
+
+    card.append(
+        $('<div>').text(getText('statsTitle', lang)).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '2px' }),
+        $('<div>').text(getText(scopeKey, lang)).css({ fontSize: '0.85em', color: '#94a3b8', marginBottom: '8px' }),
+        $('<div>').html(body),
+        closeBtn
+    );
+    modal.append(card);
+    modal.on('click', function (e) { if (e.target === this) close(); });
+    $('body').append(modal);
 }
