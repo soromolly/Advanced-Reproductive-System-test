@@ -780,11 +780,11 @@ export function renderStatsModal({ data, lang = 'ru' }) {
         overflowY: 'auto', border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
     });
     const close = () => modal.remove();
-    const closeBtn = $('<button>').text(getText('statsClose', lang)).css({
+    const closeBtn = $('<button>').attr('type', 'button').text(getText('statsClose', lang)).css({
         display: 'block', width: '100%', marginTop: '14px', padding: '8px',
         background: '#db2777', color: '#fff', border: 'none', borderRadius: '6px',
         cursor: 'pointer', fontWeight: '600'
-    }).on('click', close);
+    }).on('click', function (e) { e.stopPropagation(); e.preventDefault(); close(); });
 
     card.append(
         $('<div>').text(getText('statsTitle', lang)).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '2px' }),
@@ -793,7 +793,8 @@ export function renderStatsModal({ data, lang = 'ru' }) {
         closeBtn
     );
     modal.append(card);
-    modal.on('click', function (e) { if (e.target === this) close(); });
+    card.on('click', function (e) { e.stopPropagation(); });
+    modal.on('click', function (e) { e.stopPropagation(); if (e.target === this) close(); });
     $('body').append(modal);
 }
 
@@ -809,7 +810,8 @@ function createModalShell(onClose) {
         overflowY: 'auto', border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
     });
     modal.append(card);
-    modal.on('click', function (e) { if (e.target === this) onClose?.(); });
+    card.on('click', function (e) { e.stopPropagation(); });
+    modal.on('click', function (e) { e.stopPropagation(); if (e.target === this) onClose?.(); });
     $('body').append(modal);
     return { modal, card };
 }
@@ -825,17 +827,17 @@ export function showConfirmModal({ title = '', message = '', okLabel = 'OK', can
             resolve(value);
         }
 
-        const okBtn = $('<button>').text(okLabel).css({
+        const okBtn = $('<button>').attr('type', 'button').text(okLabel).css({
             padding: '9px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
             fontWeight: '600', fontSize: '0.95em', background: danger ? '#dc2626' : '#db2777',
             color: '#fff', marginRight: '10px'
-        }).on('click', () => finish(true));
+        }).on('click', function (e) { e.stopPropagation(); e.preventDefault(); finish(true); });
 
-        const cancelBtn = $('<button>').text(cancelLabel).css({
+        const cancelBtn = $('<button>').attr('type', 'button').text(cancelLabel).css({
             padding: '9px 16px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px',
             cursor: 'pointer', fontWeight: '600', fontSize: '0.95em',
             background: 'rgba(255,255,255,0.08)', color: '#e2e8f0'
-        }).on('click', () => finish(false));
+        }).on('click', function (e) { e.stopPropagation(); e.preventDefault(); finish(false); });
 
         card.append(
             $('<div>').text(title).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '10px' }),
@@ -863,11 +865,11 @@ export function showPromptModal({ title = '', label = '', placeholder = '', init
         });
         const error = $('<div>').css({ color: '#f87171', fontSize: '0.85em', marginTop: '6px', minHeight: '1em' });
 
-        const okBtn = $('<button>').text(okLabel).css({
+        const okBtn = $('<button>').attr('type', 'button').text(okLabel).css({
             padding: '9px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
             fontWeight: '600', fontSize: '0.95em', background: '#db2777', color: '#fff', marginRight: '10px'
         });
-        const cancelBtn = $('<button>').text(cancelLabel).css({
+        const cancelBtn = $('<button>').attr('type', 'button').text(cancelLabel).css({
             padding: '9px 16px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px',
             cursor: 'pointer', fontWeight: '600', fontSize: '0.95em',
             background: 'rgba(255,255,255,0.08)', color: '#e2e8f0'
@@ -881,9 +883,10 @@ export function showPromptModal({ title = '', label = '', placeholder = '', init
             }
             finish(value);
         };
-        okBtn.on('click', submit);
-        cancelBtn.on('click', () => finish(null));
-        input.on('keydown', function (e) { if (e.key === 'Enter') submit(); });
+        okBtn.on('click', function (e) { e.stopPropagation(); e.preventDefault(); submit(); });
+        cancelBtn.on('click', function (e) { e.stopPropagation(); e.preventDefault(); finish(null); });
+        input.on('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+        input.on('click', function (e) { e.stopPropagation(); });
 
         card.append(
             $('<div>').text(title).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '10px' }),
