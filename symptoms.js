@@ -341,6 +341,30 @@ export const COMPLICATIONS_POOL = {
     ]
 };
 
+// Лечебная спецификация: шанс успеха и кулдаун после неудачи (по тяжести).
+// Ключ — id осложнения из COMPLICATIONS_POOL (общий для ru/en).
+export const TREATMENT_SPECS = {
+    // mild — 80%, 1 день
+    toxicosis_severe: { treatChance: 80, treatCooldownDays: 1 },
+    anemia_early: { treatChance: 80, treatCooldownDays: 1 },
+    hypertonus: { treatChance: 80, treatCooldownDays: 1 },
+    rh_conflict: { treatChance: 80, treatCooldownDays: 1 },
+    // moderate — 65%, 2 дня
+    hyperemesis_gravidarum: { treatChance: 65, treatCooldownDays: 2 },
+    retrochorial_hematoma: { treatChance: 65, treatCooldownDays: 2 },
+    gestational_pyelonephritis: { treatChance: 65, treatCooldownDays: 2 },
+    // severe — 50%, 3 дня
+    miscarriage_threat_early: { treatChance: 50, treatCooldownDays: 3 },
+    istmic_cervical_insufficiency: { treatChance: 50, treatCooldownDays: 3 },
+    preeclampsia: { treatChance: 50, treatCooldownDays: 3 },
+    premature_labor_threat: { treatChance: 50, treatCooldownDays: 3 },
+    placental_insufficiency: { treatChance: 50, treatCooldownDays: 3 }
+};
+
+export function getTreatmentSpec(id) {
+    return TREATMENT_SPECS[id] || null;
+}
+
 // Полная база патологий плода и новорожденных
 export const FETAL_DISEASES = {
     ru: [
@@ -515,13 +539,23 @@ export function rollComplication(trimester) {
     const pool = COMPLICATIONS_POOL['ru'].filter(c => c.trimester === trimester);
     if (!pool || pool.length === 0) return null;
     const selected = pool[Math.floor(Math.random() * pool.length)];
+    const spec = TREATMENT_SPECS[selected.id];
     
     let startWeek = 4;
     if (trimester === 1) startWeek = Math.floor(Math.random() * 9) + 4;
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
 
-    return { id: selected.id, curable: selected.curable, triggerWeek: startWeek, isDiscovered: false };
+    return {
+        id: selected.id,
+        curable: selected.curable,
+        treatChance: spec?.treatChance ?? 0,
+        treatCooldownDays: spec?.treatCooldownDays ?? 0,
+        treatAttempts: 0,
+        treatLockedUntilDay: 0,
+        triggerWeek: startWeek,
+        isDiscovered: false
+    };
 }
 
 export function getComplication(id, lang = 'ru') {

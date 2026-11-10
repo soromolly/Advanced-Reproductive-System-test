@@ -294,6 +294,10 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
                 const compEn = getComplication(entity.activeComplication.id, 'en');
                 if (compEn) {
                     p += `[ACTIVE MEDICAL COMPLICATION]: ${macroName} is experiencing "${compEn.name}". Symptoms: ${compEn.desc}.\n`;
+                    const treatAttempts = entity.activeComplication.treatAttempts || 0;
+                    if (treatAttempts > 0) {
+                        p += `Treatment attempted but not yet successful (attempt ${treatAttempts}).\n`;
+                    }
                 }
             }
 

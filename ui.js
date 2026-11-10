@@ -263,10 +263,22 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     if (!isOviposition && isCurrentlyPregnantDiscovered && currentEntity.activeComplication?.isDiscovered) {
         const comp = getComplication(currentEntity.activeComplication.id, lang);
         if (comp) {
+            const compState = currentEntity.activeComplication;
+            const lockedDays = Math.max(0, (compState.treatLockedUntilDay || 0) - (currentEntity.pregnancyDaysTotal || 0));
+            let cureBtnHtml = '';
+            if (comp.curable) {
+                if (lockedDays > 0) {
+                    const d = lockedDays;
+                    cureBtnHtml = `<button id="repro-cure-complication" class="menu_button" disabled style="width: 100%; background: #6b7280; color: #e5e7eb; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center; cursor: not-allowed; opacity: 0.7;">${lang === 'en' ? `Retry treatment in ${d} day${d === 1 ? '' : 's'}` : `Повторить лечение через ${d} дн.`}</button>`;
+                    cureBtnHtml += `<span style="display: block; margin-top: 4px; font-size: 0.8em; opacity: 0.8; font-style: italic;">${lang === 'en' ? `Treatment didn't help. Retry available in ${d} day${d === 1 ? '' : 's'}.` : `Лечение не помогло. Повторить можно через ${d} дн.`}</span>`;
+                } else {
+                    cureBtnHtml = `<button id="repro-cure-complication" class="menu_button" style="width: 100%; background: #059669; color: white; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center;">${getText('cureBtn', lang)}</button>`;
+                }
+            }
             complicationHtml = `<div style="margin: 8px 0 10px 0; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
                 <strong style="color: #f87171; display: block; margin-bottom: 4px;">${getText('complicationTitle', lang)} ${comp.name}</strong>
                 <span style="opacity: 0.9; display: block; margin-bottom: 6px;">${comp.desc}</span>
-                ${comp.curable ? `<button id="repro-cure-complication" class="menu_button" style="width: 100%; background: #059669; color: white; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center;">${getText('cureBtn', lang)}</button>` : ''}
+                ${cureBtnHtml}
             </div>`;
         }
     }

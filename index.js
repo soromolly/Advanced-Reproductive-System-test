@@ -39,6 +39,7 @@ import { buildMultiEntityPrompt } from './promptBuilder.js';
 import { renderUI, exportReproLogs, renderStatsModal, showConfirmModal, showPromptModal } from './ui.js';
 import { 
     getComplication,
+    getTreatmentSpec,
     getRandomEggEmbryoDiseaseId
 } from './symptoms.js';
 import { 
@@ -716,13 +717,36 @@ function bindGlobalEvents() {
 
     $(document).off('click', '#repro-cure-complication').on('click', '#repro-cure-complication', function() {
         const entity = getChatData()[getActiveEntityKey()];
-        if (entity.activeComplication?.curable) {
-            logReproEvent(`[COMPLICATION CURED] [${entity.key.toUpperCase()}] ${entity.activeComplication.id}`);
+        const compState = entity.activeComplication;
+        if (!compState?.curable) return;
+
+        const lang = settings.language || 'ru';
+        const nowDay = entity.pregnancyDaysTotal || 0;
+        if ((compState.treatLockedUntilDay || 0) > nowDay) return;
+
+        const spec = getTreatmentSpec(compState.id);
+        const baseChance = compState.treatChance ?? spec?.treatChance ?? 0;
+        const cooldown = compState.treatCooldownDays ?? spec?.treatCooldownDays ?? 1;
+        const attempts = compState.treatAttempts || 0;
+        const effectiveChance = Math.min(baseChance + attempts * 10, 95);
+        const roll = Math.random() * 100;
+
+        if (roll < effectiveChance) {
+            logReproEvent(`[COMPLICATION CURED] [${entity.key.toUpperCase()}] ${compState.id} (attempt ${attempts + 1}, roll ${roll.toFixed(2)}% < ${effectiveChance}%)`);
             entity.activeComplication = null;
             saveSettingsDebounced();
             refreshUI();
             updatePrompt();
-            notify(settings.language === 'en' ? 'Complication treated!' : 'Осложнение вылечено!', 'success');
+            notify(lang === 'en' ? 'Complication treated!' : 'Осложнение вылечено!', 'success');
+        } else {
+            compState.treatAttempts = attempts + 1;
+            compState.treatLockedUntilDay = nowDay + cooldown;
+            const retryDays = cooldown;
+            logReproEvent(`[COMPLICATION TREATMENT FAILED] [${entity.key.toUpperCase()}] ${compState.id} (attempt ${attempts + 1}, roll ${roll.toFixed(2)}% >= ${effectiveChance}%, retry in ${retryDays} day(s))`);
+            saveSettingsDebounced();
+            refreshUI();
+            updatePrompt();
+            notify(lang === 'en' ? `Treatment didn't help. You can retry in ${retryDays} day${retryDays === 1 ? '' : 's'}.` : `Лечение не помогло. Повторить можно через ${retryDays} дн.`, 'warning');
         }
     });
 
