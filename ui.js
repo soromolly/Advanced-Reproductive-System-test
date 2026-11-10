@@ -793,6 +793,11 @@ export function renderStatsModal({ data, lang = 'ru' }) {
         closeBtn
     );
     modal.append(card);
+    const block = function (e) { e.stopPropagation(); };
+    ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(function (evt) {
+        modal.on(evt, block);
+        card.on(evt, block);
+    });
     card.on('click', function (e) { e.stopPropagation(); });
     modal.on('click', function (e) { e.stopPropagation(); if (e.target === this) close(); });
     $('body').append(modal);
@@ -810,6 +815,11 @@ function createModalShell(onClose) {
         overflowY: 'auto', border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
     });
     modal.append(card);
+    const block = function (e) { e.stopPropagation(); };
+    ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(function (evt) {
+        modal.on(evt, block);
+        card.on(evt, block);
+    });
     card.on('click', function (e) { e.stopPropagation(); });
     modal.on('click', function (e) { e.stopPropagation(); if (e.target === this) onClose?.(); });
     $('body').append(modal);
