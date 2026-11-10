@@ -36,7 +36,7 @@ import {
     parseRelativeDaysFromText 
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
-import { renderUI, exportReproLogs, renderStatsModal } from './ui.js';
+import { renderUI, exportReproLogs, renderStatsModal, showConfirmModal, showPromptModal } from './ui.js';
 import { 
     getComplication,
     getRandomEggEmbryoDiseaseId
@@ -474,7 +474,7 @@ function bindGlobalEvents() {
         saveSettingsDebounced();
     });
 
-    $(document).off('change', '#repro-mode').on('change', '#repro-mode', function() {
+    $(document).off('change', '#repro-mode').on('change', '#repro-mode', async function() {
         const entity = getChatData()[getActiveEntityKey()];
         const newMode = $(this).val();
         const oldMode = entity.mode;
@@ -487,7 +487,14 @@ function bindGlobalEvents() {
             const msg = lang === 'en'
                 ? `Switch mode from ${oldName} to ${newName}? The current pregnancy will be reset.`
                 : `Сменить режим с «${oldName}» на «${newName}»? Текущая беременность будет сброшена.`;
-            if (!confirm(msg)) {
+            const ok = await showConfirmModal({
+                title: getText('confirmTitle', lang),
+                message: msg,
+                okLabel: getText('confirmYes', lang),
+                cancelLabel: getText('confirmNo', lang),
+                danger: true
+            });
+            if (!ok) {
                 $(this).val(oldMode);
                 return;
             }
@@ -563,7 +570,7 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    $(document).off('click', '.repro-edit-child-name-btn').on('click', '.repro-edit-child-name-btn', function(e) {
+    $(document).off('click', '.repro-edit-child-name-btn').on('click', '.repro-edit-child-name-btn', async function(e) {
         e.stopPropagation();
         e.preventDefault();
         const childId = $(this).attr('data-child-id');
@@ -573,33 +580,43 @@ function bindGlobalEvents() {
 
         const lang = settings.language || 'ru';
         const currentName = child.name || '';
-        const promptMsg = getText('editChildNamePrompt', lang);
-        const newName = window.prompt(promptMsg, currentName);
+        const newName = await showPromptModal({
+            title: getText('editChildNamePrompt', lang),
+            label: getText('editChildNamePrompt', lang),
+            initial: currentName,
+            okLabel: getText('save', lang),
+            cancelLabel: getText('cancel', lang)
+        });
 
-        if (newName !== null) {
-            child.name = newName.trim();
+        if (newName === null) return;
+        child.name = newName.trim();
 
-            if (!child.birthDate) {
-                const dateVal = window.prompt(getText('editChildBirthDatePrompt', lang), '');
-                if (dateVal !== null && dateVal.trim() !== '') {
-                    const normalizedDate = normalizeInputDate(dateVal);
-                    if (normalizedDate) {
-                        child.birthDate = normalizedDate;
-                    } else {
-                        notify(lang === 'en' ? 'Invalid date format. Use DD.MM.YYYY.' : 'Неверный формат даты. Используйте ДД.ММ.ГГГГ.', 'warning');
-                    }
-                }
+        if (!child.birthDate) {
+            const dateVal = await showPromptModal({
+                title: getText('editChildBirthDatePrompt', lang),
+                label: getText('editChildBirthDatePrompt', lang),
+                placeholder: 'ДД.ММ.ГГГГ',
+                validate: (v) => {
+                    const t = (v || '').trim();
+                    if (t === '') return null;
+                    return normalizeInputDate(t) ? null : (lang === 'en' ? 'Invalid date format. Use DD.MM.YYYY.' : 'Неверный формат даты. Используйте ДД.ММ.ГГГГ.');
+                },
+                okLabel: getText('save', lang),
+                cancelLabel: getText('cancel', lang)
+            });
+            if (dateVal !== null && dateVal.trim() !== '') {
+                child.birthDate = normalizeInputDate(dateVal);
             }
-
-            logReproEvent(`[CHILD RENAMED] [${entity.key.toUpperCase()}] Child ID ${child.id} named: "${child.name || 'unnamed'}" | Birth date: ${child.birthDate || 'not set'}`);
-            saveSettingsDebounced();
-            refreshUI();
-            updatePrompt();
-            notify(lang === 'en' ? 'Child info updated!' : 'Данные ребенка обновлены!', 'success');
         }
+
+        logReproEvent(`[CHILD RENAMED] [${entity.key.toUpperCase()}] Child ID ${child.id} named: "${child.name || 'unnamed'}" | Birth date: ${child.birthDate || 'not set'}`);
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+        notify(lang === 'en' ? 'Child info updated!' : 'Данные ребенка обновлены!', 'success');
     });
 
-    $(document).off('click', '.repro-delete-child-btn').on('click', '.repro-delete-child-btn', function(e) {
+    $(document).off('click', '.repro-delete-child-btn').on('click', '.repro-delete-child-btn', async function(e) {
         e.stopPropagation();
         e.preventDefault();
         const childId = $(this).attr('data-child-id');
@@ -608,7 +625,14 @@ function bindGlobalEvents() {
         const idx = entity.childrenList.findIndex(c => String(c.id) === String(childId));
         if (idx === -1) return;
         const lang = settings.language || 'ru';
-        if (!window.confirm(lang === 'en' ? 'Remove this child from the family tree?' : 'Удалить этого ребёнка из семейного древа?')) return;
+        const ok = await showConfirmModal({
+            title: getText('confirmTitle', lang),
+            message: lang === 'en' ? 'Remove this child from the family tree?' : 'Удалить этого ребёнка из семейного древа?',
+            okLabel: getText('confirmYes', lang),
+            cancelLabel: getText('confirmNo', lang),
+            danger: true
+        });
+        if (!ok) return;
         entity.childrenList.splice(idx, 1);
         logReproEvent(`[CHILD DELETED] [${entity.key.toUpperCase()}] Child ID ${childId} removed from family tree.`);
         saveSettingsDebounced();
@@ -672,10 +696,18 @@ function bindGlobalEvents() {
         updatePrompt();
     });
 
-    $(document).off('click', '#repro-btn-hatch-eggs').on('click', '#repro-btn-hatch-eggs', function() {
+    $(document).off('click', '#repro-btn-hatch-eggs').on('click', '#repro-btn-hatch-eggs', async function() {
         const entity = getChatData()[getActiveEntityKey()];
         if (!entity.isNestActive) return;
-        if (!confirm(settings.language === 'en' ? 'Force hatching ALL remaining eggs now?' : 'Форсировать вылупление ВСЕХ оставшихся яиц сейчас?')) return;
+        const lang = settings.language || 'ru';
+        const ok = await showConfirmModal({
+            title: getText('confirmTitle', lang),
+            message: lang === 'en' ? 'Force hatching ALL remaining eggs now?' : 'Форсировать вылупление ВСЕХ оставшихся яиц сейчас?',
+            okLabel: getText('confirmYes', lang),
+            cancelLabel: getText('confirmNo', lang),
+            danger: true
+        });
+        if (!ok) return;
         hatchEggs(entity, settings.language, logReproEvent, notify, getChatData().lastRpDate);
         saveSettingsDebounced();
         refreshUI();
@@ -694,13 +726,20 @@ function bindGlobalEvents() {
         }
     });
 
-    $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', function() {
-        if (confirm("Подтвердить прерывание беременности? / Confirm abortion?")) {
-            processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
-            saveSettingsDebounced();
-            refreshUI();
-            updatePrompt();
-        }
+    $(document).off('click', '#repro-btn-abort').on('click', '#repro-btn-abort', async function() {
+        const lang = settings.language || 'ru';
+        const ok = await showConfirmModal({
+            title: getText('confirmTitle', lang),
+            message: lang === 'en' ? 'Confirm abortion?' : 'Подтвердить прерывание беременности?',
+            okLabel: getText('confirmYes', lang),
+            cancelLabel: getText('confirmNo', lang),
+            danger: true
+        });
+        if (!ok) return;
+        processEntityAbortion(getChatData()[getActiveEntityKey()], settings.language, logReproEvent, notify);
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
     });
 
     $(document).off('click', '#repro-export-logs').on('click', '#repro-export-logs', function() {
@@ -850,21 +889,29 @@ function bindGlobalEvents() {
         updatePrompt(); 
     });
 
-    $(document).off('click', '#repro-reset').on('click', '#repro-reset', function() {
-        if (confirm("Полностью сбросить репродуктивные данные этого чата? / Reset all chat data?")) {
-            const chatId = getCurrentChatId();
-            settings.chatPregnancyData[chatId] = {
-                targetMode: 'user',
-                lastRpDate: null,
-                activityLogs: [],
-                user: createDefaultEntityState('user'),
-                char: createDefaultEntityState('char')
-            };
-            saveSettingsDebounced(); 
-            refreshUI(); 
-            updatePrompt(); 
-            notify(getText('toastResetAll', settings.language), 'warning');
-        }
+    $(document).off('click', '#repro-reset').on('click', '#repro-reset', async function() {
+        const lang = settings.language || 'ru';
+        const ok = await showConfirmModal({
+            title: getText('confirmTitle', lang),
+            message: lang === 'en' ? 'Fully reset all reproductive data for this chat?' : 'Полностью сбросить репродуктивные данные этого чата?',
+            okLabel: getText('confirmYes', lang),
+            cancelLabel: getText('confirmNo', lang),
+            danger: true
+        });
+        if (!ok) return;
+
+        const chatId = getCurrentChatId();
+        settings.chatPregnancyData[chatId] = {
+            targetMode: 'user',
+            lastRpDate: null,
+            activityLogs: [],
+            user: createDefaultEntityState('user'),
+            char: createDefaultEntityState('char')
+        };
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+        notify(getText('toastResetAll', settings.language), 'warning');
     });
 }
 

@@ -796,3 +796,103 @@ export function renderStatsModal({ data, lang = 'ru' }) {
     modal.on('click', function (e) { if (e.target === this) close(); });
     $('body').append(modal);
 }
+
+function createModalShell(onClose) {
+    const modal = $('<div>').css({
+        position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+        background: 'rgba(0,0,0,0.55)', zIndex: '10000',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+    });
+    const card = $('<div>').css({
+        background: 'var(--panel-bg, #1e293b)', color: 'var(--text-color, #f8fafc)',
+        borderRadius: '12px', padding: '20px', width: 'min(420px, 92vw)', maxHeight: '85vh',
+        overflowY: 'auto', border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+    });
+    modal.append(card);
+    modal.on('click', function (e) { if (e.target === this) onClose?.(); });
+    $('body').append(modal);
+    return { modal, card };
+}
+
+export function showConfirmModal({ title = '', message = '', okLabel = 'OK', cancelLabel = 'Cancel', danger = false }) {
+    return new Promise((resolve) => {
+        let settled = false;
+        const { modal, card } = createModalShell(() => finish(false));
+        function finish(value) {
+            if (settled) return;
+            settled = true;
+            modal.remove();
+            resolve(value);
+        }
+
+        const okBtn = $('<button>').text(okLabel).css({
+            padding: '9px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+            fontWeight: '600', fontSize: '0.95em', background: danger ? '#dc2626' : '#db2777',
+            color: '#fff', marginRight: '10px'
+        }).on('click', () => finish(true));
+
+        const cancelBtn = $('<button>').text(cancelLabel).css({
+            padding: '9px 16px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px',
+            cursor: 'pointer', fontWeight: '600', fontSize: '0.95em',
+            background: 'rgba(255,255,255,0.08)', color: '#e2e8f0'
+        }).on('click', () => finish(false));
+
+        card.append(
+            $('<div>').text(title).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '10px' }),
+            $('<div>').text(message).css({ fontSize: '0.95em', color: '#cbd5e1', lineHeight: '1.5', whiteSpace: 'pre-wrap' }),
+            $('<div>').css({ marginTop: '18px', textAlign: 'right' }).append(okBtn, cancelBtn)
+        );
+    });
+}
+
+export function showPromptModal({ title = '', label = '', placeholder = '', initial = '', validate = null, okLabel = 'OK', cancelLabel = 'Cancel' }) {
+    return new Promise((resolve) => {
+        let settled = false;
+        const { modal, card } = createModalShell(() => finish(null));
+        function finish(value) {
+            if (settled) return;
+            settled = true;
+            modal.remove();
+            resolve(value);
+        }
+
+        const input = $('<input>').attr({ type: 'text', placeholder }).val(initial).css({
+            width: '100%', boxSizing: 'border-box', padding: '8px 10px', marginTop: '6px',
+            background: 'var(--input-bg, #0f172a)', border: '1px solid var(--input-border, #334155)',
+            color: 'var(--text-color, #f8fafc)', borderRadius: '6px', fontSize: '0.95em'
+        });
+        const error = $('<div>').css({ color: '#f87171', fontSize: '0.85em', marginTop: '6px', minHeight: '1em' });
+
+        const okBtn = $('<button>').text(okLabel).css({
+            padding: '9px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+            fontWeight: '600', fontSize: '0.95em', background: '#db2777', color: '#fff', marginRight: '10px'
+        });
+        const cancelBtn = $('<button>').text(cancelLabel).css({
+            padding: '9px 16px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px',
+            cursor: 'pointer', fontWeight: '600', fontSize: '0.95em',
+            background: 'rgba(255,255,255,0.08)', color: '#e2e8f0'
+        });
+
+        const submit = () => {
+            const value = input.val();
+            if (validate) {
+                const err = validate(value);
+                if (err) { error.text(err); return; }
+            }
+            finish(value);
+        };
+        okBtn.on('click', submit);
+        cancelBtn.on('click', () => finish(null));
+        input.on('keydown', function (e) { if (e.key === 'Enter') submit(); });
+
+        card.append(
+            $('<div>').text(title).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '10px' }),
+            label ? $('<div>').text(label).css({ fontSize: '0.9em', color: '#cbd5e1' }) : null,
+            input,
+            error,
+            $('<div>').css({ marginTop: '14px', textAlign: 'right' }).append(okBtn, cancelBtn)
+        );
+
+        setTimeout(() => input.trigger('focus'), 0);
+    });
+}
