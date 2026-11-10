@@ -344,21 +344,21 @@ export const COMPLICATIONS_POOL = {
 // Лечебная спецификация: шанс успеха и кулдаун после неудачи (по тяжести).
 // Ключ — id осложнения из COMPLICATIONS_POOL (общий для ru/en).
 export const TREATMENT_SPECS = {
-    // mild — 80%, 1 день
-    toxicosis_severe: { treatChance: 80, treatCooldownDays: 1 },
-    anemia_early: { treatChance: 80, treatCooldownDays: 1 },
-    hypertonus: { treatChance: 80, treatCooldownDays: 1 },
-    rh_conflict: { treatChance: 80, treatCooldownDays: 1 },
+    // mild — 80%, 3 дня (не срочно, можно подождать)
+    toxicosis_severe: { treatChance: 80, treatCooldownDays: 3 },
+    anemia_early: { treatChance: 80, treatCooldownDays: 3 },
+    hypertonus: { treatChance: 80, treatCooldownDays: 3 },
+    rh_conflict: { treatChance: 80, treatCooldownDays: 3 },
     // moderate — 65%, 2 дня
     hyperemesis_gravidarum: { treatChance: 65, treatCooldownDays: 2 },
     retrochorial_hematoma: { treatChance: 65, treatCooldownDays: 2 },
     gestational_pyelonephritis: { treatChance: 65, treatCooldownDays: 2 },
-    // severe — 50%, 3 дня
-    miscarriage_threat_early: { treatChance: 50, treatCooldownDays: 3 },
-    istmic_cervical_insufficiency: { treatChance: 50, treatCooldownDays: 3 },
-    preeclampsia: { treatChance: 50, treatCooldownDays: 3 },
-    premature_labor_threat: { treatChance: 50, treatCooldownDays: 3 },
-    placental_insufficiency: { treatChance: 50, treatCooldownDays: 3 }
+    // severe — 50%, 1 день (срочно, интенсивное лечение)
+    miscarriage_threat_early: { treatChance: 50, treatCooldownDays: 1 },
+    istmic_cervical_insufficiency: { treatChance: 50, treatCooldownDays: 1 },
+    preeclampsia: { treatChance: 50, treatCooldownDays: 1 },
+    premature_labor_threat: { treatChance: 50, treatCooldownDays: 1 },
+    placental_insufficiency: { treatChance: 50, treatCooldownDays: 1 }
 };
 
 export function getTreatmentSpec(id) {
