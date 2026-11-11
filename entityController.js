@@ -285,7 +285,7 @@ export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn, a
 
     if (!entity.rolledTrimesters[currentTrimester] && !entity.activeComplication) {
         entity.rolledTrimesters[currentTrimester] = true;
-        const rolled = rollComplication(currentTrimester);
+        const rolled = rollComplication(currentTrimester, entity.mode);
         if (rolled) {
             entity.activeComplication = rolled;
             logFn?.(`[COMPLICATION] [${entity.key.toUpperCase()}] Trimester ${currentTrimester}: ${rolled.id} (Week ${rolled.triggerWeek})`);
@@ -368,7 +368,8 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         if (entity.activeComplication?.id === 'premature_labor_threat'
             && entity.activeComplication.isDiscovered
             && !entity.pretermLabor
-            && entity.pregnancyWeeks >= PRETERM_LABOR_MIN_WEEK) {
+            && entity.pregnancyWeeks >= PRETERM_LABOR_MIN_WEEK
+            && entity.pregnancyWeeks < (entity.mode === 'omegaverse' ? 36 : 37)) {
             for (let i = 0; i < days; i++) {
                 if (Math.random() * 100 < PRETERM_LABOR_ONSET_CHANCE) {
                     entity.pretermLabor = { startedWeek: entity.pregnancyWeeks, daysSince: 0 };

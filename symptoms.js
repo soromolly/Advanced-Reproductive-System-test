@@ -545,7 +545,7 @@ export function getSymptomList(phase, indices, lang = 'ru') {
     return indices.map(i => list[i]).filter(Boolean);
 }
 
-export function rollComplication(trimester) {
+export function rollComplication(trimester, mode) {
     if (Math.random() * 100 > 20) return null;
     const pool = COMPLICATIONS_POOL['ru'].filter(c => c.trimester === trimester);
     if (!pool || pool.length === 0) return null;
@@ -556,9 +556,13 @@ export function rollComplication(trimester) {
     if (trimester === 1) startWeek = Math.floor(Math.random() * 9) + 4;
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
-    // Угроза преждевременных родов: во 2-м триместре проявляется на 20–26 нед.; в 3-м — в любой момент 27–39 нед.
-    if (selected.id === 'premature_labor_threat' && trimester === 2) {
-        startWeek = Math.floor(Math.random() * 7) + 20;
+    // Угроза преждевременных родов: во 2-м триместре проявляется на 20–26 нед.; в 3-м — в любой момент до доношенности (реализм до 36, омегаверс до 35).
+    if (selected.id === 'premature_labor_threat') {
+        if (trimester === 2) startWeek = Math.floor(Math.random() * 7) + 20;
+        else if (trimester === 3) {
+            const fullTermWeeks = mode === 'omegaverse' ? 36 : 37;
+            startWeek = Math.floor(Math.random() * (fullTermWeeks - 27)) + 27;
+        }
     }
 
     return {
