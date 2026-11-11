@@ -87,6 +87,61 @@ export function createDefaultEntityState(entityKey = 'user') {
     };
 }
 
+export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
+    if (entity.mode === 'oviposition') {
+        triggerEggGravid(entity, lang, logFn, notifyFn);
+        return;
+    }
+
+    ensureStats(entity).pregnanciesTotal += 1;
+    entity.isPregnant = true;
+
+    if (entity.mode === 'omegaverse') {
+        entity.pregnancyDaysTotal = Math.max(1, entity.cycleDay || 1);
+    } else {
+        entity.pregnancyDaysTotal = Math.max(14, entity.cycleDay || 14);
+    }
+
+    entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
+    entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
+    entity.isDiscovered = !entity.isSecretConception;
+    entity.rolledTrimesters = { 1: false, 2: false, 3: false };
+    entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
+    entity.fetalDemise = null;
+    entity.activeComplication = null;
+    entity.deliveryMethod = 'none';
+    entity.currentDeliveredCount = 0;
+
+    const roll = Math.random() * 100;
+    entity.babiesCount = entity.mode === 'omegaverse' ? (roll > 92 ? 3 : roll > 70 ? 2 : 1) : (roll > 98.5 ? 3 : roll > 95 ? 2 : 1);
+    entity.babiesGenders = [];
+    entity.babiesDiseases = [];
+
+    for (let i = 0; i < entity.babiesCount; i++) {
+        entity.babiesGenders.push(generateBabyGender(entity.mode, 'en'));
+        entity.babiesDiseases.push(null);
+    }
+
+    entity.fetalDiseaseId = null;
+    if (entity.isFetalPathologyEnabled && Math.random() * 100 < 3) {
+        const primaryDisease = getRandomFetalDiseaseId();
+        entity.fetalDiseaseId = primaryDisease;
+        entity.babiesDiseases[0] = primaryDisease;
+        for (let i = 1; i < entity.babiesCount; i++) {
+            if (Math.random() * 100 < 5) entity.babiesDiseases[i] = getRandomFetalDiseaseId();
+        }
+        entity.babiesDiseases.sort(() => 0.5 - Math.random());
+    }
+
+    checkEntityFetalDemise(entity, logFn);
+    logFn?.(`[PREGNANCY INITIATED] [${entity.key.toUpperCase()}] Mode: ${entity.mode} | Initial Days: ${entity.pregnancyDaysTotal} | Babies: ${entity.babiesCount} | Secret: ${entity.isSecretConception}`);
+
+    updateEntitySymptoms(entity);
+    if (entity.isDiscovered) {
+        notifyFn?.(`🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastConception', lang)}`, 'success');
+    }
+}
+
 // Результат «теста / проверки признаков» по дню задержки (детерминированный,
 // без ложноположительных/ложноотрицательных). Во всеведении (full) кнопки нет.
 // delayDays = сколько дней месячные/течка задерживаются от номинальной длины цикла.
