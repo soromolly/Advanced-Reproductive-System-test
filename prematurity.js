@@ -30,8 +30,8 @@ const PREMATURITY = {
             en: '22–25 weeks'
         },
         facts: {
-            ru: '450–750 г; тёмно-красная полупрозрачная морщинистая кожа (нет подкожного жира); сросшиеся веки; мягкие ушные раковины; незрелые лёгкие (нет сурфактанта) — не может дышать самостоятельно; нет сосательного/глотательного рефлексов; нужны аппарат ИВЛ, кувез с высокой влажностью и внутривенное парентеральное питание.',
-            en: '450–750 g; dark-red translucent wrinkled skin (no subcutaneous fat); fused eyelids; soft ears; immature lungs (no surfactant) — cannot breathe independently; no suck/swallow reflexes; needs ventilator, high-humidity incubator and IV parenteral nutrition.'
+            ru: 'Тёмно-красная полупрозрачная морщинистая кожа (нет подкожного жира); сросшиеся веки; мягкие ушные раковины; незрелые лёгкие (нет сурфактанта) — не может дышать самостоятельно; нет сосательного/глотательного рефлексов; нужны аппарат ИВЛ, кувез с высокой влажностью и внутривенное парентеральное питание.',
+            en: 'Dark-red translucent wrinkled skin (no subcutaneous fat); fused eyelids; soft ears; immature lungs (no surfactant) — cannot breathe independently; no suck/swallow reflexes; needs ventilator, high-humidity incubator and IV parenteral nutrition.'
         },
         prognosis: {
             modern: {
@@ -51,8 +51,8 @@ const PREMATURITY = {
             en: '26–29 weeks'
         },
         facts: {
-            ru: '800–1200 г; красная сильно морщинистая кожа; обильный лануго; незрелые лёгкие с эпизодами апноэ — нужны CPAP или ИВЛ; нет сосательного рефлекса; нужны кувез, кормление через назогастральный зонд, приглушённый свет и тишина.',
-            en: '800–1200 g; red heavily wrinkled skin; abundant lanugo; immature lungs with apnea episodes — needs CPAP or ventilator; no suck reflex; needs incubator, nasogastric tube feeding, low light/noise.'
+            ru: 'Красная сильно морщинистая кожа; обильный лануго; незрелые лёгкие с эпизодами апноэ — нужны CPAP или ИВЛ; нет сосательного рефлекса; нужны кувез, кормление через назогастральный зонд, приглушённый свет и тишина.',
+            en: 'Red heavily wrinkled skin; abundant lanugo; immature lungs with apnea episodes — needs CPAP or ventilator; no suck reflex; needs incubator, nasogastric tube feeding, low light/noise.'
         },
         prognosis: {
             modern: {
@@ -72,8 +72,8 @@ const PREMATURITY = {
             en: '30–33 weeks'
         },
         facts: {
-            ru: '1300–2000 г; красная кожа, мало подкожного жира, очень тонкая; дыхание самостоятельное, но нестабильное с возможным апноэ; сосательный рефлекс слабый/отсутствует (формируется к 32–34 неделям); нужны кувез для терморегуляции и сцеженное молоко через зонд или бутылочку.',
-            en: '1300–2000 g; red skin, little subcutaneous fat, very thin; breathing independent but unstable with possible apnea; suck reflex weak/absent (develops by 32–34 weeks); needs incubator for thermoregulation and expressed milk via tube or bottle.'
+            ru: 'Красная кожа, мало подкожного жира, очень тонкая; дыхание самостоятельное, но нестабильное с возможным апноэ; сосательный рефлекс слабый/отсутствует (формируется к 32–34 неделям); нужны кувез для терморегуляции и сцеженное молоко через зонд или бутылочку.',
+            en: 'Red skin, little subcutaneous fat, very thin; breathing independent but unstable with possible apnea; suck reflex weak/absent (develops by 32–34 weeks); needs incubator for thermoregulation and expressed milk via tube or bottle.'
         },
         prognosis: {
             modern: {
@@ -93,8 +93,8 @@ const PREMATURITY = {
             en: '34–36 weeks'
         },
         facts: {
-            ru: '2000–2500 г; близок к доношенному, но меньше и с меньшим подкожным жиром; дыхание самостоятельное с возможной кратковременной тахипноэ; сосательный рефлекс есть, но быстро устаёт; может находиться с матерью, часто нужен подогрев или короткий кувез для терморегуляции.',
-            en: '2000–2500 g; close to full term but smaller with less subcutaneous fat; independent breathing with possible brief tachypnea; suck reflex present but tires quickly; may room in, often needs warmer or short incubator for thermoregulation.'
+            ru: 'Близок к доношенному, но меньше и с меньшим подкожным жиром; дыхание самостоятельное с возможной кратковременной тахипноэ; сосательный рефлекс есть, но быстро устаёт; может находиться с матерью, часто нужен подогрев или короткий кувез для терморегуляции.',
+            en: 'Close to full term but smaller with less subcutaneous fat; independent breathing with possible brief tachypnea; suck reflex present but tires quickly; may room in, often needs warmer or short incubator for thermoregulation.'
         },
         prognosis: {
             modern: {

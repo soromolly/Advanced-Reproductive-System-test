@@ -304,6 +304,10 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     feat = isOviposition ? getEggEmbryoDisease(c.diseaseId, lang) : getFetalDisease(c.diseaseId, lang);
                     if (feat) featureHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fcd34d;">• ${getText('congenitalFeatureLabel', lang)} <b>${feat.name}</b></div>`;
                 }
+                let sizeHtml = '';
+                if (!isOviposition && typeof c.birthWeightGrams === 'number' && typeof c.birthLengthCm === 'number') {
+                    sizeHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #94a3b8;">• ${getText('birthWeightLabel', lang)} <b>${c.birthWeightGrams} ${getText('gramsUnit', lang)}</b> · ${getText('birthLengthLabel', lang)} <b>${c.birthLengthCm} ${getText('cmUnit', lang)}</b></div>`;
+                }
                 const isDeceased = c.alive === false;
                 const era = settings.aiAwareness === 'hidden' ? 'medieval' : 'modern';
                 const windowDays = getNeonatalWindowDays(c.prematurityId);
@@ -355,6 +359,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <div style="flex: 1; padding-right: 8px;">
                         ${isOviposition ? '🐣' : '👶'} ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}
                         ${birthInfoHtml}
+                        ${sizeHtml}
                         ${featureHtml}
                         ${prematurityHtml}
                         ${survivalHtml}
@@ -460,6 +465,18 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                             <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('fetalPathologyLabel', lang)}</label>
                             ${getTooltipHtml('fetalPathology', lang, isOviposition)}
                         </div>
+                        ${!isOviposition ? `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="repro-complications-enabled" ${currentEntity.isComplicationsEnabled !== false ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                            <label for="repro-complications-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('complicationsLabel', lang)}</label>
+                            ${getTooltipHtml('complications', lang)}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="repro-prematurity-enabled" ${currentEntity.isPrematurityEnabled !== false ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                            <label for="repro-prematurity-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('prematurityLabel', lang)}</label>
+                            ${getTooltipHtml('prematurity', lang)}
+                        </div>
+                        ` : ''}
                         ${showBreastfeeding ? `
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <input type="checkbox" id="repro-is-breastfeeding" ${currentEntity.isBreastfeeding ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>

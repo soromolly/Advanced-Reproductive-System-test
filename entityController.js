@@ -9,7 +9,7 @@ import {
 import { getText, translateGender } from './translations.js';
 import { getPrematurityCategory, getDailySurvivalHazard, getNeonatalWindowDays, getOutcomeDefs, getOutcomeName } from './prematurity.js';
 import { getChildAgeDays } from './dateUtils.js';
-import { createDefaultStats, ensureStats, generateBabyGender, rollNewCycleTarget, getCycleDelayBaseline, formatDelayDays } from './shared.js';
+import { createDefaultStats, ensureStats, generateBabyGender, rollNewCycleTarget, getCycleDelayBaseline, formatDelayDays, generateBirthMeasurements } from './shared.js';
 import {
     advanceOvipositionEntity,
     triggerEggGravid,
@@ -42,6 +42,8 @@ export function createDefaultEntityState(entityKey = 'user') {
         isSecretConception: true,
         isIrregularCycle: true,
         isFetalPathologyEnabled: true,
+        isComplicationsEnabled: true,
+        isPrematurityEnabled: true,
         isBreastfeeding: true,
         lactationDays: null,
         daysNotBreastfeeding: 0,
@@ -261,7 +263,7 @@ export function updateEntitySymptoms(entity) {
 
 export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn, aiAwareness = 'dynamic') {
     if (entity.mode === 'oviposition') return;
-    if (!entity.isFetalPathologyEnabled) return;
+    if (!entity.isComplicationsEnabled) return;
 
     const isRevealed = entity.isPregnant && (entity.isDiscovered || !entity.isSecretConception);
     if (!isRevealed) return;
@@ -563,12 +565,16 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
     if (!entity.isPregnant && (!entity.babiesGenders || entity.babiesGenders.length === 0)) return;
 
     const birthWeek = entity.pregnancyWeeks;
-    const prematurityId = entity.isFetalPathologyEnabled ? getPrematurityCategory(birthWeek, entity.mode) : null;
+    const prematurityId = entity.isPrematurityEnabled ? getPrematurityCategory(birthWeek, entity.mode) : null;
 
     if (prematurityId === 'stillbirth') {
         processEntityStillbirth(entity, lang, logFn, notifyFn);
         return;
     }
+
+    // Индивидуальные рост/вес при рождении: учитываем срок и многоплодие.
+    const totalBabies = (entity.babiesGenders?.length || 0) + (entity.currentDeliveredCount || 0);
+    const measurements = generateBirthMeasurements(birthWeek, totalBabies);
 
     const rawGender = entity.babiesGenders.shift();
     if (!rawGender) {
@@ -587,6 +593,8 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         diseaseId: babyDiseaseId,
         birthWeek,
         prematurityId,
+        birthWeightGrams: measurements.weightGrams,
+        birthLengthCm: measurements.lengthCm,
         birthDate: rpDate || null,
         ageDays: 0,
         alive: true,
@@ -597,6 +605,9 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
     entity.babiesCount = entity.babiesGenders.length;
     const displayGender = translateGender(rawGender, lang);
     const disease = babyDiseaseId ? getFetalDisease(babyDiseaseId, lang) : null;
+    const sizeNote = lang === 'en'
+        ? ` (${measurements.weightGrams} g, ${measurements.lengthCm} cm)`
+        : ` (${measurements.weightGrams} г, ${measurements.lengthCm} см)`;
     const prematurityNote = prematurityId
         ? (lang === 'en' ? ` Premature (~${birthWeek} wks).` : ` Преждевременные роды (~${birthWeek} нед.).`)
         : '';
@@ -623,10 +634,10 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
 
         const methodText = method === 'c_section' ? (lang === 'en' ? 'C-Section' : 'Кесарево сечение') : (lang === 'en' ? 'Natural' : 'Естественные роды');
         const extraNote = disease ? ` (${disease.name})` : '';
-        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Delivery complete!' : 'Роды завершены!'} (${displayGender})${extraNote}${prematurityNote} [${methodText}]`, 'success');
+        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Delivery complete!' : 'Роды завершены!'} (${displayGender})${sizeNote}${extraNote}${prematurityNote} [${methodText}]`, 'success');
     } else {
         const extraNote = disease ? ` (${disease.name})` : '';
-        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Baby born' : 'Родился ребёнок'} (${displayGender})${extraNote}${prematurityNote}. ${lang === 'en' ? 'Remaining:' : 'Осталось:'} ${entity.babiesCount}`, 'info');
+        notifyFn?.(`👶 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'Baby born' : 'Родился ребёнок'} (${displayGender})${sizeNote}${extraNote}${prematurityNote}. ${lang === 'en' ? 'Remaining:' : 'Осталось:'} ${entity.babiesCount}`, 'info');
     }
 }
 

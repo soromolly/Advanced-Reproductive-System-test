@@ -115,6 +115,9 @@ function getChatData() {
         if (data[k].isBreastfeeding === undefined) data[k].isBreastfeeding = true;
         if (data[k].lactationDays === undefined) data[k].lactationDays = null;
         if (data[k].daysNotBreastfeeding === undefined) data[k].daysNotBreastfeeding = 0;
+        // Старые данные: единая галочка «патологии» раньше управляла и осложнениями, и недоношенностью.
+        if (data[k].isComplicationsEnabled === undefined) data[k].isComplicationsEnabled = data[k].isFetalPathologyEnabled !== false;
+        if (data[k].isPrematurityEnabled === undefined) data[k].isPrematurityEnabled = data[k].isFetalPathologyEnabled !== false;
 
         if (data[k].isNestActive && data[k].eggIncubationTotal && data[k].eggIncubationTotal !== EGG_INCUBATION_DISPLAY_MAX) {
             data[k].eggIncubationTotal = EGG_INCUBATION_DISPLAY_MAX;
@@ -565,14 +568,31 @@ function bindGlobalEvents() {
         const entity = getChatData()[getActiveEntityKey()];
         entity.isFetalPathologyEnabled = $(this).is(':checked');
         if (!entity.isFetalPathologyEnabled) {
-            entity.activeComplication = null;
             entity.fetalDemise = null;
             entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
-            entity.rolledTrimesters = { 1: false, 2: false, 3: false };
             entity.fetalDiseaseId = null;
             if (Array.isArray(entity.babiesDiseases)) entity.babiesDiseases = entity.babiesDiseases.map(() => null);
             if (Array.isArray(entity.eggDiseases)) entity.eggDiseases = entity.eggDiseases.map(() => null);
         }
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    $(document).off('change', '#repro-complications-enabled').on('change', '#repro-complications-enabled', function() {
+        const entity = getChatData()[getActiveEntityKey()];
+        entity.isComplicationsEnabled = $(this).is(':checked');
+        if (!entity.isComplicationsEnabled) {
+            entity.activeComplication = null;
+            entity.rolledTrimesters = { 1: false, 2: false, 3: false };
+        }
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+    });
+
+    $(document).off('change', '#repro-prematurity-enabled').on('change', '#repro-prematurity-enabled', function() {
+        getChatData()[getActiveEntityKey()].isPrematurityEnabled = $(this).is(':checked');
         saveSettingsDebounced();
         refreshUI();
         updatePrompt();

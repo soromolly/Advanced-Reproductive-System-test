@@ -408,6 +408,10 @@ Add one tag per baby, in order.
                 const d = getFetalDisease(c.diseaseId, 'en');
                 if (d) diseaseStr = `, Congenital Condition: ${d.name}`;
             }
+            let sizeStr = '';
+            if (typeof c.birthWeightGrams === 'number' && typeof c.birthLengthCm === 'number') {
+                sizeStr = `, Birth: ${c.birthWeightGrams} g, ${c.birthLengthCm} cm`;
+            }
             let prematurityStr = '';
             let statusStr = '';
             let consequencesStr = '';
@@ -432,7 +436,7 @@ Add one tag per baby, in order.
                     }
                 }
             }
-            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr})${prematurityStr}${statusStr}${consequencesStr}`;
+            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr}${sizeStr})${prematurityStr}${statusStr}${consequencesStr}`;
         }).join('\n');
 
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:

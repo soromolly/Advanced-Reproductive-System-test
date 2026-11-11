@@ -75,3 +75,40 @@ export function rollNewCycleTarget(entity) {
     }
     return Math.max((entity.periodDuration || 5) + 6, base + variance);
 }
+
+// Медианные вес (г) и длина (см) новорождённого по акушерской неделе.
+// Используются для генерации индивидуальных значений при рождении.
+// Вес шаг 10 г, длина шаг 1 см — без дробных значений.
+const BIRTH_SIZE_BY_WEEK = {
+    22: { weight: 500, length: 28 },
+    23: { weight: 550, length: 29 },
+    24: { weight: 640, length: 31 },
+    25: { weight: 740, length: 32 },
+    26: { weight: 820, length: 34 },
+    27: { weight: 950, length: 35 },
+    28: { weight: 1050, length: 36 },
+    29: { weight: 1200, length: 37 },
+    30: { weight: 1350, length: 38 },
+    31: { weight: 1500, length: 40 },
+    32: { weight: 1700, length: 41 },
+    33: { weight: 1900, length: 42 },
+    34: { weight: 2100, length: 43 },
+    35: { weight: 2350, length: 44 },
+    36: { weight: 2600, length: 45 },
+    37: { weight: 2900, length: 47 },
+    38: { weight: 3100, length: 48 },
+    39: { weight: 3300, length: 49 },
+    40: { weight: 3500, length: 50 }
+};
+
+export function generateBirthMeasurements(weeks, babiesCount = 1) {
+    const w = Math.max(22, Math.min(40, Math.round(weeks || 40)));
+    const ref = BIRTH_SIZE_BY_WEEK[w] || BIRTH_SIZE_BY_WEEK[40];
+    // Двойни и тройни рождаются мельче одиночек.
+    const multiFactor = babiesCount >= 3 ? 0.78 : (babiesCount === 2 ? 0.88 : 1);
+    const weightSpread = 0.9 + Math.random() * 0.2;   // ±10%
+    const lengthSpread = 0.96 + Math.random() * 0.08;  // ±4%
+    const weightGrams = Math.round((ref.weight * multiFactor * weightSpread) / 10) * 10;
+    const lengthCm = Math.round(ref.length * multiFactor * lengthSpread);
+    return { weightGrams, lengthCm };
+}
