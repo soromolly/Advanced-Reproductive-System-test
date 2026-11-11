@@ -16,9 +16,9 @@ import {
     EGG_INCUBATION_DISPLAY_MAX, 
     EGG_INCUBATION_HATCHING_PROMPT_DAY 
 } from './eggSystem.js';
-import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS } from './prematurity.js';
+import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS, getPrematurityCategory, getPrematurityDisplay } from './prematurity.js';
 import { translateGender } from './translations.js';
-import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline } from './entityController.js';
+import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline, PRETERM_LABOR_WINDOW_DAYS } from './entityController.js';
 import { getChildAgeDays } from './dateUtils.js';
 import { getEffectiveTermWeeks, getTotalBabies } from './shared.js';
 
@@ -309,6 +309,23 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
                 }
             }
 
+            if (entity.pretermLabor) {
+                const premCat = getPrematurityCategory(entity.pregnancyWeeks, entity.mode);
+                const prem = premCat ? getPrematurityDisplay(premCat, 'en', aiAwareness) : null;
+                const day = Math.min((entity.pretermLabor.daysSince || 0) + 1, PRETERM_LABOR_WINDOW_DAYS);
+                const tagSuffix = entity.key.toUpperCase();
+                const num = getTotalBabies(entity) > 1 ? `_${(entity.currentDeliveredCount || 0) + 1}` : '';
+                p += `\n[IMPORTANT — ACTIVE EVENT (PREMATURE LABOR, day ${day} of ${PRETERM_LABOR_WINDOW_DAYS})]:\n${macroName} is in premature labor at ${entity.pregnancyWeeks} weeks. Contractions are regular and painful, the waters have broken, and the cervix is dilating.`;
+                if (prem) {
+                    p += ` The baby is ${prem.label} (${prem.band}): ${prem.facts} Prognosis: ${prem.prognosis}`;
+                }
+                p += `\nRoleplay the labor in progress realistically and consistently with the prognosis above. When the baby is actually delivered in this scene, add this tag at the very end of your reply (required): <!--BIRTH_NATURAL_${tagSuffix}${num}-->\n`;
+            }
+
+            if (entity.tocolysisNotice) {
+                p += `\n[RECENT MEDICAL INTERVENTION]: ${macroName} has just been given tocolytics (medication that stops contractions) to halt premature labor. The contractions are rapidly subsiding, her pain eases, and she feels relief. The pregnancy continues; the premature-birth threat has passed.\n`;
+            }
+
             if (entity.fetalDemise && entity.fetalDemise.isDead) {
                 const dDays = entity.fetalDemise.daysSinceDemise;
                 let stageDesc = dDays <= 14 
@@ -368,7 +385,7 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
 If an abortion is performed on ${macroName} in this response, add this tag at the very end of your reply (required, so the event is recorded): <!--ABORTION_${entity.key.toUpperCase()}-->\n`;
             }
 
-            if (entity.pregnancyWeeks >= 20) {
+            if (entity.pregnancyWeeks >= 20 && !entity.pretermLabor) {
                 const tagSuffix = entity.key.toUpperCase();
                 const num = getTotalBabies(entity) > 1 ? `_${(entity.currentDeliveredCount || 0) + 1}` : '';
                 p += `\n[IMPORTANT — EVENT REPORTING]

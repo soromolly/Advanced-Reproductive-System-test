@@ -312,6 +312,7 @@ export const COMPLICATIONS_POOL = {
         { id: "istmic_cervical_insufficiency", trimester: 2, name: "Истмико-цервикальная недостаточность (ИЦН)", curable: true, desc: "Преждевременное слабое раскрытие шейки матки под весом плода. Требует срочного медицинского наложения швов или установки пессария." },
         { id: "oligohydramnios", trimester: 2, name: "Маловодие", curable: false, desc: "Критический дефицит околоплодных вод. Движения и пинки плода становятся скованными и весьма болезненными для матери." },
         { id: "rh_conflict", trimester: 2, name: "Резус-конфликт плаценты", curable: true, desc: "Иммунологический конфликт между отрицательным резус-фактором матери и положительным резусом плода. Требует инъекции антирезусного иммуноглобулина." },
+        { id: "premature_labor_threat", trimester: 2, name: "Угроза преждевременных родов", curable: true, desc: "Регулярные тянущие боли как при месячных, спазмы матки задолго до 40-й недели." },
         { id: "preeclampsia", trimester: 3, name: "Преэклампсия (гестоз)", curable: true, desc: "Сильные отеки ног и лица, головная боль, мушки перед глазами. Опасное состояние." },
         { id: "premature_labor_threat", trimester: 3, name: "Угроза преждевременных родов", curable: true, desc: "Регулярные тянущие боли как при месячных, спазмы матки задолго до 40-й недели." },
         { id: "sciatica", trimester: 3, name: "Защемление седалищного нерва", curable: false, desc: "Острая простреливающая боль в ягодицу или ногу при ходьбе из-за давления веса матки." },
@@ -332,6 +333,7 @@ export const COMPLICATIONS_POOL = {
         { id: "istmic_cervical_insufficiency", trimester: 2, name: "Cervical Insufficiency (ICN)", curable: true, desc: "Premature weak opening of cervix under fetal weight. Requires emergency cerclage/pessary." },
         { id: "oligohydramnios", trimester: 2, name: "Oligohydramnios (Low Fluid)", curable: false, desc: "Critical deficit of amniotic fluid. Fetal kicks become stiff and painful." },
         { id: "rh_conflict", trimester: 2, name: "Rh Factor Incompatibility", curable: true, desc: "Immune conflict between Rh-negative mother and Rh-positive fetus. Requires anti-D immunoglobulin." },
+        { id: "premature_labor_threat", trimester: 2, name: "Threatened Preterm Labor", curable: true, desc: "Regular menstrual-like cramps, uterine contractions well before week 40." },
         { id: "preeclampsia", trimester: 3, name: "Preeclampsia", curable: true, desc: "Severe swelling of feet and face, high blood pressure, headaches, blurred vision." },
         { id: "premature_labor_threat", trimester: 3, name: "Threatened Preterm Labor", curable: true, desc: "Regular menstrual-like cramps, uterine contractions well before week 40." },
         { id: "sciatica", trimester: 3, name: "Sciatica Nerve Compression", curable: false, desc: "Shooting sharp pain in buttock or leg when walking due to heavy uterine pressure." },
@@ -554,6 +556,11 @@ export function rollComplication(trimester) {
     if (trimester === 1) startWeek = Math.floor(Math.random() * 9) + 4;
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
+    // Угроза преждевременных родов живёт в двух триместрах: во 2-м проявляется на 20–26 нед., в 3-м — сразу (27+).
+    if (selected.id === 'premature_labor_threat') {
+        if (trimester === 2) startWeek = Math.floor(Math.random() * 7) + 20;
+        else startWeek = 27;
+    }
 
     return {
         id: selected.id,

@@ -118,6 +118,8 @@ function getChatData() {
         // Старые данные: единая галочка «патологии» раньше управляла и осложнениями, и недоношенностью.
         if (data[k].isComplicationsEnabled === undefined) data[k].isComplicationsEnabled = data[k].isFetalPathologyEnabled !== false;
         if (data[k].isPrematurityEnabled === undefined) data[k].isPrematurityEnabled = data[k].isFetalPathologyEnabled !== false;
+        if (data[k].pretermLabor === undefined) data[k].pretermLabor = null;
+        if (data[k].tocolysisNotice === undefined) data[k].tocolysisNotice = false;
         // Срок вынашивания привязан к режиму (Омегаверс — 36 нед., Реализм — 40).
         // Чиним застрявший дефолт 40 у омегаверса (и обратный случай).
         if (data[k].mode === 'omegaverse' && data[k].maxPregnancyWeeks === 40) data[k].maxPregnancyWeeks = 36;
@@ -344,7 +346,7 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
             let match;
             while ((match = regex.exec(text)) !== null) {
                 if (!entity.isPregnant) break;
-                const method = match[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural';
+                const method = entity.pretermLabor ? 'natural' : (match[1].toLowerCase() === 'c_section' ? 'c_section' : 'natural');
                 deliverEntitySingleBaby(entity, method, settings.language, logReproEvent, notify, data.lastRpDate);
             }
         };
@@ -591,6 +593,8 @@ function bindGlobalEvents() {
         entity.isComplicationsEnabled = $(this).is(':checked');
         if (!entity.isComplicationsEnabled) {
             entity.activeComplication = null;
+            entity.pretermLabor = null;
+            entity.tocolysisNotice = false;
             entity.rolledTrimesters = { 1: false, 2: false, 3: false };
         }
         saveSettingsDebounced();
@@ -774,6 +778,10 @@ function bindGlobalEvents() {
 
         if (roll < effectiveChance) {
             logReproEvent(`[COMPLICATION CURED] [${entity.key.toUpperCase()}] ${compState.id} (attempt ${attempts + 1}, roll ${roll.toFixed(2)}% < ${effectiveChance}%)`);
+            if (entity.pretermLabor) {
+                entity.pretermLabor = null;
+                entity.tocolysisNotice = true;
+            }
             entity.activeComplication = null;
             saveSettingsDebounced();
             refreshUI();

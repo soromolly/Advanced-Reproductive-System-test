@@ -25,6 +25,12 @@ export { laySingleEgg, layAllEggs, layEggs, hatchSingleEgg, hatchEggs } from './
 // до 18 недель — выкидыш, от 18 недель — мертворождение (совпадает с полосой 18–21 нед. в prematurity.js).
 const STATS_STILLBIRTH_WEEKS = 18;
 
+// Преждевременные роды: механика угрозы и начала родов.
+export const PRETERM_LABOR_MIN_WEEK = 20;      // угроза «включается» с 20-й недели
+export const PRETERM_LABOR_ONSET_CHANCE = 10;  // % в день: угроза -> начало родов
+export const PRETERM_LABOR_WINDOW_DAYS = 7;    // окно с момента начала родов
+export const PRETERM_LABOR_DAILY_BASE = 10;    // роды: 10% * день (10..70%)
+
 function recordEntityLoss(entity) {
     const stats = ensureStats(entity);
     if ((entity.pregnancyWeeks || 0) >= STATS_STILLBIRTH_WEEKS) {
@@ -70,6 +76,8 @@ export function createDefaultEntityState(entityKey = 'user') {
         fetalDemiseRolledTrimesters: { 1: false, 2: false, 3: false },
         fetalDemise: null,
         activeComplication: null,
+        pretermLabor: null,
+        tocolysisNotice: false,
         postpartumDays: 0,
         deliveryMethod: 'none',
         childrenList: [],
@@ -111,6 +119,8 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     entity.fetalDemise = null;
     entity.activeComplication = null;
+    entity.pretermLabor = null;
+    entity.tocolysisNotice = false;
     entity.deliveryMethod = 'none';
     entity.currentDeliveredCount = 0;
 
@@ -319,6 +329,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         return;
     }
 
+    entity.tocolysisNotice = false;
     advanceChildrenSurvival(entity, days, aiAwareness, lang, logFn, notifyFn, rpDate);
     advanceLactation(entity, days, lang, logFn, notifyFn);
 
@@ -349,6 +360,41 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
                 if (Math.random() * 100 < 10) { 
                     processEntityMiscarriage(entity, lang, logFn, notifyFn);
                     return; 
+                }
+            }
+        }
+
+        // Преждевременные роды: угроза -> начало родов.
+        if (entity.activeComplication?.id === 'premature_labor_threat'
+            && entity.activeComplication.isDiscovered
+            && !entity.pretermLabor
+            && entity.pregnancyWeeks >= PRETERM_LABOR_MIN_WEEK) {
+            for (let i = 0; i < days; i++) {
+                if (Math.random() * 100 < PRETERM_LABOR_ONSET_CHANCE) {
+                    entity.pretermLabor = { startedWeek: entity.pregnancyWeeks, daysSince: 0 };
+                    logFn?.(`[PRETERM LABOR ONSET] [${entity.key.toUpperCase()}] Premature labor started at week ${entity.pregnancyWeeks}.`);
+                    notifyFn?.(`🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'PREMATURE LABOR HAS BEGUN!' : 'ПРЕЖДЕВРЕМЕННЫЕ РОДЫ НАЧАЛИСЬ!'} ${lang === 'en' ? `(week ${entity.pregnancyWeeks})` : `(${entity.pregnancyWeeks} нед.)`}`, 'error');
+                    return;
+                }
+            }
+        }
+
+        // Преждевременные роды: окно в 7 дней, накопительный кубик на роды.
+        if (entity.pretermLabor) {
+            for (let i = 0; i < days; i++) {
+                entity.pretermLabor.daysSince += 1;
+                const day = entity.pretermLabor.daysSince;
+                const chance = Math.min(PRETERM_LABOR_DAILY_BASE * day, PRETERM_LABOR_DAILY_BASE * PRETERM_LABOR_WINDOW_DAYS);
+                if (Math.random() * 100 < chance) {
+                    deliverAllBabiesPremature(entity, lang, logFn, notifyFn, rpDate);
+                    return;
+                }
+                if (day >= PRETERM_LABOR_WINDOW_DAYS) {
+                    entity.pretermLabor = null;
+                    entity.activeComplication = null;
+                    logFn?.(`[PRETERM LABOR SUBSIDED] [${entity.key.toUpperCase()}] Contractions stopped on their own; pregnancy continues.`);
+                    notifyFn?.(`🕊️ [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${lang === 'en' ? 'The premature labor subsided on its own — the pregnancy continues.' : 'Преждевременные роды прекратились сами собой — беременность продолжается.'}`, 'info');
+                    break;
                 }
             }
         }
@@ -559,6 +605,13 @@ function rollPostnatalConsequences(entity, child, aiAwareness, lang, logFn, noti
     }
 }
 
+function deliverAllBabiesPremature(entity, lang, logFn, notifyFn, rpDate) {
+    logFn?.(`[PRETERM LABOR DELIVERY] [${entity.key.toUpperCase()}] Labor completed at ${entity.pregnancyWeeks} weeks — delivering all babies.`);
+    while (entity.babiesCount > 0 && entity.isPregnant) {
+        deliverEntitySingleBaby(entity, 'natural', lang, logFn, notifyFn, rpDate);
+    }
+}
+
 export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru', logFn, notifyFn, rpDate = null) {
     if (entity.mode === 'oviposition') return;
 
@@ -622,6 +675,8 @@ export function deliverEntitySingleBaby(entity, method = 'natural', lang = 'ru',
         entity.pregnancyDays = 0;
         entity.currentDeliveredCount = 0;
         entity.activeComplication = null;
+        entity.pretermLabor = null;
+        entity.tocolysisNotice = false;
         entity.fetalDiseaseId = null;
         entity.babiesDiseases = [];
         entity.fetalDemise = null;
@@ -652,6 +707,8 @@ function resetEntityAfterLoss(entity) {
     entity.babiesGenders = [];
     entity.babiesDiseases = [];
     entity.activeComplication = null;
+    entity.pretermLabor = null;
+    entity.tocolysisNotice = false;
     entity.fetalDiseaseId = null;
     entity.fetalDemise = null;
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
@@ -675,6 +732,8 @@ export function resetEntityPregnancy(entity) {
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     entity.fetalDemise = null;
     entity.activeComplication = null;
+    entity.pretermLabor = null;
+    entity.tocolysisNotice = false;
     entity.fetalDiseaseId = null;
     entity.eggCount = 0;
     entity.eggShellDefects = [];
@@ -738,6 +797,8 @@ export function processEntityAbortion(entity, lang = 'ru', logFn, notifyFn) {
     entity.babiesGenders = [];
     entity.babiesDiseases = [];
     entity.activeComplication = null;
+    entity.pretermLabor = null;
+    entity.tocolysisNotice = false;
     entity.fetalDiseaseId = null;
     entity.fetalDemise = null;
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };

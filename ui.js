@@ -15,7 +15,7 @@ import {
     getAmenorrheaStatus
 } from './symptoms.js';
 import { dateToDays, daysToDateString, formatChildAge, getChildAgeDays } from './dateUtils.js';
-import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
+import { getEntityBodyPhase, isAbortionAllowed, PRETERM_LABOR_WINDOW_DAYS } from './entityController.js';
 import { getPrematurityDisplay, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS } from './prematurity.js';
 
 function sectionCard(id, title, collapsed, contentHtml) {
@@ -271,6 +271,16 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         }
     }
 
+    let pretermLaborHtml = '';
+    if (!isOviposition && isCurrentlyPregnantDiscovered && currentEntity.pretermLabor) {
+        const labDay = Math.min((currentEntity.pretermLabor.daysSince || 0) + 1, PRETERM_LABOR_WINDOW_DAYS);
+        pretermLaborHtml = `<div style="margin: 8px 0 10px 0; padding: 10px; background: rgba(234, 88, 12, 0.18); border: 1px solid rgba(251, 146, 60, 0.6); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
+            <strong style="color: #fb923c; display: block; margin-bottom: 4px;">${getText('pretermLaborTitle', lang)}</strong>
+            <span style="opacity: 0.92; display: block;">${getText('pretermLaborDay', lang)} ${labDay} / ${PRETERM_LABOR_WINDOW_DAYS}</span>
+            <span style="opacity: 0.8; display: block; margin-top: 3px; font-style: italic;">${getText('pretermLaborHint', lang)}</span>
+        </div>`;
+    }
+
     let complicationHtml = '';
     if (!isOviposition && isCurrentlyPregnantDiscovered && currentEntity.activeComplication?.isDiscovered) {
         const comp = getComplication(currentEntity.activeComplication.id, lang);
@@ -284,7 +294,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     cureBtnHtml = `<button id="repro-cure-complication" class="menu_button" disabled style="width: 100%; background: #6b7280; color: #e5e7eb; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center; cursor: not-allowed; opacity: 0.7;">${lang === 'en' ? `Retry treatment in ${d} day${d === 1 ? '' : 's'}` : `Повторить лечение через ${d} дн.`}</button>`;
                     cureBtnHtml += `<span style="display: block; margin-top: 4px; font-size: 0.8em; opacity: 0.8; font-style: italic;">${lang === 'en' ? `Treatment didn't help. Retry available in ${d} day${d === 1 ? '' : 's'}.` : `Лечение не помогло. Повторить можно через ${d} дн.`}</span>`;
                 } else {
-                    cureBtnHtml = `<button id="repro-cure-complication" class="menu_button" style="width: 100%; background: #059669; color: white; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center;">${getText('cureBtn', lang)}</button>`;
+                    cureBtnHtml = `<button id="repro-cure-complication" class="menu_button" style="width: 100%; background: #059669; color: white; font-size: 11px; padding: 4px; font-weight: 600; justify-content: center;">${currentEntity.pretermLabor ? getText('tocolysisBtn', lang) : getText('cureBtn', lang)}</button>`;
                 }
             }
             complicationHtml = `<div style="margin: 8px 0 10px 0; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
@@ -533,6 +543,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         ${fetusHtml}
                         ${fetalDiseaseHtml}
                         ${postpartumHtml}
+                        ${pretermLaborHtml}
                         ${complicationHtml}
 
                         ${isOviposition ? `
