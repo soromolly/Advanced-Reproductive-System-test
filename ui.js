@@ -460,7 +460,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <select id="repro-mode" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
                         <option value="realism" ${currentEntity.mode === 'realism' ? 'selected' : ''}>${getText('realism', lang)}</option>
                         <option value="omegaverse" ${currentEntity.mode === 'omegaverse' ? 'selected' : ''}>${getText('omegaverse', lang)}</option>
-                        <option value="oviposition" ${currentEntity.mode === 'oviposition' ? 'selected' : ''}>${getText('oviposition', lang)}</option>
+                        <option value="oviposition" ${currentEntity.mode === 'oviposition' ? 'selected' : ''}>${getText('oviposition', lang)} ${getText('ovipositionLegacy', lang)}</option>
                     </select>
                 </div>
 
@@ -607,6 +607,12 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                 <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('exportLogsBtn', lang)}</button>
 
                 <button id="repro-btn-stats" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('statsBtn', lang)}</button>
+
+                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                    <div style="font-size: 0.8em; font-weight: 700; color: #94a3b8; margin-bottom: 8px;">${getText('feedbackTitle', lang)}</div>
+                    <a href="https://t.me/st_soromolly" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px 6px 4px; padding: 6px 12px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; color: #38bdf8; font-size: 0.82em; font-weight: 600; text-decoration: none; cursor: pointer;">${getText('feedbackChannel', lang)}</a>
+                    <a href="https://t.me/soromolly_bot" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px 6px 4px; padding: 6px 12px; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 6px; color: #c084fc; font-size: 0.82em; font-weight: 600; text-decoration: none; cursor: pointer;">${getText('feedbackAnonBot', lang)}</a>
+                </div>
             </div>
         </div>
     `;
