@@ -359,6 +359,19 @@ If ${macroName} gives birth in this response, add the matching tag at the very e
 Add one tag per baby, in order.
 `;
             }
+
+            const maxWeeks = entity.maxPregnancyWeeks || (entity.mode === 'omegaverse' ? 36 : 40);
+            if (entity.pregnancyWeeks >= maxWeeks + 2) {
+                if (aiAwareness === 'hidden') {
+                    p += `\n[POST-TERM PREGNANCY — OVERDUE]
+${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} weeks) and labor has not begun on its own. Healers, midwives and relatives urge natural methods to bring on labor: long walks, walking stairs, physical work, hot herbal infusions, and "husband therapy" (intimacy and sexual stimulation with the partner). After such activity, labor may finally begin — report any birth with the tag above.
+`;
+                } else {
+                    p += `\n[POST-TERM PREGNANCY — OVERDUE]
+${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} weeks) and labor has not begun. Doctors discuss medical options: labor induction (membrane sweep, oxytocin/prostaglandin) or a cesarean section. After induction, labor may begin — report any birth with the tag above.
+`;
+                }
+            }
         } else {
             const baseCycle = entity.cycleLength || 28;
             const target = entity.currentCycleTargetLength || baseCycle;
