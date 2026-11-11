@@ -57,7 +57,8 @@ const DEFAULT_SETTINGS = {
     language: 'ru',
     aiAwareness: 'dynamic', 
     globalRollsCount: 0,
-    chatPregnancyData: {}
+    chatPregnancyData: {},
+    collapsedSections: {}
 };
 
 let settings = Object.assign({}, DEFAULT_SETTINGS);
@@ -421,6 +422,19 @@ function bindGlobalEvents() {
         isMenuCollapsed = !isMenuCollapsed; 
         $('#repro-content-wrapper').slideToggle(150);
         $('#repro-toggle-arrow').toggleClass('fa-chevron-down fa-chevron-up');
+    });
+
+    $(document).off('click', '.repro-section-header').on('click', '.repro-section-header', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = $(this).attr('data-section');
+        const body = $(`.repro-section-body[data-section="${id}"]`);
+        const willCollapse = body.is(':visible');
+        body.slideToggle(150);
+        $(this).find('i').toggleClass('fa-chevron-down fa-chevron-up');
+        settings.collapsedSections = settings.collapsedSections || {};
+        settings.collapsedSections[id] = willCollapse;
+        saveSettingsDebounced();
     });
 
     $(document).off('change', '#repro-target-mode').on('change', '#repro-target-mode', function() {
@@ -944,6 +958,7 @@ function loadSettings() {
         extension_settings[EXTENSION_NAME] = Object.assign({}, DEFAULT_SETTINGS);
     }
     settings = extension_settings[EXTENSION_NAME];
+    settings.collapsedSections = settings.collapsedSections || {};
     refreshUI();
     updatePrompt();
 }

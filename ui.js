@@ -18,6 +18,18 @@ import { dateToDays, daysToDateString, formatChildAge, getChildAgeDays } from '.
 import { getEntityBodyPhase, isAbortionAllowed } from './entityController.js';
 import { getPrematurityDisplay, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS } from './prematurity.js';
 
+function sectionCard(id, title, collapsed, contentHtml) {
+    const bodyStyle = `padding: 10px 12px; ${collapsed ? 'display: none;' : 'display: block;'}`;
+    return `
+        <div class="repro-section" data-section="${id}" style="margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.02);">
+            <div class="repro-section-header" data-section="${id}" style="display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; cursor: pointer; user-select: none; background: rgba(255,255,255,0.04);">
+                <span style="font-size: 0.9em; font-weight: 700; color: #f472b6;">${title}</span>
+                <i class="fa-solid ${collapsed ? 'fa-chevron-down' : 'fa-chevron-up'}" style="opacity: 0.6; font-size: 11px;"></i>
+            </div>
+            <div class="repro-section-body" data-section="${id}" style="${bodyStyle}">${contentHtml}</div>
+        </div>`;
+}
+
 export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
     const lang = settings.language || 'ru';
     const targetMode = chatData.targetMode || 'user';
@@ -285,9 +297,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
     let familyHtml = '';
     if (currentEntity.childrenList?.length > 0) {
-        familyHtml = `<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px; text-align: left; font-size: 0.85em;">
-            <strong style="color: #f472b6; display: block; margin-bottom: 8px;">${getText('newbornTitle', lang)}</strong>
-            ${currentEntity.childrenList.map((c, i) => {
+        familyHtml = currentEntity.childrenList.map((c, i) => {
                 let featureHtml = '';
                 let feat = null;
                 if (c.diseaseId) {
@@ -358,8 +368,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                         </button>
                     </div>
                 </div>`;
-            }).join('')}
-        </div>`;
+        }).join('');
     }
 
     let genderOptionsHtml = '';
@@ -391,6 +400,10 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
             <button id="repro-tab-char" class="menu_button" style="${activeTab === 'char' ? activeTabStyle : inactiveTabStyle}">${getText('tabChar', lang)}</button>
         </div>
     ` : '';
+
+    const collapsedSections = settings.collapsedSections || {};
+    const isCollapsed = (id, defaultCollapsed) => (collapsedSections[id] !== undefined ? collapsedSections[id] : defaultCollapsed);
+    const hasManualContent = isCurrentlyPregnantDiscovered || (currentEntity.postpartumDays === 0 && !isNestActive);
 
     const html = `
         <div class="repro-custom-btn-toggle" style="display: flex; justify-content: space-between; align-items: center; background: var(--input-bg, #1e1e2a); border: 1px solid var(--input-border, #334155); padding: 10px 14px; border-radius: ${isMenuCollapsed ? '10px' : '10px 10px 0 0'}; cursor: pointer; user-select: none; font-size: 14px; transition: background 0.15s;">
@@ -430,189 +443,200 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
                 ${tabsHtml}
 
-                <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px; ${isFullAware ? 'opacity: 0.35; pointer-events: none;' : ''}">
-                        <input type="checkbox" id="repro-is-secret-conception" ${isFullAware ? '' : (currentEntity.isSecretConception ? 'checked' : '')} ${isFullAware ? 'disabled' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer;">${getText('secretConceptionLabel', lang)}</label>
-                        ${getTooltipHtml('secretConception', lang)}
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; ${isFullAware ? 'opacity: 0.35; pointer-events: none;' : ''}">
-                        <input type="checkbox" id="repro-is-irregular-cycle" ${isFullAware ? '' : (currentEntity.isIrregularCycle ? 'checked' : '')} ${isFullAware ? 'disabled' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer;">${getText('irregularCycleLabel', lang)}</label>
-                        ${getTooltipHtml('irregularCycle', lang)}
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('fetalPathologyLabel', lang)}</label>
-                        ${getTooltipHtml('fetalPathology', lang, isOviposition)}
-                    </div>
-                    ${showBreastfeeding ? `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="repro-is-breastfeeding" ${currentEntity.isBreastfeeding ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
-                        <label for="repro-is-breastfeeding" style="font-size: 0.85em; cursor: pointer;">${getText('breastfeedingLabel', lang)}</label>
-                        ${getTooltipHtml('breastfeeding', lang)}
-                    </div>
-                    ` : ''}
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('system', lang)} ${getTooltipHtml('mode', lang, isOviposition)}</label>
-                    <select id="repro-mode" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
-                        <option value="realism" ${currentEntity.mode === 'realism' ? 'selected' : ''}>${getText('realism', lang)}</option>
-                        <option value="omegaverse" ${currentEntity.mode === 'omegaverse' ? 'selected' : ''}>${getText('omegaverse', lang)}</option>
-                        <option value="oviposition" ${currentEntity.mode === 'oviposition' ? 'selected' : ''}>${getText('oviposition', lang)} ${getText('ovipositionLegacy', lang)}</option>
-                    </select>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('physiology', lang)} ${getTooltipHtml('physiology', lang, isOviposition)}</label>
-                    <select id="repro-gender" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
-                        ${genderOptionsHtml}
-                    </select>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('aiLogic', lang)} ${getTooltipHtml('aiAwareness', lang, isOviposition)}</label>
-                    <select id="repro-awareness" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
-                        <option value="dynamic" ${settings.aiAwareness === 'dynamic' ? 'selected' : ''}>${getText('ultrasound', lang)}</option>
-                        <option value="hidden" ${settings.aiAwareness === 'hidden' ? 'selected' : ''}>${getText('medieval', lang)}</option>
-                        <option value="full" ${settings.aiAwareness === 'full' ? 'selected' : ''}>${getText('knowsAll', lang)}</option>
-                    </select>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('protectionLabel', lang)} ${getTooltipHtml('contraception', lang)}</label>
-                    <select id="repro-contraception" ${isCurrentlyPregnantDiscovered || currentEntity.postpartumDays > 0 || isNestActive ? 'disabled' : ''} style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
-                        <option value="none" ${currentEntity.contraception === 'none' ? 'selected' : ''}>${getText('protectionNone', lang)}</option>
-                        <option value="condom" ${currentEntity.contraception === 'condom' ? 'selected' : ''}>${getText('protectionCondom', lang)}</option>
-                        <option value="pills" ${currentEntity.contraception === 'pills' ? 'selected' : ''}>${getText('protectionPills', lang)}</option>
-                        <option value="iud" ${currentEntity.contraception === 'iud' ? 'selected' : ''}>${getText('protectionIud', lang)}</option>
-                    </select>
-                </div>
-
-                <div style="background: rgba(0, 0, 0, 0.25); border-left: 3px solid #f472b6; border-radius: 4px; padding: 10px; margin: 12px 0; font-size: 0.9em; text-align: left;">
-                    <div style="margin-bottom: 4px;"><strong>${isOviposition ? (lang === 'en' ? 'Current state:' : 'Текущее состояние:') : (currentEntity.mode === 'realism' ? getText('phaseRealism', lang) : getText('phaseOmega', lang))}</strong> <span style="color: #4ade80; font-weight: 700;">${getEntityBodyPhase(currentEntity, lang)}</span></div>
-                    
-                    ${symptomsHtml}
-                    ${eggHtml}
-                    ${eggIncubationHtml}
-                    ${eggContentsHtml}
-                    ${fetusHtml}
-                    ${fetalDiseaseHtml}
-                    ${postpartumHtml}
-                    ${complicationHtml}
-                    ${familyHtml}
-
-                    ${isOviposition ? `
-                        ${isEggGravid ? `<div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>` : ''}
-                        ${isNestActive ? `<div style="margin-bottom: 4px;"><strong>${getText('eggIncubationLabel', lang)}</strong> ${currentEntity.eggIncubationDays} / ${currentEntity.eggIncubationTotal}</div>` : ''}
-                        ${(!isEggGravid && !isNestActive && currentEntity.postpartumDays === 0) ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
-                    ` : `
-                        ${isCurrentlyPregnantDiscovered ? `
-                            <div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>
-                            ${eddHtml}
-                            ${wombMapHtml}
-                        ` : `
-                            ${currentEntity.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
-                        `}
-                    `}
-                    <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync', lang)} ${displayDate}</div>
-                </div>
-
-                ${(settings.aiAwareness !== 'full' && !isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0 && !isNestActive) ? `
-                    <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
-                ` : ''}
-
-                ${isEggGravid ? `
-                    <button id="repro-btn-lay-eggs" class="menu_button" style="width: 100%; background: #a855f7; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('layEggsBtn', lang)}</button>
-                ` : ''}
-
-                ${isNestActive ? `
-                    <button id="repro-btn-hatch-eggs" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('hatchEggsBtn', lang)}</button>
-                ` : ''}
-
-                ${!isOviposition && isCurrentlyPregnantDiscovered ? `
-                    <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('giveBirthBtn', lang)}</button>
-                ` : ''}
-
-                ${canAbort ? `
-                    <button id="repro-btn-abort" class="menu_button" style="width: 100%; background: #991b1b; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('abortBtn', lang)}</button>
-                ` : ''}
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('rpDateLabel', lang)} ${getTooltipHtml('rpDate', lang)}</label>
-                    <input type="text" id="repro-input-rpdate" placeholder="ДД.ММ.ГГГГ" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${inputDateValue}"/>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('cycleLengthLabel', lang)} ${getTooltipHtml('cycleLength', lang, isOviposition)}</label>
-                    <input type="number" id="repro-input-cycle" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleLength}"/>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${(currentEntity.mode === 'omegaverse') ? getText('periodDurationOmega', lang) : getText('periodDurationLabel', lang)} ${getTooltipHtml('periodDuration', lang, isOviposition)}</label>
-                    <input type="number" id="repro-input-period" min="2" max="10" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.periodDuration || 5}"/>
-                </div>
-                
-                ${!isOviposition ? `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('maxWeeksLabel', lang)} ${getTooltipHtml('maxWeeks', lang)}</label>
-                    <input type="number" id="repro-input-maxweeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.maxPregnancyWeeks || 40}" min="1" max="50"/>
-                </div>` : ''}
-                
-                ${isCurrentlyPregnantDiscovered ? `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 0.9em; opacity: 0.85;">${getText('pregnancyWeekLabel', lang)}</label>
-                        <div style="display: flex; gap: 6px; width: 55%;">
-                            <input type="number" id="repro-input-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyWeeks}" min="0" max="${isOviposition ? 6 : (currentEntity.maxPregnancyWeeks || 40)}"/>
-                            <input type="number" id="repro-input-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyDays || 0}" min="0" max="6"/>
+                ${sectionCard('physiology', getText('sectionPhysiology', lang), isCollapsed('physiology', false), `
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px; ${isFullAware ? 'opacity: 0.35; pointer-events: none;' : ''}">
+                            <input type="checkbox" id="repro-is-secret-conception" ${isFullAware ? '' : (currentEntity.isSecretConception ? 'checked' : '')} ${isFullAware ? 'disabled' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                            <label for="repro-is-secret-conception" style="font-size: 0.85em; cursor: pointer;">${getText('secretConceptionLabel', lang)}</label>
+                            ${getTooltipHtml('secretConception', lang)}
                         </div>
+                        <div style="display: flex; align-items: center; gap: 8px; ${isFullAware ? 'opacity: 0.35; pointer-events: none;' : ''}">
+                            <input type="checkbox" id="repro-is-irregular-cycle" ${isFullAware ? '' : (currentEntity.isIrregularCycle ? 'checked' : '')} ${isFullAware ? 'disabled' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                            <label for="repro-is-irregular-cycle" style="font-size: 0.85em; cursor: pointer;">${getText('irregularCycleLabel', lang)}</label>
+                            ${getTooltipHtml('irregularCycle', lang)}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="repro-fetal-pathology-enabled" ${currentEntity.isFetalPathologyEnabled ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                            <label for="repro-fetal-pathology-enabled" style="font-size: 0.85em; cursor: pointer;">${getText('fetalPathologyLabel', lang)}</label>
+                            ${getTooltipHtml('fetalPathology', lang, isOviposition)}
+                        </div>
+                        ${showBreastfeeding ? `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="repro-is-breastfeeding" ${currentEntity.isBreastfeeding ? 'checked' : ''} style="cursor: pointer; width: 15px; height: 15px; margin: 0;"/>
+                            <label for="repro-is-breastfeeding" style="font-size: 0.85em; cursor: pointer;">${getText('breastfeedingLabel', lang)}</label>
+                            ${getTooltipHtml('breastfeeding', lang)}
+                        </div>
+                        ` : ''}
                     </div>
-                ` : (!isCurrentlyPregnantDiscovered && currentEntity.postpartumDays === 0 && !isNestActive ? `
+
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 0.9em; opacity: 0.85;">${getText('cycleDayLabel', lang)} </label>
-                        <input type="number" id="repro-input-day" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleDay}"/>
-                    </div>` : '')}
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('system', lang)} ${getTooltipHtml('mode', lang, isOviposition)}</label>
+                        <select id="repro-mode" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
+                            <option value="realism" ${currentEntity.mode === 'realism' ? 'selected' : ''}>${getText('realism', lang)}</option>
+                            <option value="omegaverse" ${currentEntity.mode === 'omegaverse' ? 'selected' : ''}>${getText('omegaverse', lang)}</option>
+                            <option value="oviposition" ${currentEntity.mode === 'oviposition' ? 'selected' : ''}>${getText('oviposition', lang)} ${getText('ovipositionLegacy', lang)}</option>
+                        </select>
+                    </div>
 
-                <button id="repro-apply-params" class="menu_button type_primary" style="width: 100%; margin-top: 10px; font-weight: 600;">${getText('applyBtn', lang)}</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('physiology', lang)} ${getTooltipHtml('physiology', lang, isOviposition)}</label>
+                        <select id="repro-gender" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
+                            ${genderOptionsHtml}
+                        </select>
+                    </div>
 
-                ${(!isCurrentlyPregnantDiscovered && currentEntity.postpartumDays === 0 && !isNestActive) ? `
-                    <div style="background: rgba(244, 114, 182, 0.03); border: 1px dashed rgba(244, 114, 182, 0.2); border-radius: 8px; padding: 12px; margin: 14px 0 10px 0; text-align: left;">
-                        <div style="font-size: 0.85em; font-weight: 700; color: #f472b6; margin-bottom: 8px; text-transform: uppercase;">${isOviposition ? getText('manualEggsBtn', lang) : getText('initPregnancyHeader', lang)}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('aiLogic', lang)} ${getTooltipHtml('aiAwareness', lang, isOviposition)}</label>
+                        <select id="repro-awareness" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
+                            <option value="dynamic" ${settings.aiAwareness === 'dynamic' ? 'selected' : ''}>${getText('ultrasound', lang)}</option>
+                            <option value="hidden" ${settings.aiAwareness === 'hidden' ? 'selected' : ''}>${getText('medieval', lang)}</option>
+                            <option value="full" ${settings.aiAwareness === 'full' ? 'selected' : ''}>${getText('knowsAll', lang)}</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('protectionLabel', lang)} ${getTooltipHtml('contraception', lang)}</label>
+                        <select id="repro-contraception" ${isCurrentlyPregnantDiscovered || currentEntity.postpartumDays > 0 || isNestActive ? 'disabled' : ''} style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
+                            <option value="none" ${currentEntity.contraception === 'none' ? 'selected' : ''}>${getText('protectionNone', lang)}</option>
+                            <option value="condom" ${currentEntity.contraception === 'condom' ? 'selected' : ''}>${getText('protectionCondom', lang)}</option>
+                            <option value="pills" ${currentEntity.contraception === 'pills' ? 'selected' : ''}>${getText('protectionPills', lang)}</option>
+                            <option value="iud" ${currentEntity.contraception === 'iud' ? 'selected' : ''}>${getText('protectionIud', lang)}</option>
+                        </select>
+                    </div>
+                `)}
+
+                ${sectionCard('state', getText('sectionState', lang), isCollapsed('state', false), `
+                    <div style="background: rgba(0, 0, 0, 0.25); border-left: 3px solid #f472b6; border-radius: 4px; padding: 10px; margin: 0 0 8px 0; font-size: 0.9em; text-align: left;">
+                        <div style="margin-bottom: 4px;"><strong>${isOviposition ? (lang === 'en' ? 'Current state:' : 'Текущее состояние:') : (currentEntity.mode === 'realism' ? getText('phaseRealism', lang) : getText('phaseOmega', lang))}</strong> <span style="color: #4ade80; font-weight: 700;">${getEntityBodyPhase(currentEntity, lang)}</span></div>
+                        
+                        ${symptomsHtml}
+                        ${eggHtml}
+                        ${eggIncubationHtml}
+                        ${eggContentsHtml}
+                        ${fetusHtml}
+                        ${fetalDiseaseHtml}
+                        ${postpartumHtml}
+                        ${complicationHtml}
+
+                        ${isOviposition ? `
+                            ${isEggGravid ? `<div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>` : ''}
+                            ${isNestActive ? `<div style="margin-bottom: 4px;"><strong>${getText('eggIncubationLabel', lang)}</strong> ${currentEntity.eggIncubationDays} / ${currentEntity.eggIncubationTotal}</div>` : ''}
+                            ${(!isEggGravid && !isNestActive && currentEntity.postpartumDays === 0) ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
+                        ` : `
+                            ${isCurrentlyPregnantDiscovered ? `
+                                <div style="margin-bottom: 4px;"><strong>${getText('termInRp', lang)}</strong> ${currentEntity.pregnancyWeeks} ${getText('weeksShort', lang)} ${currentEntity.pregnancyDays} ${getText('daysShort', lang)}</div>
+                                ${eddHtml}
+                                ${wombMapHtml}
+                            ` : `
+                                ${currentEntity.postpartumDays === 0 ? `<div style="margin-bottom: 4px;"><strong>${getText('cycleDayLabel', lang)}</strong> ${currentEntity.cycleDay} ${getText('ofLabel', lang)} ${baseCycleDisplay}</div>` : ''}
+                            `}
+                        `}
+                        <div style="font-size: 0.85em; color: #64748b; margin-top: 6px;">📅 ${getText('sync', lang)} ${displayDate}</div>
+                    </div>
+
+                    ${(settings.aiAwareness !== 'full' && !isCurrentlyPregnantDiscovered && currentEntity.cycleDay > currentEntity.cycleLength && currentEntity.postpartumDays === 0 && !isNestActive) ? `
+                        <button id="repro-btn-take-test" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${checkBtnLabel}</button>
+                    ` : ''}
+
+                    ${isEggGravid ? `
+                        <button id="repro-btn-lay-eggs" class="menu_button" style="width: 100%; background: #a855f7; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('layEggsBtn', lang)}</button>
+                    ` : ''}
+
+                    ${isNestActive ? `
+                        <button id="repro-btn-hatch-eggs" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('hatchEggsBtn', lang)}</button>
+                    ` : ''}
+
+                    ${!isOviposition && isCurrentlyPregnantDiscovered ? `
+                        <button id="repro-btn-birth-trigger" class="menu_button" style="width: 100%; background: #10b981; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('giveBirthBtn', lang)}</button>
+                    ` : ''}
+
+                    ${canAbort ? `
+                        <button id="repro-btn-abort" class="menu_button" style="width: 100%; background: #991b1b; color: white; font-weight: 700; margin-bottom: 10px; padding: 8px 0; justify-content: center;">${getText('abortBtn', lang)}</button>
+                    ` : ''}
+                `)}
+
+                ${familyHtml ? sectionCard('family', getText('sectionFamily', lang), isCollapsed('family', false), familyHtml) : ''}
+
+                ${sectionCard('cycle', getText('sectionCycle', lang), isCollapsed('cycle', false), `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('cycleLengthLabel', lang)} ${getTooltipHtml('cycleLength', lang, isOviposition)}</label>
+                        <input type="number" id="repro-input-cycle" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleLength}"/>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${(currentEntity.mode === 'omegaverse') ? getText('periodDurationOmega', lang) : getText('periodDurationLabel', lang)} ${getTooltipHtml('periodDuration', lang, isOviposition)}</label>
+                        <input type="number" id="repro-input-period" min="2" max="10" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.periodDuration || 5}"/>
+                    </div>
+                    
+                    ${!isOviposition ? `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('maxWeeksLabel', lang)} ${getTooltipHtml('maxWeeks', lang)}</label>
+                        <input type="number" id="repro-input-maxweeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.maxPregnancyWeeks || 40}" min="1" max="50"/>
+                    </div>` : ''}
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label style="font-size: 0.9em; opacity: 0.85; display: flex; align-items: center;">${getText('rpDateLabel', lang)} ${getTooltipHtml('rpDate', lang)}</label>
+                        <input type="text" id="repro-input-rpdate" placeholder="ДД.ММ.ГГГГ" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${inputDateValue}"/>
+                    </div>
+                `)}
+
+                ${hasManualContent ? sectionCard('manual', getText('sectionManual', lang), isCollapsed('manual', true), `
+                    ${isCurrentlyPregnantDiscovered ? `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualWeeks', lang)}</label>
+                            <label style="font-size: 0.9em; opacity: 0.85;">${getText('pregnancyWeekLabel', lang)}</label>
                             <div style="display: flex; gap: 6px; width: 55%;">
-                                <input type="number" id="repro-manual-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="4" min="0" max="40"/>
-                                <input type="number" id="repro-manual-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="0" min="0" max="6"/>
+                                <input type="number" id="repro-input-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyWeeks}" min="0" max="${isOviposition ? 6 : (currentEntity.maxPregnancyWeeks || 40)}"/>
+                                <input type="number" id="repro-input-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="${currentEntity.pregnancyDays || 0}" min="0" max="6"/>
                             </div>
                         </div>
+                    ` : (!isCurrentlyPregnantDiscovered && currentEntity.postpartumDays === 0 && !isNestActive ? `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <label style="font-size: 0.9em; opacity: 0.85;">${isOviposition ? getText('manualEggCount', lang) : getText('manualCount', lang)} </label>
-                            <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${isOviposition ? 4 : 1}" min="1" max="${isOviposition ? 7 : 12}"/>
+                            <label style="font-size: 0.9em; opacity: 0.85;">${getText('cycleDayLabel', lang)} </label>
+                            <input type="number" id="repro-input-day" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${currentEntity.cycleDay}"/>
+                        </div>` : '')}
+
+                    ${(!isCurrentlyPregnantDiscovered && currentEntity.postpartumDays === 0 && !isNestActive) ? `
+                        <div style="background: rgba(244, 114, 182, 0.03); border: 1px dashed rgba(244, 114, 182, 0.2); border-radius: 8px; padding: 12px; margin: 14px 0 10px 0; text-align: left;">
+                            <div style="font-size: 0.85em; font-weight: 700; color: #f472b6; margin-bottom: 8px; text-transform: uppercase;">${isOviposition ? getText('manualEggsBtn', lang) : getText('initPregnancyHeader', lang)}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualWeeks', lang)}</label>
+                                <div style="display: flex; gap: 6px; width: 55%;">
+                                    <input type="number" id="repro-manual-weeks" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="4" min="0" max="40"/>
+                                    <input type="number" id="repro-manual-days" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 8px; border-radius: 6px; width: 50%;" value="0" min="0" max="6"/>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <label style="font-size: 0.9em; opacity: 0.85;">${isOviposition ? getText('manualEggCount', lang) : getText('manualCount', lang)} </label>
+                                <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${isOviposition ? 4 : 1}" min="1" max="${isOviposition ? 7 : 12}"/>
+                            </div>
+                            <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${isOviposition ? getText('manualEggsBtn', lang) : getText('startPregnancyBtn', lang)}</button>
                         </div>
-                        <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${isOviposition ? getText('manualEggsBtn', lang) : getText('startPregnancyBtn', lang)}</button>
+                    ` : ''}
+                `) : ''}
+
+                ${sectionCard('service', getText('sectionService', lang), isCollapsed('service', true), `
+                    ${(isCurrentlyPregnantDiscovered || isNestActive) ? `
+                        <button id="repro-reset-pregnancy-only" class="menu_button type_warning" style="width: 100%; margin-bottom: 10px; font-weight: 600;">${isOviposition ? getText('resetEggCarryingBtn', lang) : getText('resetPregnancyBtn', lang)}</button>
+                    ` : ''}
+
+                    <button id="repro-reset" class="menu_button type_danger" style="width: 100%; margin-bottom: 10px; font-weight: 600;">${getText('resetAllBtn', lang)}</button>
+                    
+                    <div style="padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78em; color: #64748b; text-align: center; font-style: italic;">
+                        ${getText('globalRollsLabel', lang)} <span style="font-weight: bold; font-family: monospace; color: #94a3b8; margin-left: 2px;">${settings.globalRollsCount || 0}</span>
                     </div>
-                ` : ''}
 
-                ${(isCurrentlyPregnantDiscovered || isNestActive) ? `
-                    <button id="repro-reset-pregnancy-only" class="menu_button type_warning" style="width: 100%; margin-top: 10px; font-weight: 600;">${isOviposition ? getText('resetEggCarryingBtn', lang) : getText('resetPregnancyBtn', lang)}</button>
-                ` : ''}
+                    <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('exportLogsBtn', lang)}</button>
 
-                <button id="repro-reset" class="menu_button type_danger" style="width: 100%; margin-top: 10px; font-weight: 600;">${getText('resetAllBtn', lang)}</button>
-                
-                <div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78em; color: #64748b; text-align: center; font-style: italic;">
-                    ${getText('globalRollsLabel', lang)} <span style="font-weight: bold; font-family: monospace; color: #94a3b8; margin-left: 2px;">${settings.globalRollsCount || 0}</span>
-                </div>
+                    <button id="repro-btn-stats" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('statsBtn', lang)}</button>
 
-                <button id="repro-export-logs" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('exportLogsBtn', lang)}</button>
+                    <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
+                        <div style="font-size: 0.8em; font-weight: 700; color: #94a3b8; margin-bottom: 8px;">${getText('feedbackTitle', lang)}</div>
+                        <a href="https://t.me/st_soromolly" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px 6px 4px; padding: 6px 12px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; color: #38bdf8; font-size: 0.82em; font-weight: 600; text-decoration: none; cursor: pointer;">${getText('feedbackChannel', lang)}</a>
+                        <a href="https://t.me/soromolly_bot" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px 6px 4px; padding: 6px 12px; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 6px; color: #c084fc; font-size: 0.82em; font-weight: 600; text-decoration: none; cursor: pointer;">${getText('feedbackAnonBot', lang)}</a>
+                    </div>
+                `)}
 
-                <button id="repro-btn-stats" class="menu_button" style="width: 100%; margin-top: 10px; font-weight: 600; justify-content: center;">${getText('statsBtn', lang)}</button>
-
-                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center;">
-                    <div style="font-size: 0.8em; font-weight: 700; color: #94a3b8; margin-bottom: 8px;">${getText('feedbackTitle', lang)}</div>
-                    <a href="https://t.me/st_soromolly" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px 6px 4px; padding: 6px 12px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; color: #38bdf8; font-size: 0.82em; font-weight: 600; text-decoration: none; cursor: pointer;">${getText('feedbackChannel', lang)}</a>
-                    <a href="https://t.me/soromolly_bot" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin: 0 4px 6px 4px; padding: 6px 12px; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 6px; color: #c084fc; font-size: 0.82em; font-weight: 600; text-decoration: none; cursor: pointer;">${getText('feedbackAnonBot', lang)}</a>
-                </div>
+                <button id="repro-apply-params" class="menu_button type_primary" style="width: 100%; margin-top: 10px; font-weight: 600;">${getText('applyBtn', lang)}</button>
             </div>
         </div>
     `;
