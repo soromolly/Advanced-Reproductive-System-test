@@ -30,6 +30,7 @@ export const PRETERM_LABOR_MIN_WEEK = 20;      // угроза «включае�
 export const PRETERM_LABOR_ONSET_CHANCE = 10;  // % в день: угроза -> начало родов
 export const PRETERM_LABOR_WINDOW_DAYS = 7;    // окно с момента начала родов
 export const PRETERM_LABOR_DAILY_BASE = 10;    // роды: 10% * день (10..70%)
+export const PRETERM_LABOR_DAILY_BASE_MULTI = 15; // многоплодие: 15% * день (матка сокращается агрессивнее)
 
 function recordEntityLoss(entity) {
     const stats = ensureStats(entity);
@@ -285,7 +286,7 @@ export function checkEntityComplications(entity, lang = 'ru', logFn, notifyFn, a
 
     if (!entity.rolledTrimesters[currentTrimester] && !entity.activeComplication) {
         entity.rolledTrimesters[currentTrimester] = true;
-        const rolled = rollComplication(currentTrimester, entity.mode);
+        const rolled = rollComplication(currentTrimester, entity);
         if (rolled) {
             entity.activeComplication = rolled;
             logFn?.(`[COMPLICATION] [${entity.key.toUpperCase()}] Trimester ${currentTrimester}: ${rolled.id} (Week ${rolled.triggerWeek})`);
@@ -365,11 +366,14 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         }
 
         // Преждевременные роды: угроза -> начало родов.
+        // Доношенность наступает раньше при многоплодии (двойня 38 нед., тройня 36 нед.):
+        // после неё роды уже не считаются преждевременными, и угроза отключается.
+        const pretermBoundary = (entity.babiesCount >= 2) ? getEffectiveTermWeeks(entity) : (entity.mode === 'omegaverse' ? 36 : 37);
         if (entity.activeComplication?.id === 'premature_labor_threat'
             && entity.activeComplication.isDiscovered
             && !entity.pretermLabor
             && entity.pregnancyWeeks >= PRETERM_LABOR_MIN_WEEK
-            && entity.pregnancyWeeks < (entity.mode === 'omegaverse' ? 36 : 37)) {
+            && entity.pregnancyWeeks < pretermBoundary) {
             for (let i = 0; i < days; i++) {
                 if (Math.random() * 100 < PRETERM_LABOR_ONSET_CHANCE) {
                     entity.pretermLabor = { startedWeek: entity.pregnancyWeeks, daysSince: 0 };
@@ -385,7 +389,8 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
             for (let i = 0; i < days; i++) {
                 entity.pretermLabor.daysSince += 1;
                 const day = entity.pretermLabor.daysSince;
-                const chance = Math.min(PRETERM_LABOR_DAILY_BASE * day, PRETERM_LABOR_DAILY_BASE * PRETERM_LABOR_WINDOW_DAYS);
+                const dailyBase = (entity.babiesCount >= 2) ? PRETERM_LABOR_DAILY_BASE_MULTI : PRETERM_LABOR_DAILY_BASE;
+                const chance = Math.min(dailyBase * day, dailyBase * PRETERM_LABOR_WINDOW_DAYS);
                 if (Math.random() * 100 < chance) {
                     deliverAllBabiesPremature(entity, lang, logFn, notifyFn, rpDate);
                     return;

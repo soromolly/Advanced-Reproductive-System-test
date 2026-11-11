@@ -1,5 +1,6 @@
 // База данных симптомов цикла и беременности (RU / EN)
 import { EGG_EMBRYO_DISEASES } from './eggSystem.js';
+import { getEffectiveTermWeeks } from './shared.js';
 
 export const SYMPTOMS = {
     ru: {
@@ -545,10 +546,17 @@ export function getSymptomList(phase, indices, lang = 'ru') {
     return indices.map(i => list[i]).filter(Boolean);
 }
 
-export function rollComplication(trimester, mode) {
+export function rollComplication(trimester, entity) {
     if (Math.random() * 100 > 20) return null;
-    const pool = COMPLICATIONS_POOL['ru'].filter(c => c.trimester === trimester);
+    const mode = entity.mode;
+    const babiesCount = entity.babiesCount || 0;
+    let pool = COMPLICATIONS_POOL['ru'].filter(c => c.trimester === trimester);
     if (!pool || pool.length === 0) return null;
+    // При многоплодии (двойня/тройня) угроза преждевременных родов попадает в пул дважды — выпадает чаще.
+    if (babiesCount >= 2) {
+        const preterm = pool.find(c => c.id === 'premature_labor_threat');
+        if (preterm) pool = pool.concat(preterm);
+    }
     const selected = pool[Math.floor(Math.random() * pool.length)];
     const spec = TREATMENT_SPECS[selected.id];
     
@@ -556,12 +564,13 @@ export function rollComplication(trimester, mode) {
     if (trimester === 1) startWeek = Math.floor(Math.random() * 9) + 4;
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
-    // Угроза преждевременных родов: во 2-м триместре проявляется на 20–26 нед.; в 3-м — в любой момент до доношенности (реализм до 36, омегаверс до 35).
+    // Угроза преждевременных родов: во 2-м триместре проявляется на 20–26 нед.; в 3-м — в любой момент до доношенности.
+    // Доношенность при многоплодии наступает раньше (getEffectiveTermWeeks): после неё роды не считаются преждевременными.
     if (selected.id === 'premature_labor_threat') {
         if (trimester === 2) startWeek = Math.floor(Math.random() * 7) + 20;
         else if (trimester === 3) {
-            const fullTermWeeks = mode === 'omegaverse' ? 36 : 37;
-            startWeek = Math.floor(Math.random() * (fullTermWeeks - 27)) + 27;
+            const boundary = (babiesCount >= 2) ? getEffectiveTermWeeks(entity) : (mode === 'omegaverse' ? 36 : 37);
+            startWeek = Math.floor(Math.random() * Math.max(1, boundary - 27)) + 27;
         }
     }
 
