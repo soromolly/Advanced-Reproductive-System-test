@@ -9,7 +9,7 @@ import {
 import { getText, translateGender } from './translations.js';
 import { getPrematurityCategory, getDailySurvivalHazard, getNeonatalWindowDays, getOutcomeDefs, getOutcomeName } from './prematurity.js';
 import { getChildAgeDays } from './dateUtils.js';
-import { createDefaultStats, ensureStats, generateBabyGender, rollNewCycleTarget, getCycleDelayBaseline, formatDelayDays, generateBirthMeasurements } from './shared.js';
+import { createDefaultStats, ensureStats, generateBabyGender, rollNewCycleTarget, getCycleDelayBaseline, formatDelayDays, generateBirthMeasurements, getEffectiveTermWeeks } from './shared.js';
 import {
     advanceOvipositionEntity,
     triggerEggGravid,
@@ -384,7 +384,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
         }
 
         updateEntitySymptoms(entity);
-        const maxWeeks = entity.maxPregnancyWeeks || (entity.mode === 'omegaverse' ? 36 : 40);
+        const maxWeeks = getEffectiveTermWeeks(entity);
         if (entity.isDiscovered && entity.pregnancyWeeks >= maxWeeks) {
             notifyFn?.(`[${entity.key === 'user' ? '{{user}}' : '{{char}}'}] ${getText('toastPregEnd', lang)}`, 'warning');
         }

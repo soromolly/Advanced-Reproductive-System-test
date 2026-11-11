@@ -112,3 +112,18 @@ export function generateBirthMeasurements(weeks, babiesCount = 1) {
     const lengthCm = Math.round(ref.length * multiFactor * lengthSpread);
     return { weightGrams, lengthCm };
 }
+
+
+// Полная кратность беременности (сколько детей всего, а не осталось родить).
+export function getTotalBabies(entity) {
+    return (entity.babiesGenders?.length || 0) + (entity.currentDeliveredCount || 0);
+}
+
+// Эффективный срок доношенности с учётом многоплодия:
+// двойня — на 2 недели раньше, тройня+ — на 4 недели раньше одиночки.
+export function getEffectiveTermWeeks(entity) {
+    const base = entity.maxPregnancyWeeks || (entity.mode === 'omegaverse' ? 36 : 40);
+    const total = getTotalBabies(entity);
+    const shift = total >= 3 ? 4 : (total === 2 ? 2 : 0);
+    return Math.max(1, base - shift);
+}

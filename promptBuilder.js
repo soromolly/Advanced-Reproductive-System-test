@@ -20,6 +20,7 @@ import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays, PREMATURIT
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline } from './entityController.js';
 import { getChildAgeDays } from './dateUtils.js';
+import { getEffectiveTermWeeks, getTotalBabies } from './shared.js';
 
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
@@ -324,7 +325,14 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
             }
 
             if (aiAwareness === 'hidden') {
-                p += `[SECRET DATA]: Headcount and features of ${macroName}'s babies hidden until labor.\n`;
+                const remaining = entity.babiesGenders?.length || 1;
+                if (remaining <= 1) {
+                    p += `[MIDWIFE'S EXAMINATION]: The midwife has felt ${macroName}'s belly and believes she carries a single child. The child's sex remains unknown until labor.\n`;
+                } else if (remaining === 2) {
+                    p += `[MIDWIFE'S EXAMINATION]: ${macroName}'s belly is unusually large for her term, and the midwife, feeling the abdomen, detects two babies (twins). Their sexes remain unknown until labor.\n`;
+                } else {
+                    p += `[MIDWIFE'S EXAMINATION]: ${macroName}'s belly is enormous for her term; the midwife feels several babies, likely triplets. Their sexes remain unknown until labor.\n`;
+                }
             } else {
                 if (entity.babiesDiseases?.length > 0) {
                     entity.babiesDiseases.forEach((dId, idx) => {
@@ -350,17 +358,16 @@ If an abortion is performed on ${macroName} in this response, add this tag at th
             }
 
             if (entity.pregnancyWeeks >= 20) {
-                const nextNum = (entity.currentDeliveredCount || 0) + 1;
                 const tagSuffix = entity.key.toUpperCase();
+                const num = getTotalBabies(entity) > 1 ? `_${(entity.currentDeliveredCount || 0) + 1}` : '';
                 p += `\n[IMPORTANT — EVENT REPORTING]
 If ${macroName} gives birth in this response, add the matching tag at the very end of your reply (required, so the birth is recorded):
-- Natural birth: <!--BIRTH_NATURAL_${tagSuffix}_${nextNum}--> (or <!--BIRTH_NATURAL_${tagSuffix}-->)
-- C-Section: <!--BIRTH_C_SECTION_${tagSuffix}_${nextNum}--> (or <!--BIRTH_C_SECTION_${tagSuffix}-->)
-Add one tag per baby, in order.
+- Natural birth: <!--BIRTH_NATURAL_${tagSuffix}${num}-->
+- C-Section: <!--BIRTH_C_SECTION_${tagSuffix}${num}-->
 `;
             }
 
-            const maxWeeks = entity.maxPregnancyWeeks || (entity.mode === 'omegaverse' ? 36 : 40);
+            const maxWeeks = getEffectiveTermWeeks(entity);
             if (entity.pregnancyWeeks >= maxWeeks + 2) {
                 if (aiAwareness === 'hidden') {
                     p += `\n[POST-TERM PREGNANCY — OVERDUE]
