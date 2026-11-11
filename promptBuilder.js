@@ -24,7 +24,7 @@ import { getEffectiveTermWeeks, getTotalBabies } from './shared.js';
 
 // Неделя, на которой в средневековом режиме (aiAwareness='hidden') повитуха
 // уже может прощупать количество детей.
-const MEDIEVAL_COUNT_REVEAL_WEEK = 20;
+const MEDIEVAL_COUNT_REVEAL_WEEK = 24;
 
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
@@ -287,12 +287,15 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
 
         if (isRevealedPregnancy) {
             p += `Status: PREGNANT (Obstetric Term) | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
-            const fetus = getFetusData(entity.pregnancyWeeks, 'en');
+            const fetus = getFetusData(entity.pregnancyWeeks, 'en', entity.babiesCount);
             p += `Fetus Size: ${fetus.size} | Maternal Body: ${fetus.belly}. ${fetus.desc}\n`;
             
             const symptomsEn = getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
             if (symptomsEn.length > 0) {
                 p += `Current Pregnancy Symptoms: ${symptomsEn.join(', ')}.\n`;
+            }
+            if (entity.babiesCount >= 2 && entity.pregnancyWeeks >= 12) {
+                p += `Multiple Pregnancy Symptoms: carrying ${entity.babiesCount} babies intensifies the usual symptoms — faster weight gain, a heavier belly, and stronger pressure on the bladder and pelvis.\n`;
             }
 
             if (entity.activeComplication && entity.activeComplication.isDiscovered) {

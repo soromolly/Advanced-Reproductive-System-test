@@ -480,14 +480,23 @@ export function rollEggEmbryoDisease() {
 }
 
 
-export function getFetusData(weeks, lang = 'ru') {
+export function getFetusData(weeks, lang = 'ru', babiesCount = 1) {
     const l = (lang === 'en') ? 'en' : 'ru';
     const pool = PREGNANCY_STAGES[l] || PREGNANCY_STAGES['ru'];
     const milestones = Object.keys(pool).map(Number).sort((a, b) => b - a);
+    let data = pool[1];
     for (const week of milestones) {
-        if (weeks >= week) return pool[week];
+        if (weeks >= week) { data = pool[week]; break; }
     }
-    return pool[1];
+    // Многоплодная беременность: живот заметно больше, чем при одном ребёнке
+    // (с ~12 недели, когда живот уже начинает быть виден).
+    if (babiesCount >= 2 && weeks >= 12) {
+        const suffix = babiesCount >= 3
+            ? (l === 'en' ? ' (triplet pregnancy — belly enormous for this term)' : ' (тройня — живот огромный для этого срока)')
+            : (l === 'en' ? ' (twin pregnancy — belly noticeably larger than a singleton)' : ' (двойня — живот заметно больше, чем при одном ребёнке)');
+        data = { ...data, belly: data.belly + suffix };
+    }
+    return data;
 }
 
 export function getPostpartumData(days, method = 'natural', lang = 'ru') {

@@ -173,7 +173,7 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
 
     // ============ Обычная беременность ============
     if (!isOviposition && isCurrentlyPregnantDiscovered) {
-        const fetus = getFetusData(currentEntity.pregnancyWeeks, lang);
+        const fetus = getFetusData(currentEntity.pregnancyWeeks, lang, currentEntity.babiesCount);
         fetusHtml = `<div style="margin: 5px 0 10px 0; padding: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; text-align: left; font-size: 0.85em; line-height: 1.4;">
             <strong style="font-size: 1.05em; color: #38bdf8; display: block; margin-bottom: 5px;">${getText('fetusTitle', lang)}</strong>
             • ${getText('fetusSizeLabel', lang)} <span style="color: #38bdf8; font-weight: bold;">${fetus.size}</span><br>
