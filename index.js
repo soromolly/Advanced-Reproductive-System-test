@@ -118,6 +118,10 @@ function getChatData() {
         // Старые данные: единая галочка «патологии» раньше управляла и осложнениями, и недоношенностью.
         if (data[k].isComplicationsEnabled === undefined) data[k].isComplicationsEnabled = data[k].isFetalPathologyEnabled !== false;
         if (data[k].isPrematurityEnabled === undefined) data[k].isPrematurityEnabled = data[k].isFetalPathologyEnabled !== false;
+        // Срок вынашивания привязан к режиму (Омегаверс — 36 нед., Реализм — 40).
+        // Чиним застрявший дефолт 40 у омегаверса (и обратный случай).
+        if (data[k].mode === 'omegaverse' && data[k].maxPregnancyWeeks === 40) data[k].maxPregnancyWeeks = 36;
+        else if (data[k].mode === 'realism' && data[k].maxPregnancyWeeks === 36) data[k].maxPregnancyWeeks = 40;
 
         if (data[k].isNestActive && data[k].eggIncubationTotal && data[k].eggIncubationTotal !== EGG_INCUBATION_DISPLAY_MAX) {
             data[k].eggIncubationTotal = EGG_INCUBATION_DISPLAY_MAX;
@@ -520,6 +524,9 @@ function bindGlobalEvents() {
         }
 
         entity.mode = newMode;
+        // Срок вынашивания привязан к режиму: Омегаверс — 36 нед., Реализм — 40 нед.
+        if (entity.mode === 'omegaverse') entity.maxPregnancyWeeks = 36;
+        else if (entity.mode === 'realism') entity.maxPregnancyWeeks = 40;
         if (entity.mode === 'realism') entity.gender = 'female';
         else if (entity.mode === 'omegaverse' && (entity.gender === 'female' || entity.gender === 'male')) entity.gender = 'female_omega';
         else if (entity.mode === 'oviposition' && entity.gender !== 'male' && entity.gender !== 'female') entity.gender = 'female';
