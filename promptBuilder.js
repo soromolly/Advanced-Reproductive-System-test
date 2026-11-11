@@ -22,6 +22,10 @@ import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline } from './
 import { getChildAgeDays } from './dateUtils.js';
 import { getEffectiveTermWeeks, getTotalBabies } from './shared.js';
 
+// Неделя, на которой в средневековом режиме (aiAwareness='hidden') повитуха
+// уже может прощупать количество детей.
+const MEDIEVAL_COUNT_REVEAL_WEEK = 20;
+
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
     const gender = entity.gender;
@@ -325,13 +329,17 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
             }
 
             if (aiAwareness === 'hidden') {
-                const remaining = entity.babiesGenders?.length || 1;
-                if (remaining <= 1) {
-                    p += `[MIDWIFE'S EXAMINATION]: The midwife has felt ${macroName}'s belly and believes she carries a single child. The child's sex remains unknown until labor.\n`;
-                } else if (remaining === 2) {
-                    p += `[MIDWIFE'S EXAMINATION]: ${macroName}'s belly is unusually large for her term, and the midwife, feeling the abdomen, detects two babies (twins). Their sexes remain unknown until labor.\n`;
+                if (entity.pregnancyWeeks >= MEDIEVAL_COUNT_REVEAL_WEEK) {
+                    const remaining = entity.babiesGenders?.length || 1;
+                    if (remaining <= 1) {
+                        p += `[MIDWIFE'S EXAMINATION]: The midwife has felt ${macroName}'s belly and believes she carries a single child. The child's sex remains unknown until labor.\n`;
+                    } else if (remaining === 2) {
+                        p += `[MIDWIFE'S EXAMINATION]: ${macroName}'s belly is unusually large for her term, and the midwife, feeling the abdomen, detects two babies (twins). Their sexes remain unknown until labor.\n`;
+                    } else {
+                        p += `[MIDWIFE'S EXAMINATION]: ${macroName}'s belly is enormous for her term; the midwife feels several babies, likely triplets. Their sexes remain unknown until labor.\n`;
+                    }
                 } else {
-                    p += `[MIDWIFE'S EXAMINATION]: ${macroName}'s belly is enormous for her term; the midwife feels several babies, likely triplets. Their sexes remain unknown until labor.\n`;
+                    p += `[SECRET DATA]: Too early for the midwife to tell how many children ${macroName} carries; the baby's sex is unknown until labor.\n`;
                 }
             } else {
                 if (entity.babiesDiseases?.length > 0) {
