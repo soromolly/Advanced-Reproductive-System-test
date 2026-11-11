@@ -19,7 +19,7 @@ import {
 import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS, getPrematurityCategory, getPrematurityDisplay } from './prematurity.js';
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline, PRETERM_LABOR_WINDOW_DAYS } from './entityController.js';
-import { getChildAgeDays } from './dateUtils.js';
+import { getChildAgeDays, formatChildAge } from './dateUtils.js';
 import { getEffectiveTermWeeks, getTotalBabies } from './shared.js';
 
 // Неделя, на которой в средневековом режиме (aiAwareness='hidden') повитуха
@@ -449,8 +449,9 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
     if (entity.childrenList?.length > 0) {
         const era = aiAwareness === 'hidden' ? 'medieval' : 'modern';
         const kidsInfo = entity.childrenList.map((c, i) => {
-            const gEn = translateGender(c.gender, 'en');
+            const gEn = translateGender(c.gender, 'en').replace(/[♂♀]/g, '').trim();
             const nameStr = (c.name && c.name.trim()) ? `Name: "${c.name.trim()}"` : 'Name: Unnamed';
+            const ageStr = formatChildAge(c.birthDate, rpDate, 'en');
             let diseaseStr = '';
             if (c.diseaseId) {
                 const d = getFetalDisease(c.diseaseId, 'en');
@@ -484,7 +485,8 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
                     }
                 }
             }
-            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr}${sizeStr})${prematurityStr}${statusStr}${consequencesStr}`;
+            const agePart = ageStr ? `, Age: ${ageStr}` : '';
+            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr}${sizeStr}${agePart})${prematurityStr}${statusStr}${consequencesStr}`;
         }).join('\n');
 
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:
