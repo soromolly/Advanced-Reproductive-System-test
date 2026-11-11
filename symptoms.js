@@ -556,10 +556,9 @@ export function rollComplication(trimester) {
     if (trimester === 1) startWeek = Math.floor(Math.random() * 9) + 4;
     else if (trimester === 2) startWeek = Math.floor(Math.random() * 14) + 13;
     else if (trimester === 3) startWeek = Math.floor(Math.random() * 13) + 27;
-    // Угроза преждевременных родов живёт в двух триместрах: во 2-м проявляется на 20–26 нед., в 3-м — сразу (27+).
-    if (selected.id === 'premature_labor_threat') {
-        if (trimester === 2) startWeek = Math.floor(Math.random() * 7) + 20;
-        else startWeek = 27;
+    // Угроза преждевременных родов: во 2-м триместре проявляется на 20–26 нед.; в 3-м — в любой момент 27–39 нед.
+    if (selected.id === 'premature_labor_threat' && trimester === 2) {
+        startWeek = Math.floor(Math.random() * 7) + 20;
     }
 
     return {
