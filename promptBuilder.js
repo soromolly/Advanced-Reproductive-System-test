@@ -443,6 +443,18 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
             }
             const symptomsEn = getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
             if (symptomsEn.length > 0) p += `Current Physiological Symptoms: ${symptomsEn.join(', ')}.\n`;
+
+            if (entity.lastCheck && entity.lastCheck.remainingMessages > 0 && entity.cycleDay >= entity.lastCheck.cycleDay) {
+                if (entity.lastCheck.status === 'negative') {
+                    p += aiAwareness === 'hidden'
+                        ? `[MIDWIFE'S CHECK]: The midwife examined ${macroName} and found no signs of pregnancy — she is not with child.\n`
+                        : `[PREGNANCY TEST]: Negative — ${macroName} is not pregnant.\n`;
+                } else if (entity.lastCheck.status === 'uncertain') {
+                    p += aiAwareness === 'hidden'
+                        ? `[MIDWIFE'S CHECK]: The midwife found no clear signs yet — too early to tell whether ${macroName} is with child.\n`
+                        : `[PREGNANCY TEST]: Inconclusive — too early to confirm; pregnancy is not yet established.\n`;
+                }
+            }
         }
     }
 

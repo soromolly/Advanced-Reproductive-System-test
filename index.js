@@ -51,6 +51,7 @@ import {
 } from './eggSystem.js';
 
 const EXTENSION_NAME = 'st-advanced-reproductive-system';
+const CHECK_RESULT_LINGER_MESSAGES = 5;
 
 const DEFAULT_SETTINGS = {
     isEnabled: true,
@@ -440,6 +441,14 @@ function processIncomingMessage(messageIndex, isUser = false) {
         }
     }
 
+    if (!isUser) {
+        [data.user, data.char].forEach((e) => {
+            if (e && e.lastCheck && e.lastCheck.remainingMessages > 0) {
+                e.lastCheck.remainingMessages -= 1;
+                if (e.lastCheck.remainingMessages <= 0) delete e.lastCheck;
+            }
+        });
+    }
     processMessageInteractions(text, isUser, idx);
     saveSettingsDebounced();
     refreshUI();
@@ -720,6 +729,13 @@ function bindGlobalEvents() {
         const aiAwareness = settings.aiAwareness || 'dynamic';
         const result = getPregnancyCheckResult(entity, aiAwareness);
         const delayDays = result.delayDays;
+        if (entity.mode !== 'oviposition') {
+            if (result.status === 'positive') {
+                delete entity.lastCheck;
+            } else {
+                entity.lastCheck = { status: result.status, cycleDay: entity.cycleDay, remainingMessages: CHECK_RESULT_LINGER_MESSAGES };
+            }
+        }
 
         if (result.status === 'positive') {
             setPregnancyDiscovered(entity);
@@ -966,6 +982,7 @@ function bindGlobalEvents() {
         const entity = getChatData()[getActiveEntityKey()];
         entity.isPregnant = false; 
         entity.isDiscovered = false;
+        entity.lastCheck = null;
         entity.pregnancyDaysTotal = 0;
         entity.pregnancyWeeks = 0;
         entity.pregnancyDays = 0;

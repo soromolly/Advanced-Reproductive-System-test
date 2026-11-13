@@ -740,6 +740,7 @@ function resetEntityAfterLoss(entity) {
 export function resetEntityPregnancy(entity) {
     entity.isPregnant = false;
     entity.isDiscovered = false;
+    entity.lastCheck = null;
     entity.pregnancyDaysTotal = 0;
     entity.pregnancyWeeks = 0;
     entity.pregnancyDays = 0;
