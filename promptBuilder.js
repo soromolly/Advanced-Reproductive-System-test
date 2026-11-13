@@ -509,10 +509,10 @@ export function buildMultiEntityPrompt({ targetMode, userEntity, charEntity, aiA
 
     const climaxLines = [];
     if (targetMode === 'user' || targetMode === 'both') {
-        climaxLines.push(`- Inside {{user}} vagina: <!--CUM_VAGINAL_USER--> | anus: <!--CUM_ANAL_USER-->`);
+        climaxLines.push(`- Inside {{user}} vagina: <!--CUM_VAGINAL_USER--> | anus: <!--CUM_ANAL_USER--> | mouth: <!--CUM_ORAL_USER-->`);
     }
     if (targetMode === 'char' || targetMode === 'both') {
-        climaxLines.push(`- Inside {{char}} vagina: <!--CUM_VAGINAL_CHAR--> | anus: <!--CUM_ANAL_CHAR-->`);
+        climaxLines.push(`- Inside {{char}} vagina: <!--CUM_VAGINAL_CHAR--> | anus: <!--CUM_ANAL_CHAR--> | mouth: <!--CUM_ORAL_CHAR-->`);
     }
     if (climaxLines.length > 0) {
         fullPrompt += `\n[IMPORTANT — EVENT REPORTING]\nIf a climax happens inside someone in this response, add the matching tag at the very end of your reply (required, so the event is recorded):\n${climaxLines.join('\n')}\n`;

@@ -8,6 +8,7 @@ export function createDefaultStats() {
         cyclesCompleted: 0,
         cycleLengthsSum: 0,
         maxDelayDays: 0,
+        sexualActs: 0,
         conceptionChecks: 0,
         conceptionSuccesses: 0,
         pregnanciesTotal: 0,

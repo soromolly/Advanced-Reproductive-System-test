@@ -744,6 +744,7 @@ function aggregateStats(entities) {
         cyclesCompleted: 0,
         cycleLengthsSum: 0,
         maxDelayDays: 0,
+        sexualActs: 0,
         conceptionChecks: 0,
         conceptionSuccesses: 0,
         pregnanciesTotal: 0,
@@ -764,6 +765,7 @@ function aggregateStats(entities) {
         sum.cyclesCompleted += s.cyclesCompleted || 0;
         sum.cycleLengthsSum += s.cycleLengthsSum || 0;
         sum.maxDelayDays = Math.max(sum.maxDelayDays, s.maxDelayDays || 0);
+        sum.sexualActs += s.sexualActs || 0;
         sum.conceptionChecks += s.conceptionChecks || 0;
         sum.conceptionSuccesses += s.conceptionSuccesses || 0;
         sum.pregnanciesTotal += s.pregnanciesTotal || 0;
@@ -813,7 +815,8 @@ export function renderStatsModal({ data, lang = 'ru' }) {
         + row(getText('statsAvgCycle', lang), sum.cyclesCompleted > 0 ? `${avgCycle.toFixed(1)} ${daysLabel}` : '—')
         + row(getText('statsMaxDelay', lang), `${sum.maxDelayDays} ${daysLabel}`);
 
-    const conceptionHtml = row(getText('statsConceptionChecks', lang), sum.conceptionChecks)
+    const conceptionHtml = row(getText('statsSexualActs', lang), sum.sexualActs)
+        + row(getText('statsConceptionChecks', lang), sum.conceptionChecks)
         + row(getText('statsConceptionSuccesses', lang), sum.conceptionSuccesses);
 
     const pregnancyHtml = row(getText('statsPregnancies', lang), sum.pregnanciesTotal)

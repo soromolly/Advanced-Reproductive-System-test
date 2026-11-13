@@ -289,14 +289,38 @@ function processMessageInteractions(rawText, isUserMessage, messageIndex) {
 
     const cumVagUser = /<!--\s*CUM_VAGINAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_VAGINAL\s*-->/i.test(text));
     const cumAnalUser = /<!--\s*CUM_ANAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_ANAL\s*-->/i.test(text));
+    const cumOralUser = /<!--\s*CUM_ORAL_USER\s*-->/i.test(text) || (!/CHAR/i.test(text) && /<!--\s*CUM_ORAL\s*-->/i.test(text));
     const cumVagChar = /<!--\s*CUM_VAGINAL_CHAR\s*-->/i.test(text);
     const cumAnalChar = /<!--\s*CUM_ANAL_CHAR\s*-->/i.test(text);
+    const cumOralChar = /<!--\s*CUM_ORAL_CHAR\s*-->/i.test(text);
+
+    const countActs = (v, a, o) => (v ? 1 : 0) + (a ? 1 : 0) + (o ? 1 : 0);
 
     if (data.targetMode === 'user' || data.targetMode === 'both') {
+        const acts = countActs(cumVagUser, cumAnalUser, cumOralUser);
+        if (acts > 0) {
+            const stats = ensureStats(data.user);
+            stats.sexualActs = (stats.sexualActs || 0) + acts;
+            const parts = [];
+            if (cumVagUser) parts.push('vaginal');
+            if (cumAnalUser) parts.push('anal');
+            if (cumOralUser) parts.push('oral');
+            logReproEvent(`[SEX ACT] [USER] ${parts.join(' + ')}`);
+        }
         const isTargetClimax = (data.user.gender === 'male_omega' || data.user.gender === 'male') ? cumAnalUser : cumVagUser;
         checkConceptionForEntity(data.user, text, isTargetClimax);
     }
     if (data.targetMode === 'char' || data.targetMode === 'both') {
+        const acts = countActs(cumVagChar, cumAnalChar, cumOralChar);
+        if (acts > 0) {
+            const stats = ensureStats(data.char);
+            stats.sexualActs = (stats.sexualActs || 0) + acts;
+            const parts = [];
+            if (cumVagChar) parts.push('vaginal');
+            if (cumAnalChar) parts.push('anal');
+            if (cumOralChar) parts.push('oral');
+            logReproEvent(`[SEX ACT] [CHAR] ${parts.join(' + ')}`);
+        }
         const isTargetClimax = (data.char.gender === 'male_omega' || data.char.gender === 'male') ? cumAnalChar : cumVagChar;
         checkConceptionForEntity(data.char, text, isTargetClimax);
     }
