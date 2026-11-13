@@ -309,6 +309,13 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
                 }
             }
 
+            if (entity.treatmentSuccess && entity.treatmentSuccess.remainingMessages > 0) {
+                const curedComp = getComplication(entity.treatmentSuccess.complicationId, 'en');
+                if (curedComp) {
+                    p += `[RECENT MEDICAL INTERVENTION]: ${macroName} has just been successfully treated for "${curedComp.name}". Her symptoms are rapidly resolving and she feels noticeably better. The complication has passed.\n`;
+                }
+            }
+
             if (entity.pretermLabor) {
                 const premCat = getPrematurityCategory(entity.pregnancyWeeks, entity.mode);
                 const prem = premCat ? getPrematurityDisplay(premCat, 'en', aiAwareness) : null;

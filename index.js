@@ -123,6 +123,7 @@ function getChatData() {
         if (data[k].isPrematurityEnabled === undefined) data[k].isPrematurityEnabled = data[k].isFetalPathologyEnabled !== false;
         if (data[k].pretermLabor === undefined) data[k].pretermLabor = null;
         if (data[k].tocolysisNotice === undefined) data[k].tocolysisNotice = false;
+        if (data[k].treatmentSuccess === undefined) data[k].treatmentSuccess = null;
         // Срок вынашивания привязан к режиму (Омегаверс — 36 нед., Реализм — 40).
         // Чиним застрявший дефолт 40 у омегаверса (и обратный случай).
         if (data[k].mode === 'omegaverse' && data[k].maxPregnancyWeeks === 40) data[k].maxPregnancyWeeks = 36;
@@ -448,6 +449,10 @@ function processIncomingMessage(messageIndex, isUser = false) {
             if (e && e.lastCheck && e.lastCheck.remainingMessages > 0) {
                 e.lastCheck.remainingMessages -= 1;
                 if (e.lastCheck.remainingMessages <= 0) delete e.lastCheck;
+            }
+            if (e && e.treatmentSuccess && e.treatmentSuccess.remainingMessages > 0) {
+                e.treatmentSuccess.remainingMessages -= 1;
+                if (e.treatmentSuccess.remainingMessages <= 0) delete e.treatmentSuccess;
             }
         });
     }
@@ -827,6 +832,8 @@ function bindGlobalEvents() {
             if (entity.pretermLabor) {
                 entity.pretermLabor = null;
                 entity.tocolysisNotice = true;
+            } else {
+                entity.treatmentSuccess = { complicationId: compState.id, remainingMessages: CHECK_RESULT_LINGER_MESSAGES };
             }
             entity.activeComplication = null;
             saveSettingsDebounced();
@@ -986,6 +993,7 @@ function bindGlobalEvents() {
         entity.isPregnant = false; 
         entity.isDiscovered = false;
         entity.lastCheck = null;
+        entity.treatmentSuccess = null;
         entity.pregnancyDaysTotal = 0;
         entity.pregnancyWeeks = 0;
         entity.pregnancyDays = 0;
