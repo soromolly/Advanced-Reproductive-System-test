@@ -41,6 +41,19 @@ function recordEntityLoss(entity) {
     }
 }
 
+// +1 к «беременностям» только в момент, когда игрок реально узнал о беременности
+// (тест/проверка признаков/срок, либо несекретное зачатие). Скрытая беременность
+// статистику не трогает, чтобы игрок не догадался по счётчику. Яйцекладка (oviposition)
+// считает кладки отдельно (clutches), поэтому pregnanciesTotal там не трогаем.
+export function setPregnancyDiscovered(entity) {
+    if (!entity.isDiscovered) {
+        entity.isDiscovered = true;
+        if (entity.mode !== 'oviposition') {
+            ensureStats(entity).pregnanciesTotal += 1;
+        }
+    }
+}
+
 export function createDefaultEntityState(entityKey = 'user') {
     return {
         key: entityKey,
@@ -104,7 +117,6 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
         return;
     }
 
-    ensureStats(entity).pregnanciesTotal += 1;
     entity.isPregnant = true;
 
     if (entity.mode === 'omegaverse') {
@@ -115,7 +127,8 @@ export function triggerEntityPregnancy(entity, lang = 'ru', logFn, notifyFn) {
 
     entity.pregnancyWeeks = Math.floor(entity.pregnancyDaysTotal / 7);
     entity.pregnancyDays = entity.pregnancyDaysTotal % 7;
-    entity.isDiscovered = !entity.isSecretConception;
+    entity.isDiscovered = false;
+    if (!entity.isSecretConception) setPregnancyDiscovered(entity);
     entity.rolledTrimesters = { 1: false, 2: false, 3: false };
     entity.fetalDemiseRolledTrimesters = { 1: false, 2: false, 3: false };
     entity.fetalDemise = null;
@@ -413,7 +426,7 @@ export function advanceEntityDays(entity, days, aiAwareness, lang, logFn, notify
 
         const autoDiscoveryWeek = (aiAwareness === 'hidden') ? 9 : 6;
         if (!entity.isDiscovered && entity.pregnancyWeeks >= autoDiscoveryWeek) {
-            entity.isDiscovered = true;
+            setPregnancyDiscovered(entity);
             logFn?.(`[PREGNANCY DISCOVERED] [${entity.key.toUpperCase()}] Confirmed at ${entity.pregnancyWeeks} weeks.`);
             notifyFn?.(lang === 'en' 
                 ? `🚨 [${entity.key === 'user' ? '{{user}}' : '{{char}}'}] Pregnancy confirmed (~${entity.pregnancyWeeks} wks)!` 

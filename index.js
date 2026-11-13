@@ -25,7 +25,8 @@ import {
     hatchEggs,
     rollNewCycleTarget,
     resetEntityPregnancy,
-    ensureStats
+    ensureStats,
+    setPregnancyDiscovered
 } from './entityController.js';
 import { getText } from './translations.js';
 import { 
@@ -131,10 +132,12 @@ function getChatData() {
     });
 
     if (settings.aiAwareness === 'full') {
-        data.user.isSecretConception = false;
-        data.user.isIrregularCycle = false;
-        data.char.isSecretConception = false;
-        data.char.isIrregularCycle = false;
+        ['user', 'char'].forEach(k => {
+            const e = data[k];
+            e.isSecretConception = false;
+            e.isIrregularCycle = false;
+            if (e.isPregnant) setPregnancyDiscovered(e);
+        });
     }
 
     return data;
@@ -511,7 +514,7 @@ function bindGlobalEvents() {
     $(document).off('change', '#repro-is-secret-conception').on('change', '#repro-is-secret-conception', function() {
         const entity = getChatData()[getActiveEntityKey()];
         entity.isSecretConception = $(this).is(':checked');
-        if (!entity.isSecretConception && entity.isPregnant) entity.isDiscovered = true;
+        if (!entity.isSecretConception && entity.isPregnant) setPregnancyDiscovered(entity);
         saveSettingsDebounced();
         refreshUI();
         updatePrompt();
@@ -582,7 +585,7 @@ function bindGlobalEvents() {
                 const e = data[k];
                 e.isSecretConception = false;
                 e.isIrregularCycle = false;
-                if (e.isPregnant) e.isDiscovered = true;
+                if (e.isPregnant) setPregnancyDiscovered(e);
                 e.currentCycleTargetLength = rollNewCycleTarget(e);
             });
         }
@@ -719,7 +722,7 @@ function bindGlobalEvents() {
         const delayDays = result.delayDays;
 
         if (result.status === 'positive') {
-            entity.isDiscovered = true;
+            setPregnancyDiscovered(entity);
             logReproEvent(`[TEST] [${entity.key.toUpperCase()}] Positive (delay ${delayDays}d).`);
             if (entity.mode === 'oviposition') {
                 notify(lang === 'en'
@@ -916,7 +919,7 @@ function bindGlobalEvents() {
 
         if (entity.mode === 'oviposition') {
             entity.isPregnant = true;
-            entity.isDiscovered = true;
+            setPregnancyDiscovered(entity);
             entity.pregnancyWeeks = weeks;
             entity.pregnancyDays = Math.max(0, Math.min(6, days));
             entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
@@ -942,7 +945,7 @@ function bindGlobalEvents() {
             notify(`${lang === 'en' ? 'Egg carrying started: ' : 'Вынашивание яиц установлено: '}${weeks}w ${days}d, ${entity.eggCount} eggs`, 'success');
         } else {
             entity.isPregnant = true; 
-            entity.isDiscovered = true;
+            setPregnancyDiscovered(entity);
             entity.pregnancyWeeks = weeks; 
             entity.pregnancyDays = Math.max(0, Math.min(6, days)); 
             entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
@@ -951,7 +954,6 @@ function bindGlobalEvents() {
             entity.babiesGenders = Array.from({ length: count }, () => generateBabyGender(entity.mode, 'en'));
             entity.babiesDiseases = Array.from({ length: count }, () => null);
             entity.deliveryMethod = 'none';
-            ensureStats(entity).pregnanciesTotal += 1;
             notify(`${getText('toastManualPreg', lang)}${weeks}w ${days}d`, 'success');
         }
 
