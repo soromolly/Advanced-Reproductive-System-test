@@ -73,6 +73,7 @@ const processedBirthMessages = new Set();
 const processedLayMessages = new Set();
 const processedHatchMessages = new Set();
 let lastProcessedMessageUid = null;
+let lastCheckDecrementIdx = null;
 
 function getCurrentChatId() {
     return (typeof SillyTavern?.getContext === 'function') ? (SillyTavern.getContext().chatId || window.chat_id || 'default') : (window.chat_id || 'default');
@@ -441,7 +442,8 @@ function processIncomingMessage(messageIndex, isUser = false) {
         }
     }
 
-    if (!isUser) {
+    if (!isUser && chat[idx] && chat[idx].is_user !== true && idx !== lastCheckDecrementIdx) {
+        lastCheckDecrementIdx = idx;
         [data.user, data.char].forEach((e) => {
             if (e && e.lastCheck && e.lastCheck.remainingMessages > 0) {
                 e.lastCheck.remainingMessages -= 1;
@@ -734,6 +736,7 @@ function bindGlobalEvents() {
                 delete entity.lastCheck;
             } else {
                 entity.lastCheck = { status: result.status, cycleDay: entity.cycleDay, remainingMessages: CHECK_RESULT_LINGER_MESSAGES };
+                lastCheckDecrementIdx = null;
             }
         }
 
@@ -1057,6 +1060,7 @@ jQuery(async () => {
                 processedLayMessages.clear();
                 processedHatchMessages.clear();
                 lastProcessedMessageUid = null;
+                lastCheckDecrementIdx = null;
                 pendingUserTimeskipDays = 0;
                 skipNextDateSync = false;
                 loadSettings(); 
