@@ -17,6 +17,7 @@ import {
 import { dateToDays, daysToDateString, formatChildAge, getChildAgeDays } from './dateUtils.js';
 import { getEntityBodyPhase, isAbortionAllowed, PRETERM_LABOR_WINDOW_DAYS } from './entityController.js';
 import { getPrematurityDisplay, getOutcomeName, getNeonatalWindowDays, PREMATURITY_DETAIL_DAYS } from './prematurity.js';
+import { MEDIEVAL_COUNT_REVEAL_WEEK } from './shared.js';
 
 function sectionCard(id, title, collapsed, contentHtml) {
     const bodyStyle = `padding: 10px 12px; ${collapsed ? 'display: none;' : 'display: block;'}`;
@@ -211,7 +212,11 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
         }
 
         if (settings.aiAwareness === 'hidden') {
-            wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">${getText('medievalLocked', lang)}</div>`;
+            if (currentEntity.pregnancyWeeks >= MEDIEVAL_COUNT_REVEAL_WEEK) {
+                wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('medievalCountRevealed', lang)} <b>${currentEntity.babiesCount}</b><br><span style="color: #a1a1aa; font-style: italic;">${getText('medievalSexUnknown', lang)}</span></div>`;
+            } else {
+                wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #a1a1aa; font-style: italic; font-size: 0.85em;">${getText('medievalLocked', lang)}</div>`;
+            }
         } else if (settings.aiAwareness === 'dynamic') {
             if (currentEntity.pregnancyWeeks >= 20) {
                 wombMapHtml = `<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 5px; padding-top: 5px; color: #f472b6; font-size: 0.85em;">ℹ️ <em>${getText('wombMap', lang)}</em><br>• ${getText('babiesCount', lang)} <b>${currentEntity.babiesCount}</b><br>• ${getText('babiesSex', lang)} <b>${currentEntity.babiesGenders.map(g => translateGender(g, lang)).join(', ')}</b></div>`;

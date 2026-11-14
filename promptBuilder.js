@@ -20,11 +20,7 @@ import { getPrematurityPrompt, getOutcomeName, getNeonatalWindowDays, PREMATURIT
 import { translateGender } from './translations.js';
 import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline, PRETERM_LABOR_WINDOW_DAYS } from './entityController.js';
 import { getChildAgeDays, formatChildAge } from './dateUtils.js';
-import { getEffectiveTermWeeks, getTotalBabies } from './shared.js';
-
-// Неделя, на которой в средневековом режиме (aiAwareness='hidden') повитуха
-// уже может прощупать количество детей.
-const MEDIEVAL_COUNT_REVEAL_WEEK = 24;
+import { getEffectiveTermWeeks, getTotalBabies, MEDIEVAL_COUNT_REVEAL_WEEK } from './shared.js';
 
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;

@@ -2,6 +2,10 @@
 // и режимом «Яйцекладка». Вынесены отдельно, чтобы яйцекладка (eggController.js)
 // и entityController.js не тянули друг друга (нет циклических импортов).
 
+// Неделя, на которой в средневековом режиме (aiAwareness='hidden') повитуха
+// уже может прощупать количество детей.
+export const MEDIEVAL_COUNT_REVEAL_WEEK = 24;
+
 // Накопительная статистика сущности.
 export function createDefaultStats() {
     return {
