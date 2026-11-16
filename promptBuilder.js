@@ -22,6 +22,28 @@ import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline, PRETERM_L
 import { getChildAgeDays, formatChildAge } from './dateUtils.js';
 import { getEffectiveTermWeeks, getTotalBabies, MEDIEVAL_COUNT_REVEAL_WEEK } from './shared.js';
 
+function getContraceptionPrompt(entity, macroName) {
+    const c = entity.contraception;
+    if (!c || c === 'none') return '';
+    if (c === 'condom') {
+        return `Active Contraception: CONDOM.
+[CONTRACEPTION — ROLEPLAY GUIDANCE] Condoms are the active protection. In any sex scene a condom is put on before penetration (narrate putting it on) and penetration stays protected the whole time — no bare penetration.
+`;
+    }
+    if (c === 'pills') {
+        return `Active Contraception: ORAL PILLS.
+[CONTRACEPTION — ROLEPLAY GUIDANCE] ${macroName} takes birth control pills. No condom is used; penetration is unprotected but pregnancy is effectively ruled out.
+`;
+    }
+    if (c === 'iud') {
+        return `Active Contraception: IUD.
+[CONTRACEPTION — ROLEPLAY GUIDANCE] ${macroName} has an intrauterine device (IUD). No condom is used; penetration is unprotected but pregnancy is effectively ruled out.
+`;
+    }
+    return `Active Contraception: ${c.toUpperCase()}.
+`;
+}
+
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
     const gender = entity.gender;
@@ -441,9 +463,8 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
                 }
             }
 
-            if (entity.contraception !== 'none') {
-                p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
-            }
+            const contraceptionLine = getContraceptionPrompt(entity, macroName);
+            if (contraceptionLine) p += contraceptionLine;
             const symptomsEn = getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
             if (symptomsEn.length > 0) p += `Current Physiological Symptoms: ${symptomsEn.join(', ')}.\n`;
 
@@ -472,10 +493,6 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
                 const d = getFetalDisease(c.diseaseId, 'en');
                 if (d) diseaseStr = `, Congenital Condition: ${d.name}`;
             }
-            let sizeStr = '';
-            if (typeof c.birthWeightGrams === 'number' && typeof c.birthLengthCm === 'number') {
-                sizeStr = `, Birth: ${c.birthWeightGrams} g, ${c.birthLengthCm} cm`;
-            }
             let prematurityStr = '';
             let statusStr = '';
             let consequencesStr = '';
@@ -501,7 +518,7 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
                 }
             }
             const agePart = ageStr ? `, Age: ${ageStr}` : '';
-            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr}${sizeStr}${agePart})${prematurityStr}${statusStr}${consequencesStr}`;
+            return `• Child #${i + 1} (${gEn}, ${nameStr}${diseaseStr}${agePart})${prematurityStr}${statusStr}${consequencesStr}`;
         }).join('\n');
 
         p += `\n[FAMILY TREE & BORN CHILDREN OF ${macroName}]:

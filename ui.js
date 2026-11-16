@@ -319,10 +319,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     feat = isOviposition ? getEggEmbryoDisease(c.diseaseId, lang) : getFetalDisease(c.diseaseId, lang);
                     if (feat) featureHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #fcd34d;">• ${getText('congenitalFeatureLabel', lang)} <b>${feat.name}</b></div>`;
                 }
-                let sizeHtml = '';
-                if (!isOviposition && typeof c.birthWeightGrams === 'number' && typeof c.birthLengthCm === 'number') {
-                    sizeHtml = `<div style="margin-top: 2px; padding-left: 14px; font-size: 0.9em; color: #94a3b8;">• ${getText('birthWeightLabel', lang)} <b>${c.birthWeightGrams} ${getText('gramsUnit', lang)}</b> · ${getText('birthLengthLabel', lang)} <b>${c.birthLengthCm} ${getText('cmUnit', lang)}</b></div>`;
-                }
                 const isDeceased = c.alive === false;
                 const era = settings.aiAwareness === 'hidden' ? 'medieval' : 'modern';
                 const windowDays = getNeonatalWindowDays(c.prematurityId);
@@ -374,7 +370,6 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     <div style="flex: 1; padding-right: 8px;">
                         ${isOviposition ? '🐣' : '👶'} ${getText('childLabel', lang)} ${i+1}: <b>${translateGender(c.gender, lang)}</b> — ${nameDisplay}
                         ${birthInfoHtml}
-                        ${sizeHtml}
                         ${featureHtml}
                         ${prematurityHtml}
                         ${survivalHtml}
