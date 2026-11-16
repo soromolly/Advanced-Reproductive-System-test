@@ -22,28 +22,6 @@ import { getEntityBodyPhase, isAbortionAllowed, getCycleDelayBaseline, PRETERM_L
 import { getChildAgeDays, formatChildAge } from './dateUtils.js';
 import { getEffectiveTermWeeks, getTotalBabies, MEDIEVAL_COUNT_REVEAL_WEEK } from './shared.js';
 
-function getContraceptionPrompt(entity, macroName) {
-    const c = entity.contraception;
-    if (!c || c === 'none') return '';
-    if (c === 'condom') {
-        return `Active Contraception: CONDOM.
-[CONTRACEPTION — ROLEPLAY GUIDANCE] Condoms are the active protection. In any sex scene a condom is put on before penetration (narrate putting it on) and penetration stays protected the whole time — no bare penetration.
-`;
-    }
-    if (c === 'pills') {
-        return `Active Contraception: ORAL PILLS.
-[CONTRACEPTION — ROLEPLAY GUIDANCE] ${macroName} takes birth control pills. No condom is used; penetration is unprotected but pregnancy is effectively ruled out.
-`;
-    }
-    if (c === 'iud') {
-        return `Active Contraception: IUD.
-[CONTRACEPTION — ROLEPLAY GUIDANCE] ${macroName} has an intrauterine device (IUD). No condom is used; penetration is unprotected but pregnancy is effectively ruled out.
-`;
-    }
-    return `Active Contraception: ${c.toUpperCase()}.
-`;
-}
-
 function getSystemAndPhysiologyLabels(entity, isEn) {
     const mode = entity.mode;
     const gender = entity.gender;
@@ -463,8 +441,9 @@ ${macroName} is ${entity.pregnancyWeeks} weeks pregnant (term is ${maxWeeks} wee
                 }
             }
 
-            const contraceptionLine = getContraceptionPrompt(entity, macroName);
-            if (contraceptionLine) p += contraceptionLine;
+            if (entity.contraception !== 'none') {
+                p += `Active Contraception: ${entity.contraception.toUpperCase()}.\n`;
+            }
             const symptomsEn = getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
             if (symptomsEn.length > 0) p += `Current Physiological Symptoms: ${symptomsEn.join(', ')}.\n`;
 
