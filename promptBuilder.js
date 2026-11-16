@@ -40,7 +40,7 @@ function getSystemAndPhysiologyLabels(entity, isEn) {
         else if (gender === 'male_omega') phys = isEn ? 'Male Omega' : 'Мужчина-Омега';
         else phys = isEn ? 'Unknown' : 'Неизвестно';
         return {
-            system: isEn ? 'OmegaVerse' : 'ОмегаВерс',
+            system: isEn ? 'Omegaverse' : 'Омегаверс',
             physiology: phys
         };
     }

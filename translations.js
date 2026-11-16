@@ -31,7 +31,7 @@ export const TRANSLATIONS = {
         tabChar: '🤖 Профиль {{char}}',
         secretConceptionLabel: 'Реалистичное зачатие',
         irregularCycleLabel: 'Нерегулярный цикл',
-        system: 'Система:', realism: 'Реализм', omegaverse: 'ОмегаВерс', oviposition: 'Яйцекладка',
+        system: 'Система:', realism: 'Реализм', omegaverse: 'Омегаверс', oviposition: 'Яйцекладка',
         ovipositionLegacy: '(заморожена)',
         physiology: 'Физиология:', female: 'Женщина', male: 'Мужчина', female_omega: 'Женщина Омега', male_omega: 'Мужчина Омега',
         aiLogic: 'Режим раскрытия:', ultrasound: 'Современность', medieval: 'Средневековье', knowsAll: 'Всеведение',
@@ -45,7 +45,7 @@ export const TRANSLATIONS = {
         pregnancyWeekLabel: 'Срок (нед / дн):', cycleDayLabel: 'День цикла:',
         ofLabel: 'из',
         applyBtn: '▶ Применить изменения', initPregnancyHeader: 'Задать беременность вручную',
-        manualWeeks: 'Срок (нед / дн):', manualCount: 'Плодов:', manualGenderRandom: 'Случайный пол', babyBoy: 'Мальчик', babyGirl: 'Девочка', startPregnancyBtn: '🤰 Начать беременность',
+        manualWeeks: 'Срок (нед / дн):', manualCount: 'Плодов:', manualGenderRandom: 'Случайный пол', babyBoy: 'Мальчик', babyGirl: 'Девочка', secondaryAlpha: 'Альфа', secondaryBeta: 'Бета', secondaryOmega: 'Омега', startPregnancyBtn: '🤰 Начать беременность',
         resetPregnancyBtn: '🚼 Сбросить беременность', resetAllBtn: 'Полный сброс данных',
         takeTestBtn: '🧪 Сделать тест на беременность',
         checkPregnancyBtn: '🌿 Проверить признаки беременности',
@@ -159,7 +159,7 @@ export const TRANSLATIONS = {
 
         // ===== Яйцекладка =====
         modeRealism: 'Реализм',
-        modeOmega: 'ОмегаВерс',
+        modeOmega: 'Омегаверс',
         modeOviposition: 'Яйцекладка',
 
         eggCarryingTitle: '🥚 Вынашивание яиц:',
@@ -216,7 +216,7 @@ export const TRANSLATIONS = {
         tabChar: '🤖 {{char}} Profile',
         secretConceptionLabel: 'Realistic Conception',
         irregularCycleLabel: 'Irregular Cycle',
-        system: 'System:', realism: 'Realism', omegaverse: 'OmegaVerse', oviposition: 'Oviposition',
+        system: 'System:', realism: 'Realism', omegaverse: 'Omegaverse', oviposition: 'Oviposition',
         ovipositionLegacy: '(frozen)',
         physiology: 'Physiology:', female: 'Female', male: 'Male', female_omega: 'F-Omega', male_omega: 'M-Omega',
         aiLogic: 'Reveal Mode:', ultrasound: 'Modernity', medieval: 'Medieval (Blind)', knowsAll: 'Omniscience',
@@ -230,7 +230,7 @@ export const TRANSLATIONS = {
         pregnancyWeekLabel: 'Term (wks / days):', cycleDayLabel: 'Cycle Day:',
         ofLabel: 'of',
         applyBtn: '▶ Apply Changes', initPregnancyHeader: 'Initialize Pregnancy Manually',
-        manualWeeks: 'Term (wks / days):', manualCount: 'Babies:', manualGenderRandom: 'Random sex', babyBoy: 'Boy', babyGirl: 'Girl', startPregnancyBtn: '🤰 Start Pregnancy',
+        manualWeeks: 'Term (wks / days):', manualCount: 'Babies:', manualGenderRandom: 'Random sex', babyBoy: 'Boy', babyGirl: 'Girl', secondaryAlpha: 'Alpha', secondaryBeta: 'Beta', secondaryOmega: 'Omega', startPregnancyBtn: '🤰 Start Pregnancy',
         resetPregnancyBtn: '🚼 Reset Pregnancy Only', resetAllBtn: 'Full Data Reset',
         takeTestBtn: '🧪 Take Pregnancy Test',
         checkPregnancyBtn: '🌿 Check for Pregnancy Signs',
@@ -344,7 +344,7 @@ export const TRANSLATIONS = {
 
         // ===== Oviposition =====
         modeRealism: 'Realism',
-        modeOmega: 'OmegaVerse',
+        modeOmega: 'Omegaverse',
         modeOviposition: 'Oviposition',
 
         eggCarryingTitle: '🥚 Egg Carrying:',

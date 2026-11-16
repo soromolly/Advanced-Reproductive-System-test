@@ -986,7 +986,11 @@ function bindGlobalEvents() {
                 root.find('[data-repro-baby-gender]').each(function () {
                     overrides.push($(this).val() === 'female' ? 'female' : 'male');
                 });
-                babiesGenders = Array.from({ length: count }, (_, i) => generateBabyGender(entity.mode, 'en', overrides[i] || null));
+                const secondaryOverrides = [];
+                root.find('[data-repro-baby-secondary]').each(function () {
+                    secondaryOverrides.push($(this).val() || null);
+                });
+                babiesGenders = Array.from({ length: count }, (_, i) => generateBabyGender(entity.mode, 'en', overrides[i] || null, secondaryOverrides[i] || null));
             }
             entity.babiesGenders = babiesGenders;
             entity.babiesDiseases = Array.from({ length: count }, () => null);
@@ -1007,8 +1011,9 @@ function bindGlobalEvents() {
         if (randomChecked) {
             rowsContainer.html('');
         } else {
+            const entity = getChatData()[getActiveEntityKey()];
             const count = parseInt(root.find('#repro-manual-count').val(), 10) || 1;
-            rowsContainer.html(buildManualGenderRows(count, settings.language || 'ru'));
+            rowsContainer.html(buildManualGenderRows(count, settings.language || 'ru', entity.mode));
         }
     }
 

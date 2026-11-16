@@ -985,18 +985,29 @@ export function showPromptModal({ title = '', label = '', placeholder = '', init
 }
 
 // Строит по одной строке выбора пола на каждого ребёнка (для ручной настройки беременности).
-// Возвращает пустую строку, если count <= 0.
-export function buildManualGenderRows(count, lang) {
+// В омегаверсе добавляется выбор вторичного пола (альфа/бета/омега). Возвращает '' при count <= 0.
+export function buildManualGenderRows(count, lang, mode) {
     const n = Math.max(0, Math.min(12, parseInt(count, 10) || 0));
     if (n === 0) return '';
+    const isOmega = mode === 'omegaverse';
     let html = '';
     for (let i = 0; i < n; i++) {
+        const secondarySelect = isOmega
+            ? `<select data-repro-baby-secondary="${i}" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 6px; border-radius: 6px; width: 50%;">
+                <option value="alpha">${getText('secondaryAlpha', lang)}</option>
+                <option value="beta">${getText('secondaryBeta', lang)}</option>
+                <option value="omega">${getText('secondaryOmega', lang)}</option>
+            </select>`
+            : '';
         html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.9em; opacity: 0.85;">${getText('childLabel', lang)} ${i + 1}</label>
-            <select data-repro-baby-gender="${i}" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
-                <option value="male">${getText('babyBoy', lang)}</option>
-                <option value="female">${getText('babyGirl', lang)}</option>
-            </select>
+            <label style="font-size: 0.9em; opacity: 0.85; min-width: 24px;">${i + 1}.</label>
+            <div style="display: flex; gap: 6px; width: 55%;">
+                <select data-repro-baby-gender="${i}" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 6px; border-radius: 6px; width: ${isOmega ? '50%' : '100%'};">
+                    <option value="male">${getText('babyBoy', lang)}</option>
+                    <option value="female">${getText('babyGirl', lang)}</option>
+                </select>
+                ${secondarySelect}
+            </div>
         </div>`;
     }
     return html;

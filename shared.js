@@ -1,4 +1,4 @@
-// Общие хелперы сущности, используемые и обычной беременностью (Реализм/ОмегаВерс),
+// Общие хелперы сущности, используемые и обычной беременностью (Реализм/Омегаверс),
 // и режимом «Яйцекладка». Вынесены отдельно, чтобы яйцекладка (eggController.js)
 // и entityController.js не тянули друг друга (нет циклических импортов).
 
@@ -31,15 +31,21 @@ export function ensureStats(entity) {
     return entity.stats;
 }
 
-export function generateBabyGender(mode, lang = 'ru', sexOverride = null) {
+export function generateBabyGender(mode, lang = 'ru', sexOverride = null, secondaryOverride = null) {
     const isBoy = sexOverride === 'male' ? true : (sexOverride === 'female' ? false : (Math.random() > 0.5));
     const isRu = lang === 'ru';
     
     if (mode === 'omegaverse') {
-        const roll = Math.random() * 100;
-        let sec = isRu ? 'Бета' : 'Beta';
-        if (roll < 33.33) sec = isRu ? 'Альфа' : 'Alpha';
-        else if (roll < 66.66) sec = isRu ? 'Омега' : 'Omega';
+        let sec;
+        if (secondaryOverride === 'alpha') sec = isRu ? 'Альфа' : 'Alpha';
+        else if (secondaryOverride === 'omega') sec = isRu ? 'Омега' : 'Omega';
+        else if (secondaryOverride === 'beta') sec = isRu ? 'Бета' : 'Beta';
+        else {
+            const roll = Math.random() * 100;
+            sec = isRu ? 'Бета' : 'Beta';
+            if (roll < 33.33) sec = isRu ? 'Альфа' : 'Alpha';
+            else if (roll < 66.66) sec = isRu ? 'Омега' : 'Omega';
+        }
         if (isRu) return isBoy ? `${sec}-мальчик ♂` : `${sec}-девочка ♀`;
         return isBoy ? `${sec} Boy ♂` : `${sec} Girl ♀`;
     }
