@@ -999,9 +999,9 @@ export function buildManualGenderRows(count, lang, mode) {
                 <option value="omega">${getText('secondaryOmega', lang)}</option>
             </select>`
             : '';
-        html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.9em; opacity: 0.85; min-width: 24px;">${i + 1}.</label>
-            <div style="display: flex; gap: 6px; width: 55%;">
+        html += `<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span style="font-size: 0.9em; opacity: 0.85; width: 24px; text-align: right; flex-shrink: 0;">${i + 1}.</span>
+            <div style="display: flex; gap: 6px; flex: 1;">
                 <select data-repro-baby-gender="${i}" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 6px; border-radius: 6px; width: ${isOmega ? '50%' : '100%'};">
                     <option value="male">${getText('babyBoy', lang)}</option>
                     <option value="female">${getText('babyGirl', lang)}</option>
