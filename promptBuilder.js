@@ -284,7 +284,11 @@ function buildSingleEntityPrompt(entity, macroName, aiAwareness, rpDate) {
         if (isRevealedPregnancy) {
             p += `Status: PREGNANT (Obstetric Term) | Duration: ${entity.pregnancyWeeks} weeks ${entity.pregnancyDays} days.\n`;
             const fetus = getFetusData(entity.pregnancyWeeks, 'en', entity.babiesCount);
-            p += `Fetus Size: ${fetus.size} | Maternal Body: ${fetus.belly}. ${fetus.desc}\n`;
+            if (aiAwareness === 'hidden') {
+                p += `Maternal Body: ${fetus.belly}.\n`;
+            } else {
+                p += `Fetus Size: ${fetus.size} | Maternal Body: ${fetus.belly}. ${fetus.desc}\n`;
+            }
             
             const symptomsEn = getSymptomList(entity.symptomPhaseKey, entity.symptomIndices, 'en');
             if (symptomsEn.length > 0) {

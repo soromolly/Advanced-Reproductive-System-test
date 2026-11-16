@@ -637,6 +637,13 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                                 <label style="font-size: 0.9em; opacity: 0.85;">${isOviposition ? getText('manualEggCount', lang) : getText('manualCount', lang)} </label>
                                 <input type="number" id="repro-manual-count" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;" value="${isOviposition ? 4 : 1}" min="1" max="${isOviposition ? 7 : 12}"/>
                             </div>
+                            ${!isOviposition ? `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <label style="font-size: 0.9em; opacity: 0.85;">${getText('manualGenderRandom', lang)}</label>
+                                <input type="checkbox" id="repro-manual-gender-random" style="width: 18px; height: 18px; accent-color: #db2777;" checked/>
+                            </div>
+                            <div id="repro-manual-gender-rows" style="margin-bottom: 10px;"></div>
+                            ` : ''}
                             <button id="repro-btn-manual-preg" class="menu_button" style="width: 100%; background: #db2777; color: white; font-weight: 600;">${isOviposition ? getText('manualEggsBtn', lang) : getText('startPregnancyBtn', lang)}</button>
                         </div>
                     ` : ''}
@@ -975,4 +982,22 @@ export function showPromptModal({ title = '', label = '', placeholder = '', init
 
         setTimeout(() => input.trigger('focus'), 0);
     });
+}
+
+// Строит по одной строке выбора пола на каждого ребёнка (для ручной настройки беременности).
+// Возвращает пустую строку, если count <= 0.
+export function buildManualGenderRows(count, lang) {
+    const n = Math.max(0, Math.min(12, parseInt(count, 10) || 0));
+    if (n === 0) return '';
+    let html = '';
+    for (let i = 0; i < n; i++) {
+        html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.9em; opacity: 0.85;">${getText('childLabel', lang)} ${i + 1}</label>
+            <select data-repro-baby-gender="${i}" style="background: var(--input-bg, #0f172a); border: 1px solid var(--input-border, #334155); color: var(--text-color, #f8fafc); padding: 6px 10px; border-radius: 6px; width: 55%;">
+                <option value="male">${getText('babyBoy', lang)}</option>
+                <option value="female">${getText('babyGirl', lang)}</option>
+            </select>
+        </div>`;
+    }
+    return html;
 }

@@ -180,11 +180,20 @@ export function parseRpDateFromText(rawText) {
     return null;
 }
 
+// Убираем прямую речь и мысли (кавычки «», "", звёздочки *...*),
+// чтобы фразы персонажей вроде «через неделю я вернусь» не двигали дату.
+function stripDialogue(text) {
+    return text
+        .replace(/«[^«»]*»/g, ' ')
+        .replace(/"[^"]*"/g, ' ')
+        .replace(/\*[^*]*\*/g, ' ');
+}
+
 export function parseRelativeDaysFromText(rawText) {
     if (!rawText) return 0;
-    const lower = cleanHtmlFromText(rawText).toLowerCase();
+    const lower = stripDialogue(cleanHtmlFromText(rawText)).toLowerCase();
 
-    if (/(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?пол[\s-]?года|half\s+a\s+year\s+(?:passed|later)|after\s+half\s+a\s+year/i.test(lower)) {
+    if (/(?:прошл[оаи]|прош[ёе]л)\s+(?:(?:около|примерно)\s+)?пол[\s-]?года|half\s+a\s+year\s+(?:passed|later)/i.test(lower)) {
         return 180;
     }
 
@@ -215,7 +224,7 @@ export function parseRelativeDaysFromText(rawText) {
         return 0;
     };
 
-    const ruRegex = /(?:прошл(?:о|а|ел|и|ели)|спустя|через)\s+(?:(?:около|примерно)\s+)?(\d+|од[иннаоу]+|дв[ае]|пар[ау]|три|четыре|пять|шесть|семь|восемь|девять|десять)?\s*(дне[йяа]|день|дня|недел[ьиюяе]+|месяц[аев]*|ле[тв]|год[аоу]?)/i;
+    const ruRegex = /(?:прошл[оаи]|прош[ёе]л)\s+(?:(?:около|примерно)\s+)?(\d+|од[иннаоу]+|дв[ае]|пар[ау]|три|четыре|пять|шесть|семь|восемь|девять|десять)?\s*(дне[йяа]|день|дня|недел[ьиюяе]+|месяц[аев]*|ле[тв]|год[аоу]?)/i;
     const ruMatch = lower.match(ruRegex);
     if (ruMatch) {
         const count = parseCount(ruMatch[1]);
@@ -231,7 +240,7 @@ export function parseRelativeDaysFromText(rawText) {
         if (days > 0) return days;
     }
 
-    const enPrefixRegex = /\b(?:after|in|past)\s+(?:about\s+)?(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?\b/i;
+    const enPrefixRegex = /\bpast\s+(?:about\s+)?(\d+|a|an|one|two|couple|three|four|five|six|seven|eight|nine|ten)?\s*(day|week|month|year)s?\b/i;
     const enPrefixMatch = lower.match(enPrefixRegex);
     if (enPrefixMatch) {
         const count = parseCount(enPrefixMatch[1]);

@@ -31,8 +31,8 @@ export function ensureStats(entity) {
     return entity.stats;
 }
 
-export function generateBabyGender(mode, lang = 'ru') {
-    const isBoy = Math.random() > 0.5;
+export function generateBabyGender(mode, lang = 'ru', sexOverride = null) {
+    const isBoy = sexOverride === 'male' ? true : (sexOverride === 'female' ? false : (Math.random() > 0.5));
     const isRu = lang === 'ru';
     
     if (mode === 'omegaverse') {

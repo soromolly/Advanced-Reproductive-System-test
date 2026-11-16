@@ -37,7 +37,7 @@ import {
     parseRelativeDaysFromText 
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
-import { renderUI, exportReproLogs, renderStatsModal, showConfirmModal, showPromptModal } from './ui.js';
+import { renderUI, buildManualGenderRows, exportReproLogs, renderStatsModal, showConfirmModal, showPromptModal } from './ui.js';
 import { 
     getComplication,
     getTreatmentSpec,
@@ -977,7 +977,18 @@ function bindGlobalEvents() {
             entity.pregnancyDaysTotal = (weeks * 7) + entity.pregnancyDays;
             entity.babiesCount = count; 
             entity.currentDeliveredCount = 0;
-            entity.babiesGenders = Array.from({ length: count }, () => generateBabyGender(entity.mode, 'en'));
+            const randomChecked = root.find('#repro-manual-gender-random').is(':checked');
+            let babiesGenders;
+            if (randomChecked) {
+                babiesGenders = Array.from({ length: count }, () => generateBabyGender(entity.mode, 'en'));
+            } else {
+                const overrides = [];
+                root.find('[data-repro-baby-gender]').each(function () {
+                    overrides.push($(this).val() === 'female' ? 'female' : 'male');
+                });
+                babiesGenders = Array.from({ length: count }, (_, i) => generateBabyGender(entity.mode, 'en', overrides[i] || null));
+            }
+            entity.babiesGenders = babiesGenders;
             entity.babiesDiseases = Array.from({ length: count }, () => null);
             entity.deliveryMethod = 'none';
             notify(`${getText('toastManualPreg', lang)}${weeks}w ${days}d`, 'success');
@@ -986,6 +997,26 @@ function bindGlobalEvents() {
         saveSettingsDebounced(); 
         refreshUI(); 
         updatePrompt(); 
+    });
+
+    function refreshManualGenderRows() {
+        const root = $('#repro-content-wrapper');
+        const randomChecked = root.find('#repro-manual-gender-random').is(':checked');
+        const rowsContainer = root.find('#repro-manual-gender-rows');
+        if (!rowsContainer.length) return;
+        if (randomChecked) {
+            rowsContainer.html('');
+        } else {
+            const count = parseInt(root.find('#repro-manual-count').val(), 10) || 1;
+            rowsContainer.html(buildManualGenderRows(count, settings.language || 'ru'));
+        }
+    }
+
+    $(document).off('change', '#repro-manual-gender-random').on('change', '#repro-manual-gender-random', function() {
+        refreshManualGenderRows();
+    });
+    $(document).off('input', '#repro-manual-count').on('input', '#repro-manual-count', function() {
+        refreshManualGenderRows();
     });
 
     $(document).off('click', '#repro-reset-pregnancy-only').on('click', '#repro-reset-pregnancy-only', function() {
