@@ -886,10 +886,23 @@ function createModalShell(onClose) {
         display: 'flex', alignItems: 'center', justifyContent: 'center'
     });
     const card = $('<div>').css({
+        position: 'relative',
         background: 'var(--panel-bg, #1e293b)', color: 'var(--text-color, #f8fafc)',
-        borderRadius: '12px', padding: '20px', width: 'min(420px, 92vw)', maxHeight: '85vh',
-        overflowY: 'auto', border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+        borderRadius: '12px', width: 'min(420px, 92vw)', maxHeight: '85vh',
+        display: 'flex', flexDirection: 'column',
+        border: '1px solid rgba(244,114,182,0.35)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
     });
+    const body = $('<div>').css({
+        padding: '20px 32px 20px 20px', overflowY: 'auto', minHeight: '0'
+    });
+    const closeBtn = $('<button>').attr('type', 'button').attr('aria-label', 'Close').html('&times;').css({
+        position: 'absolute', top: '8px', right: '10px', zIndex: '2',
+        border: 'none', background: 'transparent', color: '#94a3b8',
+        fontSize: '22px', lineHeight: '1', cursor: 'pointer', padding: '2px 6px', borderRadius: '6px'
+    }).on('mouseenter', function () { $(this).css('color', '#f8fafc'); })
+      .on('mouseleave', function () { $(this).css('color', '#94a3b8'); })
+      .on('click', function (e) { e.stopPropagation(); e.preventDefault(); onClose?.(); });
+    card.append(closeBtn, body);
     modal.append(card);
     const block = function (e) { e.stopPropagation(); };
     ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(function (evt) {
@@ -899,7 +912,7 @@ function createModalShell(onClose) {
     card.on('click', function (e) { e.stopPropagation(); });
     modal.on('click', function (e) { e.stopPropagation(); if (e.target === this) onClose?.(); });
     $('body').append(modal);
-    return { modal, card };
+    return { modal, card: body };
 }
 
 export function showConfirmModal({ title = '', message = '', okLabel = 'OK', cancelLabel = 'Cancel', danger = false }) {
