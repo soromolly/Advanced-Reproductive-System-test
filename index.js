@@ -166,6 +166,13 @@ function notify(text, type = 'info') {
     }
 }
 
+function getLastLogTimestamp(logs) {
+    if (!Array.isArray(logs) || logs.length === 0) return '';
+    const last = String(logs[logs.length - 1]);
+    const m = last.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/);
+    return m ? m[1] : '';
+}
+
 function getOrphanedChats() {
     const currentId = getCurrentChatId();
     const results = [];
@@ -179,8 +186,12 @@ function getOrphanedChats() {
         const hasMeaning = children.length > 0 || logs.length > 0 || !!data.lastRpDate
             || !!(data.user && data.user.isPregnant) || !!(data.char && data.char.isPregnant);
         if (!hasMeaning) continue;
-        results.push({ chatId, data, children, logs });
+        results.push({ chatId, data, children, logs, lastTs: getLastLogTimestamp(logs) });
     }
+    results.sort((a, b) => {
+        if (a.lastTs === b.lastTs) return 0;
+        return a.lastTs > b.lastTs ? -1 : 1;
+    });
     return results;
 }
 
