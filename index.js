@@ -37,7 +37,7 @@ import {
     parseRelativeDaysFromText 
 } from './dateUtils.js';
 import { buildMultiEntityPrompt } from './promptBuilder.js';
-import { renderUI, buildManualGenderRows, exportReproLogs, renderStatsModal, showConfirmModal, showPromptModal } from './ui.js';
+import { renderUI, buildManualGenderRows, exportReproLogs, renderStatsModal, showConfirmModal, showPromptModal, showDataRecoveryModal } from './ui.js';
 import { 
     getComplication,
     getTreatmentSpec,
@@ -164,6 +164,41 @@ function notify(text, type = 'info') {
     if (settings.isNotificationsEnabled && typeof toastr !== 'undefined') {
         toastr[type]?.(text) || toastr.info(text);
     }
+}
+
+function getOrphanedChats() {
+    const currentId = getCurrentChatId();
+    const results = [];
+    const dataMap = settings.chatPregnancyData || {};
+    for (const [chatId, data] of Object.entries(dataMap)) {
+        if (chatId === currentId || !data) continue;
+        const userChildren = Array.isArray(data.user?.childrenList) ? data.user.childrenList : [];
+        const charChildren = Array.isArray(data.char?.childrenList) ? data.char.childrenList : [];
+        const children = userChildren.concat(charChildren);
+        const logs = Array.isArray(data.activityLogs) ? data.activityLogs : [];
+        const hasMeaning = children.length > 0 || logs.length > 0 || !!data.lastRpDate
+            || !!(data.user && data.user.isPregnant) || !!(data.char && data.char.isPregnant);
+        if (!hasMeaning) continue;
+        results.push({ chatId, data, children, logs });
+    }
+    return results;
+}
+
+function summarizeOrphanEntry(entry, lang) {
+    const childNames = entry.children.map(c => (c && c.name) || getText('noName', lang)).filter(Boolean);
+    const title = entry.children.length > 0
+        ? `${getText('recoverChildren', lang)} ${entry.children.length}`
+        : getText('recoverNoChildren', lang);
+    const metaLines = [];
+    metaLines.push(`${getText('recoverRpDate', lang)} ${entry.data.lastRpDate || '—'}`);
+    metaLines.push(`${getText('recoverLogs', lang)} ${entry.logs.length}`);
+    if (childNames.length > 0) {
+        const shown = childNames.slice(0, 4).join(', ');
+        metaLines.push(`👶 ${shown}${childNames.length > 4 ? '…' : ''}`);
+    }
+    const lastLog = entry.logs[entry.logs.length - 1];
+    const snippet = lastLog ? lastLog.slice(0, 110) : null;
+    return { chatId: entry.chatId, title, metaLines, snippet };
 }
 
 function updatePrompt() {
@@ -879,6 +914,45 @@ function bindGlobalEvents() {
 
     $(document).off('click', '#repro-btn-stats').on('click', '#repro-btn-stats', function() {
         renderStatsModal({ data: getChatData(), lang: settings.language || 'ru' });
+    });
+
+    $(document).off('click', '#repro-btn-recover').on('click', '#repro-btn-recover', async function() {
+        const lang = settings.language || 'ru';
+        const orphans = getOrphanedChats();
+        if (orphans.length === 0) {
+            notify(getText('recoverNoData', lang), 'warning');
+            return;
+        }
+        const entries = orphans.map(o => summarizeOrphanEntry(o, lang));
+        const pickedId = await showDataRecoveryModal({
+            entries,
+            title: getText('recoverTitle', lang),
+            hint: getText('recoverHint', lang),
+            okLabel: getText('recoverPickBtn', lang),
+            cancelLabel: getText('cancel', lang)
+        });
+        if (!pickedId) return;
+        const source = settings.chatPregnancyData[pickedId];
+        if (!source) {
+            notify(getText('toastRecoverFailed', lang), 'error');
+            return;
+        }
+        const ok = await showConfirmModal({
+            title: getText('confirmTitle', lang),
+            message: getText('recoverConfirmMsg', lang),
+            okLabel: getText('confirmYes', lang),
+            cancelLabel: getText('confirmNo', lang),
+            danger: true
+        });
+        if (!ok) return;
+        const currentId = getCurrentChatId();
+        settings.chatPregnancyData[currentId] = JSON.parse(JSON.stringify(source));
+        getChatData();
+        logReproEvent('[DATA RECOVERED] Imported data from another chat (children/statistics/date restored).');
+        saveSettingsDebounced();
+        refreshUI();
+        updatePrompt();
+        notify(getText('toastRecovered', lang), 'success');
     });
 
     $(document).off('click', '#repro-apply-params').on('click', '#repro-apply-params', function() {

@@ -655,6 +655,8 @@ export function renderUI({ settings, chatData, activeTab, isMenuCollapsed }) {
                     ` : ''}
 
                     <button id="repro-reset" class="menu_button type_danger" style="width: 100%; margin-bottom: 10px; font-weight: 600;">${getText('resetAllBtn', lang)}</button>
+
+                    <button id="repro-btn-recover" class="menu_button" style="width: 100%; margin-bottom: 10px; font-weight: 600; justify-content: center;">${getText('recoverDataBtn', lang)}</button>
                     
                     <div style="padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.78em; color: #64748b; text-align: center; font-style: italic;">
                         ${getText('globalRollsLabel', lang)} <span style="font-weight: bold; font-family: monospace; color: #94a3b8; margin-left: 2px;">${settings.globalRollsCount || 0}</span>
@@ -981,6 +983,55 @@ export function showPromptModal({ title = '', label = '', placeholder = '', init
         );
 
         setTimeout(() => input.trigger('focus'), 0);
+    });
+}
+
+// Модалка выбора чата для восстановления данных (список «осиротевших» записей из других чатов).
+export function showDataRecoveryModal({ entries = [], title = '', hint = '', okLabel = 'Restore', cancelLabel = 'Cancel' }) {
+    return new Promise((resolve) => {
+        let settled = false;
+        const { modal, card } = createModalShell(() => finish(null));
+        function finish(value) {
+            if (settled) return;
+            settled = true;
+            modal.remove();
+            resolve(value);
+        }
+
+        card.append(
+            $('<div>').text(title).css({ fontSize: '1.05em', fontWeight: '700', marginBottom: '6px' }),
+            $('<div>').text(hint).css({ fontSize: '0.85em', color: '#94a3b8', marginBottom: '10px', lineHeight: '1.4' })
+        );
+
+        const list = $('<div>').css({ display: 'flex', flexDirection: 'column', gap: '8px' });
+        entries.forEach((entry) => {
+            const item = $('<div>').css({
+                background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: '8px', padding: '10px'
+            });
+            item.append($('<div>').text(entry.title).css({ fontWeight: '700', fontSize: '0.95em', marginBottom: '4px' }));
+            (entry.metaLines || []).forEach((line) => {
+                item.append($('<div>').text(line).css({ fontSize: '0.85em', color: '#94a3b8', lineHeight: '1.45' }));
+            });
+            if (entry.snippet) {
+                item.append($('<div>').text(entry.snippet).css({
+                    fontSize: '0.78em', color: '#64748b', marginTop: '6px', fontStyle: 'italic', lineHeight: '1.4'
+                }));
+            }
+            const pickBtn = $('<button>').attr('type', 'button').text(okLabel).css({
+                marginTop: '8px', width: '100%', padding: '8px 12px', border: 'none', borderRadius: '6px',
+                cursor: 'pointer', fontWeight: '600', fontSize: '0.9em', background: '#db2777', color: '#fff'
+            }).on('click', function (e) { e.stopPropagation(); e.preventDefault(); finish(entry.chatId); });
+            item.append(pickBtn);
+            list.append(item);
+        });
+        card.append(list);
+
+        const cancelBtn = $('<button>').attr('type', 'button').text(cancelLabel).css({
+            marginTop: '14px', padding: '9px 16px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px',
+            cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', background: 'rgba(255,255,255,0.08)', color: '#e2e8f0'
+        }).on('click', function (e) { e.stopPropagation(); e.preventDefault(); finish(null); });
+        card.append($('<div>').css({ textAlign: 'right' }).append(cancelBtn));
     });
 }
 
